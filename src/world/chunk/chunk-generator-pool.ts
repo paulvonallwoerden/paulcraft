@@ -5,7 +5,6 @@ import { Biome } from "../biome/biome";
 import { ArrayMap2D, Map2D, PaletteMap2D } from "../../util/map-2d";
 import { CHUNK_WIDTH } from "./chunk-constants";
 import { Vector2 } from "three";
-import { BuildGeometryResult } from "../chunk-renderer";
 import { randomElement } from "../../util/random-element";
 
 export class ChunkGeneratorPool {
@@ -19,6 +18,10 @@ export class ChunkGeneratorPool {
             const instance = await new ChunkGeneratorClass(4545);
             this.workers.push(instance);
         }
+    }
+
+    public async buildBaseTerrain(heightMap: Map2D<number>): Promise<Uint8Array> {
+        return this.getWorker().buildBaseTerrain(heightMap.serialize());
     }
 
     public async generateBiomeMap(chunkPosition: Vector2): Promise<Map2D<Biome>> {

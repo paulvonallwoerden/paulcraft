@@ -2,13 +2,15 @@ import { expose } from 'comlink';
 import { boolean, number } from 'fp-ts';
 import SimplexNoise from 'simplex-noise';
 import { Vector2 } from 'three';
+import { STONE_BLOCK_ID } from '../../block/block-ids';
 import { SmoothNoise } from '../../noise/smooth-noise';
 import { indexToXZ } from '../../util/index-to-vector2';
+import { xyzTupelToIndex } from '../../util/index-to-vector3';
 import { ArrayMap2D, deserializeMap2D, Map2D, PaletteMap2D, SerializedMap2D } from '../../util/map-2d';
 import { Biome } from '../biome/biome';
 import { BiomeGenerator } from '../biome/biome-generator';
 import { BiomeMapGenerator } from '../biome/biome-map-generator';
-import { CHUNK_WIDTH } from './chunk-constants';
+import { CHUNK_HEIGHT, CHUNK_WIDTH } from './chunk-constants';
 
 export class ChunkGenerator {
     private readonly biomeGenerator: BiomeGenerator;
@@ -18,6 +20,17 @@ export class ChunkGenerator {
         const smoothNoise = new SmoothNoise(new SimplexNoise(noiseSeed));
         this.biomeMapGenerator = new BiomeMapGenerator(smoothNoise);
         this.biomeGenerator = new BiomeGenerator(smoothNoise);
+    }
+
+    public buildBaseTerrain(heightMap: SerializedMap2D<number>): Uint8Array {
+        const heights = deserializeMap2D(heightMap);
+        const blockData = new Uint8Array(CHUNK_WIDTH * CHUNK_HEIGHT * CHUNK_WIDTH);
+        for (let i = 0; i < CHUNK_WIDTH * CHUNK_WIDTH; i += 1) {
+            const [x, z] = indexToXZ(i, CHUNK_WIDTH).toArray();
+            blockData[xyzTupelToIndex(x, heights.get(x, z), z, CHUNK_WIDTH, CHUNK_WIDTH)] = STONE_BLOCK_ID;
+        }
+
+        return blockData;
     }
 
     public generateBiomeMap(chunkPosition: Vector2): Biome[] {

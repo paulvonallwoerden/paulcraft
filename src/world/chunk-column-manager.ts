@@ -31,7 +31,7 @@ export class ChunkColumnManager {
         for (const candidate of candidates) {
             let chunkColumn = this.getChunkColumn(candidate.x, candidate.z);
             if (!chunkColumn) {
-                chunkColumn = new ChunkColumn([candidate.x, candidate.z], 8);
+                chunkColumn = new ChunkColumn(this, [candidate.x, candidate.z], 8);
                 chunkColumn.register(this.scene);
                 this.setChunkColumn(candidate.x, candidate.z, chunkColumn);
             }
@@ -112,7 +112,7 @@ export class ChunkColumnManager {
         this.chunkColumns[x][z] = chunkColumn;
     }
 
-    private getChunkColumn(x: number, z: number): ChunkColumn | undefined {
+    public getChunkColumn(x: number, z: number): ChunkColumn | undefined {
         if (!this.chunkColumns[x]) {
             return;
         }

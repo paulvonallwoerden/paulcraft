@@ -17,11 +17,12 @@ export class ChunkGeometryBuilderPool extends WorkerPool<ChunkGeometryBuilder> {
         this.blockUvs = blocks.serializeBlockUvs();
     }
 
-    public async buildGeometry(blockData: Uint8Array): Promise<{ solid: BufferGeometry, transparent: BufferGeometry }> {
-        const { solid, transparent } = await this.getWorker().buildGeometry(blockData);
+    public async buildGeometry(blockData: Uint8Array[]): Promise<{ solid: BufferGeometry, water: BufferGeometry, transparent: BufferGeometry }> {
+        const { solid, water, transparent } = await this.getWorker().buildGeometry(blockData);
 
         return {
             solid: this.getGeometryFromChunkMeshData(solid),
+            water: this.getGeometryFromChunkMeshData(water),
             transparent: this.getGeometryFromChunkMeshData(transparent),
         };
     }

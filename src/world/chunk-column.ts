@@ -6,6 +6,7 @@ import { indexToXZ } from "../util/index-to-vector2";
 import { Map2D } from "../util/map-2d";
 import { Biome } from "./biome/biome";
 import { Chunk, CHUNK_HEIGHT, CHUNK_WIDTH } from "./chunk";
+import { ChunkColumnManager } from "./chunk-column-manager";
 import { OakTreeFeature } from "./feature/oak-tree-feature";
 import { WorldFeatureBuilder } from "./feature/world-feature";
 
@@ -32,12 +33,13 @@ export class ChunkColumn implements ITickable {
     private heightMap?: Map2D<number>;
 
     public constructor(
-        readonly position: [number, number],
-        readonly height: number,
+        private readonly manager: ChunkColumnManager,
+        private readonly position: [number, number],
+        private readonly height: number,
     ) {
         this.chunks = [];
         for (let i = 0; i < height; i++) {
-            this.chunks.push(new Chunk(new Vector3(position[0], i, position[1])));
+            this.chunks.push(new Chunk(this, new Vector3(position[0], i, position[1])));
         }
     }
 
@@ -162,6 +164,19 @@ export class ChunkColumn implements ITickable {
 
     public getChunkMeshes(): Mesh[] {
         return this.chunks.flatMap((chunk) => [chunk.solidMesh, chunk.transparentMesh]).filter((chunk) => chunk !== undefined);
+    }
+
+    public getChunk(absolutePos: [number, number, number]): Chunk | undefined {
+        if (this.position[0] === absolutePos[0] && this.position[1] === absolutePos[2]) {
+            return this.chunks[absolutePos[1]];
+        }
+
+        const neighborColumn = this.manager.getChunkColumn(absolutePos[0], absolutePos[2]);
+        if (!neighborColumn) {
+            return undefined;
+        }
+
+        return neighborColumn.chunks[absolutePos[1]];
     }
 
     // private generateFeatures() {

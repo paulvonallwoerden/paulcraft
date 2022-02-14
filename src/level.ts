@@ -48,8 +48,8 @@ export class Level implements ITickable {
         this.player = new Player(
             Game.main.camera,
             Game.main.input,
-            new Vector3(0, 120, 0),
-            new Vector2(degToRad(-90), degToRad(180)),
+            new Vector3(0, 40, 0),
+            new Vector2(degToRad(0), degToRad(0)),
         );
         this.world = new World(this.scene);
     }

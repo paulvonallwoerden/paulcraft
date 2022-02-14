@@ -1,4 +1,4 @@
-import { expose } from "comlink";
+import { expose, transfer } from "comlink";
 import { SerializedBlockUvs } from "../../block/blocks";
 import { BuildGeometryResult, ChunkRenderer } from "../chunk-renderer";
 
@@ -10,13 +10,10 @@ export class ChunkGeometryBuilder {
     public constructor(
         readonly blockUvs: SerializedBlockUvs
     ) {
-        console.log("hey!", (globalThis as any).a, globalThis.toString())
-        this.chunkRenderer = new ChunkRenderer(
-            blockUvs
-        );
+        this.chunkRenderer = new ChunkRenderer(blockUvs);
     }
 
-    public buildGeometry(blockData: Uint8Array): BuildGeometryResult {
+    public buildGeometry(blockData: Uint8Array[]): BuildGeometryResult {
         return this.chunkRenderer.buildGeometry(blockData);
     }
 }

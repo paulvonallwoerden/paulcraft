@@ -116,10 +116,10 @@ function main() {
                 break;
             }
             case 'build-mesh': {
-                const chunkRenderer = new ChunkRenderer(data.blockTextureUvs);
-                const result = chunkRenderer.buildGeometry(data.blockData);
+                // const chunkRenderer = new ChunkRenderer(data.blockTextureUvs);
+                // const result = chunkRenderer.buildGeometry(data.blockData);
 
-                ctx.postMessage({ type: 'build-mesh--complete', position: data.position, result });
+                // ctx.postMessage({ type: 'build-mesh--complete', position: data.position, result });
                 break;
             }
         }

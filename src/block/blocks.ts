@@ -22,7 +22,7 @@ export const grassBlock = new GrassBlock(
     },
 );
 export const dirtBlock = new DirtBlock(DIRT_BLOCK_ID, 'textures/blocks/dirt.png');
-export const WaterBlock = new UniTextureBlock(WATER_BLOCK_ID, 'textures/blocks/light_blue_wool.png');
+export const WaterBlock = new UniTextureBlock(WATER_BLOCK_ID, 'textures/blocks/water.png');
 export const SandBlock = new UniTextureBlock(SAND_BLOCK_ID, 'textures/blocks/sand.png');
 export const OakLogBlock = new BarrelTextureBlock(OAK_LOG_BLOCK_ID, 'textures/blocks/oak_log_top.png', 'textures/blocks/oak_log.png');
 export const OakLeavesBlock = new UniTextureBlock(OAK_LEAVES_BLOCK_ID, 'textures/blocks/oak_leaves_color.png');

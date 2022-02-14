@@ -215,7 +215,7 @@ export class Player {
         if (this.input.isKeyDowned('Q') && this.selectedBlockId > 1) {
             this.selectedBlockId--;
         }
-        if (this.input.isKeyDowned('E') && this.selectedBlockId < Game.main.blocks.getNumberOfBlocks()) {
+        if (this.input.isKeyDowned('E') && this.selectedBlockId + 1 < Game.main.blocks.getNumberOfBlocks()) {
             this.selectedBlockId++;
         }
 
