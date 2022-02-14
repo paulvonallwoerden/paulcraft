@@ -10,7 +10,7 @@ module.exports = {
         publicPath: '',
     },
     resolve: {
-        extensions: [".ts", ".js"],
+        extensions: [".ts", ".js", ".json"],
         modules: ["node_modules"],
     },
     module: {
@@ -18,6 +18,9 @@ module.exports = {
             {
                 test: /\.worker\.ts$/i,
                 loader: "worker-loader",
+                options: {
+                    filename: "[name].[contenthash].worker.js",
+                },  
             },
             {
                 test: /\.ts$/,

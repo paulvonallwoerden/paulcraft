@@ -4,24 +4,28 @@ import * as three from 'three';
 import { degToRad, radToDeg } from "three/src/math/MathUtils";
 // @ts-ignore
 import ParticleSystem from "three-nebula";
-import { AIR_BLOCK_ID, STONE_BLOCK_ID } from "../block/block-ids";
+import { AIR_BLOCK_ID, STONE_BLOCK_ID, SUGAR_CANE_BLOCK_ID } from "../block/block-ids";
 import { Game } from "../game";
 import { Input, LeftMouseButton, RightMouseButton } from "../input/input";
 import { xyzTupelToIndex } from "../util/index-to-vector3";
 import { randomElement } from "../util/random-element";
 
 export class Player {
-    private readonly movementSpeed = 0.025;
+    private readonly walkingSpeed = 0.025;
+    private readonly flyingSpeed = 0.065;
     private readonly raycaster: Raycaster = new Raycaster();
 
     private isOnGround = false;
     private velocity = new Vector3();
 
+    private flying = true;
+    private noclip = false;
+
     private start = false;
 
     private readonly collisionBox = new Box3(new Vector3(-0.35, 0, -0.35), new Vector3(0.35, 1.8, 0.35));
 
-    private readonly planeGeometry = new SphereGeometry(0.05);
+    private readonly planeGeometry = new SphereGeometry(0);
     private readonly collMatZ = new MeshStandardMaterial({ color: 0x0000ff, side: DoubleSide });
     private readonly collMatY = new MeshStandardMaterial({ color: 0x00ff00, side: DoubleSide });
     private readonly collMatX = new MeshStandardMaterial({ color: 0xff0000, side: DoubleSide });
@@ -58,11 +62,11 @@ export class Player {
     private digBlockSounds: AudioBuffer[] = [];
     private readonly audio: Audio;
 
-    private breakBlockParticleSystem: ParticleSystem;
-    private breakBlockParticleEmitter: ParticleSystem.Emitter;
-    private breakBlockParticleRenderer: ParticleSystem.SpriteRenderer;
+    // private breakBlockParticleSystem: ParticleSystem;
+    // private breakBlockParticleEmitter: ParticleSystem.Emitter;
+    // private breakBlockParticleRenderer: ParticleSystem.SpriteRenderer;
 
-    private selectedBlockId: number = 1;
+    private selectedBlockId: number = 9;
 
     public constructor(
         private readonly camera: Camera,
@@ -75,31 +79,44 @@ export class Player {
         Game.main.scene.add(new Box3Helper(this.boxZPos, new Color(0, 0, 0)));
 
         // Game.main.scene.add(new Box3Helper(this.collisionBox, new Color(0, 0, 0)));
+        
+
+        this.collMesh[0].position.setX(0);
+        this.collMesh[0].position.setY(0);
+        this.collMesh[0].position.setZ(0);
         Game.main.scene.add(this.collMesh[0]);
 
-        this.updateMovement(0);
+        this.updateMovement(0, 0);
 
-        this.breakBlockParticleRenderer = new ParticleSystem.SpriteRenderer(Game.main.scene, three);
-        this.breakBlockParticleSystem = new ParticleSystem();
-        this.breakBlockParticleEmitter = new ParticleSystem.Emitter();
-        this.breakBlockParticleEmitter
-            .setRate(new ParticleSystem.Rate(new ParticleSystem.Span(4, 16), new ParticleSystem.Span(0.01)))
-            .setInitializers([
-                new ParticleSystem.Position(new ParticleSystem.PointZone(0, 0)),
-                new ParticleSystem.Mass(1),
-                new ParticleSystem.Radius(6, 12),
-                new ParticleSystem.Life(3),
-                new ParticleSystem.RadialVelocity(45, new ParticleSystem.Vector3D(0, 1, 0), 180),
-            ])
-            .setBehaviours([
-                new ParticleSystem.Alpha(1, 0),
-                new ParticleSystem.Scale(0.1, 1.3),
-                new ParticleSystem.Color(new Color(), new Color()),
-            ]);
-        this.breakBlockParticleSystem
-            .addEmitter(this.breakBlockParticleEmitter)
-            .addRenderer(this.breakBlockParticleRenderer)
-            .emit();
+        // this.breakBlockParticleRenderer = new ParticleSystem.SpriteRenderer(Game.main.scene, three);
+        // this.breakBlockParticleSystem = new ParticleSystem();
+        // this.breakBlockParticleEmitter = new ParticleSystem.Emitter();
+        // this.breakBlockParticleEmitter
+        //     .setRate(new ParticleSystem.Rate(new ParticleSystem.Span(4, 16), new ParticleSystem.Span(0.01)))
+        //     .setInitializers([
+        //         new ParticleSystem.Position(new ParticleSystem.PointZone(0, 0)),
+        //         new ParticleSystem.Mass(1),
+        //         new ParticleSystem.Radius(6, 12),
+        //         new ParticleSystem.Life(3),
+        //         new ParticleSystem.RadialVelocity(45, new ParticleSystem.Vector3D(0, 1, 0), 180),
+        //     ])
+        //     .setBehaviours([
+        //         new ParticleSystem.Alpha(1, 0),
+        //         new ParticleSystem.Scale(0.1, 1.3),
+        //         new ParticleSystem.Color(new Color(), new Color()),
+        //     ]);
+        // this.breakBlockParticleSystem
+        //     .addEmitter(this.breakBlockParticleEmitter)
+        //     .addRenderer(this.breakBlockParticleRenderer)
+        //     .emit();
+    }
+
+    public getChunkPosition(): [number, number, number] {
+        return [
+            Math.floor(this.position.x / 16),
+            Math.floor(this.position.y / 16),
+            Math.floor(this.position.z / 16),
+        ];
     }
 
     public async init() {
@@ -203,6 +220,7 @@ export class Player {
         }
 
         // Movement
+        const movementSpeed = this.flying ? this.flyingSpeed : this.walkingSpeed;
         {
             let inputVector = new Vector3();
             if (this.input.isKeyPressed('W')) {
@@ -225,8 +243,21 @@ export class Player {
                 inputVector = inputVector.normalize();
             }
 
-            if (this.input.isKeyPressed(' ') && this.isOnGround) {
+            if (this.input.isKeyPressed(' ') && (this.isOnGround || this.flying)) {
                 inputVector.setY(0.015);
+            }
+
+            if (this.input.isKeyPressed('Shift') && this.flying) {
+                inputVector.setY(-0.015);
+            }
+
+            // Cheating
+            if (this.input.isKeyDowned('F')) {
+                this.flying = !this.flying;
+            }
+
+            if (this.input.isKeyDowned('N')) {
+                this.noclip = !this.noclip;
             }
 
             const x = Math.cos(this.rotation.y);
@@ -236,34 +267,41 @@ export class Player {
 
             this.velocity.multiply(new Vector3(0.9, 1, 0.9));
             this.velocity.add(new Vector3(
-                (forward.y * inputVector.x + right.y * inputVector.z) * this.movementSpeed,
+                (forward.y * inputVector.x + right.y * inputVector.z) * movementSpeed,
                 inputVector.y,
-                (forward.x * inputVector.x + right.x * inputVector.z) * this.movementSpeed,
+                (forward.x * inputVector.x + right.x * inputVector.z) * movementSpeed,
             ));
-            this.velocity.setY(this.velocity.y - 0.00005 * deltaTime);
+
+            if (!this.flying) {
+                this.velocity.setY(this.velocity.y - 0.00005 * deltaTime);
+            } else {
+                this.velocity.multiply(new Vector3(1, 0.9, 1));
+            }
         }
 
         // let [x, y, z] = this.position.add(this.velocity).toArray();
-        const potentialPosition = this.position.clone().add(this.velocity.clone().multiplyScalar(deltaTime).multiply(new Vector3(this.movementSpeed, 1, this.movementSpeed)));
-        const [potentialX, potentialY, potentialZ] = potentialPosition.toArray()
-        const collisionX = this.createTerrainCollisionBoxes([potentialX, this.position.y, this.position.z]);
-        if (collisionX) this.velocity.setX(0);
-        const collisionY = this.createTerrainCollisionBoxes([this.position.x, potentialY, this.position.z]);
-        if (collisionY) {
-            if (this.velocity.y < 0) {
-                this.isOnGround = true;
+        if (!this.noclip) {
+            const potentialPosition = this.position.clone().add(this.velocity.clone().multiplyScalar(deltaTime).multiply(new Vector3(movementSpeed, 1, movementSpeed)));
+            const [potentialX, potentialY, potentialZ] = potentialPosition.toArray()
+            const collisionX = this.createTerrainCollisionBoxes([potentialX, this.position.y, this.position.z]);
+            if (collisionX) this.velocity.setX(0);
+            const collisionY = this.createTerrainCollisionBoxes([this.position.x, potentialY, this.position.z]);
+            if (collisionY) {
+                if (this.velocity.y < 0) {
+                    this.isOnGround = true;
+                } else {
+                    this.isOnGround = false;
+                }
+    
+                this.velocity.setY(0);
             } else {
                 this.isOnGround = false;
             }
-
-            this.velocity.setY(0);
-        } else {
-            this.isOnGround = false;
+            const collisionZ = this.createTerrainCollisionBoxes([this.position.x, this.position.y, potentialZ]);
+            if (collisionZ) this.velocity.setZ(0);
         }
-        const collisionZ = this.createTerrainCollisionBoxes([this.position.x, this.position.y, potentialZ]);
-        if (collisionZ) this.velocity.setZ(0);
 
-        this.updateMovement(deltaTime);
+        this.updateMovement(deltaTime, movementSpeed);
     }
 
     private createTerrainCollisionBoxes([x, y, z]: Vector3Tuple): boolean {
@@ -281,7 +319,7 @@ export class Player {
                     }
 
                     const block = Game.main.level.getBlockAt(new Vector3(blockX + ix, blockY + iy, blockZ + iz));
-                    const solidBlock = block !== undefined && block !== 0;
+                    const solidBlock = block !== undefined && block !== 0 && block !== SUGAR_CANE_BLOCK_ID;
                     this.terrainCollisionBoxes[boxIndex].set(
                         new Vector3(blockX + ix, blockY + iy, blockZ + iz),
                         new Vector3(blockX + ix + 1, blockY + iy + 1, blockZ + iz + 1),
@@ -360,7 +398,7 @@ export class Player {
         // }
     }
 
-    private updateMovement(deltaTime: number): void {
+    private updateMovement(deltaTime: number, movementSpeed: number): void {
         // let inputMovement = new Vector2(
         //     this.input.isKeyPressed('W') ? -1 : (this.input.isKeyPressed('S') ? 1 : 0),
         //     this.input.isKeyPressed('A') ? -1 : (this.input.isKeyPressed('D') ? 1 : 0),
@@ -378,7 +416,7 @@ export class Player {
         //     yMovement -= 1;
         // }
 
-        this.position.add(this.velocity.clone().multiplyScalar(deltaTime).multiply(new Vector3(this.movementSpeed, 1, this.movementSpeed)));
+        this.position.add(this.velocity.clone().multiplyScalar(deltaTime).multiply(new Vector3(movementSpeed, 1, movementSpeed)));
         // this.position.add(new Vector3(
         //     deltaTime * forward.y * this.velocity.x * this.movementSpeed,
         //     this.velocity.y,

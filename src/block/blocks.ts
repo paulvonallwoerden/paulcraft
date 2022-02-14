@@ -1,15 +1,16 @@
 import { Texture } from "three";
-import { BarrelTextureBlock, Block, MultiTextureBlock, UniTextureBlock } from "./block";
+import { AirBlock, BarrelTextureBlock, Block, DirtBlock, GrassBlock, MultiTextureBlock, SugarCaneBlock, UniTextureBlock } from "./block";
 import { BlockFace, BlockFaces } from "./block-face";
-import { DIRT_BLOCK_ID, GRASS_BLOCK_ID, OAK_LEAVES_BLOCK_ID, OAK_LOG_BLOCK_ID, SAND_BLOCK_ID, STONE_BLOCK_ID, WATER_BLOCK_ID } from "./block-ids";
+import { AIR_BLOCK_ID, DIRT_BLOCK_ID, GLASS_BLOCK_ID, GRASS_BLOCK_ID, MYCELIUM_BLOCK_ID, OAK_LEAVES_BLOCK_ID, OAK_LOG_BLOCK_ID, OAK_PLANKS_BLOCK_ID, SAND_BLOCK_ID, SNOW_BLOCK_ID, STONE_BLOCK_ID, SUGAR_CANE_BLOCK_ID, WATER_BLOCK_ID } from "./block-ids";
 import { TextureAtlas } from "./texture-atlas";
 
 export interface SerializedBlockUvs {
     [blockId: number]: Record<BlockFace, number[]>;
 }
 
+export const airBlock = new AirBlock(AIR_BLOCK_ID);
 export const StoneBlock = new UniTextureBlock(STONE_BLOCK_ID, 'textures/blocks/stone.png');
-export const GrassBlock = new MultiTextureBlock(
+export const grassBlock = new GrassBlock(
     GRASS_BLOCK_ID,
     {
         [BlockFace.TOP]: 'textures/blocks/grass_block_top.png',
@@ -20,11 +21,16 @@ export const GrassBlock = new MultiTextureBlock(
         [BlockFace.BACK]: 'textures/blocks/grass_block_side.png',
     },
 );
-export const DirtBlock = new UniTextureBlock(DIRT_BLOCK_ID, 'textures/blocks/dirt.png');
+export const dirtBlock = new DirtBlock(DIRT_BLOCK_ID, 'textures/blocks/dirt.png');
 export const WaterBlock = new UniTextureBlock(WATER_BLOCK_ID, 'textures/blocks/light_blue_wool.png');
 export const SandBlock = new UniTextureBlock(SAND_BLOCK_ID, 'textures/blocks/sand.png');
 export const OakLogBlock = new BarrelTextureBlock(OAK_LOG_BLOCK_ID, 'textures/blocks/oak_log_top.png', 'textures/blocks/oak_log.png');
 export const OakLeavesBlock = new UniTextureBlock(OAK_LEAVES_BLOCK_ID, 'textures/blocks/oak_leaves_color.png');
+export const SnowBlock = new UniTextureBlock(SNOW_BLOCK_ID, 'textures/blocks/snow.png');
+export const MyceliumBlock = new UniTextureBlock(MYCELIUM_BLOCK_ID, 'textures/blocks/mycelium.png');
+export const sugarCaneBlock = new SugarCaneBlock(SUGAR_CANE_BLOCK_ID, 'textures/blocks/sugar_cane.png');
+export const GlassBlock = new UniTextureBlock(GLASS_BLOCK_ID, 'textures/blocks/glass.png');
+export const OakPlanksBlock = new UniTextureBlock(OAK_PLANKS_BLOCK_ID, 'textures/blocks/oak_planks.png');
 
 export class Blocks {
     private readonly blocksById: Record<number, Block>;

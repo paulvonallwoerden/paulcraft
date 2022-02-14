@@ -26,8 +26,8 @@ export class TextureAtlas {
             throw new Error('Canvas context couldn\'t be created!');
         }
 
-        context.fillStyle = 'pink';
-        context.fillRect(0, 0, this.atlasWidth * this.textureWidth, this.atlasWidth * this.textureWidth);
+        // context.fillStyle = 'pink';
+        // context.fillRect(0, 0, this.atlasWidth * this.textureWidth, this.atlasWidth * this.textureWidth);
 
         for (let i = 0; i < images.length; i++) {
             const [x, y] = indexToXZ(i, this.atlasWidth).toArray();

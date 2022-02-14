@@ -1,0 +1,36 @@
+{
+    "version": "v1",
+    "updatedAt": 0,
+    "chunkColumns": {
+        "0": {
+            "status": "full",
+            "chunks": [
+                {
+                    "blockPalette": [
+                        {
+                            "name": "air"
+                        },
+                        {
+                            "name": "oak_log",
+                            "props": {
+                                "facing": 2
+                            }
+                        }
+                    ],
+                    "blocks": [0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,2,2,2,2,2,2],
+                    "biomePalette": {
+                        "0": {
+                            "name": "forest"
+                        }
+                    },
+                    "biomes": [0]
+                }
+            ],
+            "blockStates": [],
+            "heightMaps": {
+                "surface": []
+            },
+            "entities": []
+        }
+    }
+}

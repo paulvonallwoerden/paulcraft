@@ -1,11 +1,16 @@
-import { AmbientLight, Audio, AudioListener, AudioLoader, Camera, Fog, FogExp2, PerspectiveCamera, Scene, Vector3, WebGLRenderer } from 'three';
-import { Blocks, DirtBlock, GrassBlock, OakLeavesBlock, OakLogBlock, SandBlock, StoneBlock, WaterBlock } from './block/blocks';
+import { AmbientLight, Audio, AudioListener, AudioLoader, Camera, Fog, FogExp2, PerspectiveCamera, Scene, Vector2, Vector3, WebGLRenderer } from 'three';
+import { AirBlock, BlockRenderMode } from './block/block';
+import { AIR_BLOCK_ID } from './block/block-ids';
+import { airBlock, Blocks, dirtBlock, GlassBlock, grassBlock, MyceliumBlock, OakLeavesBlock, OakLogBlock, OakPlanksBlock, SandBlock, SnowBlock, StoneBlock, sugarCaneBlock, WaterBlock } from './block/blocks';
 import { Input } from './input/input';
 import { Level } from './level';
 import { OriginCross } from './origin-cross';
 import { SpectatorCamera } from './spectator-camera';
 import ChunkDataGeneratorWorker from './world/chunk-data-generator.worker.ts';
-import { ChunkMeshData } from './world/chunk-renderer';
+import { BuildGeometryResult } from './world/chunk-renderer';
+import { ChunkGeneratorPool } from './world/chunk/chunk-generator-pool';
+import { ChunkGeometryBuilderPool } from './world/chunk/chunk-geometry-builder-pool';
+import { World } from './world/world';
 
 export class Game {
     public static main: Game;
@@ -26,21 +31,26 @@ export class Game {
     private chunkDataGeneratorWorker!: ChunkDataGeneratorWorker;
     private chunkDataGeneratorWorkerPool: ChunkDataGeneratorWorker[] = [];
 
-    private chunkDataGenerationResults: Record<string, Uint8Array> = {};
-    private chunkGeometryResults: Record<string, ChunkMeshData> = {};
+    private chunkDataGenerationResults: Record<string, Uint8Array | undefined> = {};
+    private chunkGeometryResults: Record<string, BuildGeometryResult> = {};
 
     public readonly input: Input;
 
-    private readonly seed = Date.now();
+    private readonly seed = 'Date.now()ss4221242';
 
     public readonly audioListener: AudioListener = new AudioListener();
     private readonly musicAudio: Audio = new Audio(this.audioListener);
+
+    public readonly chunkGeneratorPool: ChunkGeneratorPool = new ChunkGeneratorPool();
+    public readonly chunkGeometryBuilderPool: ChunkGeometryBuilderPool = new ChunkGeometryBuilderPool();
+
+    // NEW
 
     public constructor(readonly root: HTMLElement) {
         Game.main = this;
 
         this.scene = new Scene();
-        this.scene.fog = new Fog(0xe6fcff, 15 * 16, 15.5 * 16)
+        // this.scene.fog = new Fog(0xe6fcff, 110, 128)
         const { clientWidth: width, clientHeight: height } = root;
 
         const ambientLight = new AmbientLight(0x888888);
@@ -61,13 +71,24 @@ export class Game {
         const originCross = new OriginCross();
         originCross.addToScene(this.scene);
 
+        // this.world = new World(this.scene);
+
         this.onAnimationFrame = this.onAnimationFrame.bind(this);
     }
 
     public async init() {
-        this.blocks = new Blocks([StoneBlock, GrassBlock, DirtBlock, WaterBlock, SandBlock, OakLogBlock, OakLeavesBlock]);
+        console.log("Crafting the blocks...");
+        this.blocks = new Blocks([airBlock, StoneBlock, grassBlock, dirtBlock, WaterBlock, SandBlock, OakLogBlock, OakLeavesBlock, SnowBlock, MyceliumBlock, sugarCaneBlock, GlassBlock, OakPlanksBlock]);
         await this.blocks.init();
 
+        // Workers
+        console.log("Waking up the workers...");
+        await this.chunkGeometryBuilderPool.init(this.blocks);
+        await this.chunkGeometryBuilderPool.addWorkers(4);
+
+        await this.chunkGeneratorPool.addWorkers(1);
+
+        // Legacy
         for (let i = 0; i < 4; i++) {
             const worker = new ChunkDataGeneratorWorker();
             worker.postMessage({
@@ -88,14 +109,15 @@ export class Game {
             this.chunkDataGeneratorWorkerPool.push(worker);
         }
 
-        
+        // Level
+        console.log("Leveling...");
         this.level = new Level(this.scene);
         await this.level.init();
 
-
+        // Audio
+        console.log("Making it sound nice...");
         const musicLoader = new AudioLoader();
         const shimmer = await musicLoader.loadAsync('audio/music/shimmer.mp3')
-
         this.musicAudio.setLoop(true);
         this.musicAudio.setBuffer(shimmer);
         this.musicAudio.setVolume(0.2);
@@ -103,6 +125,8 @@ export class Game {
     }
 
     public generateChunkData(position: Vector3): void {
+        const key = JSON.stringify(position.toArray());
+        this.chunkDataGenerationResults[key] = undefined;
         this.instructWorker({
             type: 'generate',
             position: position.toArray(),
@@ -110,11 +134,12 @@ export class Game {
     }
 
     public buildChunkGeometry(position: Vector3, blockData: Uint8Array): void {
+        // const blockDataN = blockData.map((blockId) => this.blocks.getBlockById(blockId) && this.blocks.getBlockById(blockId).renderMode === BlockRenderMode.Solid ? blockId : AIR_BLOCK_ID);
         this.instructWorker({
             type: 'build-mesh',
             position: position.toArray(),
             blockTextureUvs: this.blocks.serializeBlockUvs(),
-            blockData,
+            blockData: blockData,
         });
     }
 
@@ -137,7 +162,7 @@ export class Game {
         return this.chunkDataGenerationResults[key];
     }
 
-    public getMaybeChunkGeometry(position: Vector3): ChunkMeshData | undefined {
+    public getMaybeChunkGeometry(position: Vector3): BuildGeometryResult | undefined {
         const key = JSON.stringify(position.toArray());
         if (this.chunkGeometryResults[key] === undefined) {
             return undefined;
@@ -180,6 +205,7 @@ export class Game {
         this.level.update(deltaTime);
         this.renderer.render(this.scene, this.camera);
 
+        this.level.lateUpdate(deltaTime);
         this.input.lateUpdate();
     }
 

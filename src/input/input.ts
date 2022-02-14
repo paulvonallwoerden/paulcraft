@@ -13,7 +13,9 @@ export class Input {
     public constructor(readonly domElement: HTMLElement) {
         domElement.addEventListener('keydown', this.onKeyDown.bind(this));
         domElement.addEventListener('keyup', this.onKeyUp.bind(this));
+
         domElement.addEventListener('mousemove', this.onMouseMove.bind(this));
+
         domElement.addEventListener('mousedown', this.onMouseDown.bind(this));
         domElement.addEventListener('mouseup', this.onMouseUp.bind(this));
     }

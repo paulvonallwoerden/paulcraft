@@ -1,5 +1,6 @@
 import { BufferAttribute, BufferGeometry, Euler, Matrix4, Quaternion, Vector3 } from "three";
 import { BlockFace } from "../block/block-face";
+import { AIR_BLOCK_ID, GLASS_BLOCK_ID, SUGAR_CANE_BLOCK_ID, WATER_BLOCK_ID } from "../block/block-ids";
 import type { SerializedBlockUvs } from "../block/blocks";
 import { indexToXZY, xzyToIndex } from "../util/index-to-vector3";
 
@@ -20,6 +21,11 @@ export interface ChunkMeshData {
     uv: Float32Array;
 }
 
+export interface BuildGeometryResult {
+    solid: ChunkMeshData;
+    transparent: ChunkMeshData;
+}
+
 const BLOCK_FACE_NORMAL = {
     [BlockFace.TOP]: new Vector3(0, 1, 0),
     [BlockFace.BOTTOM]: new Vector3(0, -1, 0),
@@ -32,6 +38,8 @@ const BLOCK_FACE_NORMAL = {
 function degToRad(deg: number): number {
     return deg * (Math.PI / 180);
 }
+
+type IsVisible = (blockId: number) => boolean;
 
 export class ChunkRenderer {
     private static readonly blockFaceTRSMatrices: Record<BlockFace, Matrix4> = {
@@ -69,7 +77,20 @@ export class ChunkRenderer {
 
     public constructor(private readonly blockUvs: SerializedBlockUvs) {}
 
-    public buildGeometry(blockData: Uint8Array): ChunkMeshData {
+    public buildGeometry(blockData: Uint8Array): BuildGeometryResult {
+        return {
+            solid: this.buildGeometryWithOptions(
+                blockData,
+                (blockId) => blockId !== AIR_BLOCK_ID && blockId !== GLASS_BLOCK_ID && blockId !== SUGAR_CANE_BLOCK_ID && blockId !== WATER_BLOCK_ID,
+            ),
+            transparent: this.buildGeometryWithOptions(
+                blockData,
+                (blockId) => blockId === GLASS_BLOCK_ID || blockId === SUGAR_CANE_BLOCK_ID || blockId === WATER_BLOCK_ID,
+            ),
+        };
+    }
+
+    private buildGeometryWithOptions(blockData: Uint8Array, isVisible: IsVisible): ChunkMeshData {
         const partialChunkMeshData: PartialChunkMeshData = {
             normals: [],
             triangles: [],
@@ -77,11 +98,16 @@ export class ChunkRenderer {
             vertices: [],
         };
         for (let i = 0; i < blockData.length; i += 1) {
-            if (blockData[i] === 0) {
+            if (!isVisible(blockData[i])) {
                 continue;
             }
 
-            this.renderBlock(blockData, indexToXZY(i, CHUNK_WIDTH, CHUNK_WIDTH), partialChunkMeshData);
+            this.renderBlock(
+                blockData,
+                indexToXZY(i, CHUNK_WIDTH, CHUNK_WIDTH),
+                partialChunkMeshData,
+                isVisible,
+            );
         }
 
         return {
@@ -90,24 +116,20 @@ export class ChunkRenderer {
             normals: new Float32Array(partialChunkMeshData.normals),
             uv: new Float32Array(partialChunkMeshData.uv),
         };
-
-        // const geometry = new BufferGeometry();
-        // const { normals, triangles, uv, vertices } = partialChunkMeshData;
-        // geometry.setAttribute('position', new BufferAttribute(new Float32Array(vertices), 3));
-        // geometry.setAttribute('normal', new BufferAttribute(new Float32Array(normals), 3));
-        // geometry.setAttribute('uv', new BufferAttribute(new Float32Array(uv), 2));
-        // geometry.setIndex(triangles);
-
-        // return geometry;
     }
 
-    private renderBlock(blockData: Uint8Array, position: Vector3, partialChunkMeshData: PartialChunkMeshData) {
-        this.renderBlockFaceIfVisible(blockData, position, BlockFace.TOP, partialChunkMeshData);
-        this.renderBlockFaceIfVisible(blockData, position, BlockFace.BOTTOM, partialChunkMeshData);
-        this.renderBlockFaceIfVisible(blockData, position, BlockFace.LEFT, partialChunkMeshData);
-        this.renderBlockFaceIfVisible(blockData, position, BlockFace.RIGHT, partialChunkMeshData);
-        this.renderBlockFaceIfVisible(blockData, position, BlockFace.FRONT, partialChunkMeshData);
-        this.renderBlockFaceIfVisible(blockData, position, BlockFace.BACK, partialChunkMeshData);
+    private renderBlock(blockData: Uint8Array, position: Vector3, partialChunkMeshData: PartialChunkMeshData, isVisible: IsVisible) {
+        const blockId = blockData[xzyToIndex(position, CHUNK_WIDTH, CHUNK_WIDTH)];
+        if (blockId !== SUGAR_CANE_BLOCK_ID) {
+            this.renderBlockFaceIfVisible(blockData, position, BlockFace.TOP, partialChunkMeshData, isVisible);
+            this.renderBlockFaceIfVisible(blockData, position, BlockFace.BOTTOM, partialChunkMeshData, isVisible);
+            this.renderBlockFaceIfVisible(blockData, position, BlockFace.LEFT, partialChunkMeshData, isVisible);
+            this.renderBlockFaceIfVisible(blockData, position, BlockFace.RIGHT, partialChunkMeshData, isVisible);
+            this.renderBlockFaceIfVisible(blockData, position, BlockFace.FRONT, partialChunkMeshData, isVisible);
+            this.renderBlockFaceIfVisible(blockData, position, BlockFace.BACK, partialChunkMeshData, isVisible);
+        } else {
+            this.renderSugarCane(position, partialChunkMeshData);
+        }
     }
 
     private renderBlockFaceIfVisible(
@@ -115,8 +137,9 @@ export class ChunkRenderer {
         position: Vector3,
         direction: BlockFace,
         partialChunkMeshData: PartialChunkMeshData,
+        isVisible: IsVisible,
     ): void {
-        if (!this.isFaceVisible(blockData, position, direction)) {
+        if (!this.isFaceVisible(blockData, position, direction, isVisible)) {
             return;
         }
 
@@ -124,14 +147,83 @@ export class ChunkRenderer {
         this.renderBlockFace(blockId, direction, position, partialChunkMeshData);
     }
 
-    private isFaceVisible(blockData: Uint8Array, position: Vector3, face: BlockFace): boolean {
-        return this.isTransparentBlock(
-            blockData,
-            position.clone().add(BLOCK_FACE_NORMAL[face]),
+    private renderSugarCane(
+        position: Vector3,
+        partialChunkMeshData: PartialChunkMeshData,
+    ): void {
+        partialChunkMeshData.vertices.push(
+            ...new Vector3(0.15, 0, 0.15).add(position).toArray(),
         );
+        partialChunkMeshData.vertices.push(
+            ...new Vector3(0.85, 0, 0.85).add(position).toArray(),
+        );
+        partialChunkMeshData.vertices.push(
+            ...new Vector3(0.15, 1, 0.15).add(position).toArray(),
+        );
+        partialChunkMeshData.vertices.push(
+            ...new Vector3(0.85, 1, 0.85).add(position).toArray(),
+        );
+
+        partialChunkMeshData.vertices.push(
+            ...new Vector3(0.85, 0, 0.15).add(position).toArray(),
+        );
+        partialChunkMeshData.vertices.push(
+            ...new Vector3(0.15, 0, 0.85).add(position).toArray(),
+        );
+        partialChunkMeshData.vertices.push(
+            ...new Vector3(0.85, 1, 0.15).add(position).toArray(),
+        );
+        partialChunkMeshData.vertices.push(
+            ...new Vector3(0.15, 1, 0.85).add(position).toArray(),
+        );
+
+        const triangleOffset = (partialChunkMeshData.vertices.length / 3) - 8;
+        partialChunkMeshData.triangles.push(
+            triangleOffset,
+            triangleOffset + 1,
+            triangleOffset + 2,
+
+            triangleOffset + 2,
+            triangleOffset + 1,
+            triangleOffset + 3,
+
+            triangleOffset + 4,
+            triangleOffset + 5,
+            triangleOffset + 6,
+
+            triangleOffset + 6,
+            triangleOffset + 5,
+            triangleOffset + 7,
+        );
+
+        const normalsArray = [0, 0, 1];
+        for (let i = 0; i < 8; i++) {
+            partialChunkMeshData.normals.push(...normalsArray);
+        }
+
+        partialChunkMeshData.uv.push(...this.blockUvs[SUGAR_CANE_BLOCK_ID][BlockFace.FRONT]);
+        partialChunkMeshData.uv.push(...this.blockUvs[SUGAR_CANE_BLOCK_ID][BlockFace.FRONT]);
     }
 
-    private isTransparentBlock(blockData: Uint8Array, position: Vector3): boolean {
+    private isFaceVisible(blockData: Uint8Array, position: Vector3, face: BlockFace, isVisible: IsVisible): boolean {
+        const neighbor = this.getNeighborBlock(blockData, position.clone().add(BLOCK_FACE_NORMAL[face]));
+
+        return !isVisible(neighbor) || blockData[xzyToIndex(position, CHUNK_WIDTH, CHUNK_WIDTH)] !== neighbor;
+    }
+
+    private getNeighborBlock(blockData: Uint8Array, position: Vector3): number {
+        if (position.x < 0 || position.y < 0 || position.z < 0) {
+            return AIR_BLOCK_ID;
+        }
+
+        if (position.x >= CHUNK_WIDTH || position.y >= CHUNK_HEIGHT || position.z >= CHUNK_WIDTH) {
+            return AIR_BLOCK_ID;
+        }
+
+        return blockData[xzyToIndex(position, CHUNK_WIDTH, CHUNK_WIDTH)];
+    }
+
+    private isTransparentBlock(blockData: Uint8Array, position: Vector3, isVisible: IsVisible): boolean {
         if (position.x < 0 || position.y < 0 || position.z < 0) {
             return true;
         }
@@ -139,8 +231,9 @@ export class ChunkRenderer {
         if (position.x >= CHUNK_WIDTH || position.y >= CHUNK_HEIGHT || position.z >= CHUNK_WIDTH) {
             return true;
         }
+        const blockId = blockData[xzyToIndex(position, CHUNK_WIDTH, CHUNK_WIDTH)];
 
-        return blockData[xzyToIndex(position, CHUNK_WIDTH, CHUNK_WIDTH)] == 0;
+        return !isVisible(blockId);
     }
 
     public renderBlockFace(
@@ -149,7 +242,15 @@ export class ChunkRenderer {
         additionalTranslation: Vector3,
         partialChunkMeshData: PartialChunkMeshData,
     ): void {
-        const rts = ChunkRenderer.blockFaceTRSMatrices[direction];
+        let rts = ChunkRenderer.blockFaceTRSMatrices[direction];
+        if (blockId === WATER_BLOCK_ID && direction === BlockFace.TOP) {
+            rts = new Matrix4().compose(
+                new Vector3(0, 0.9, 1),
+                new Quaternion().setFromEuler(new Euler(degToRad(-90), 0, 0), true),
+                new Vector3(1, 1, 1),
+            );
+        }
+
         partialChunkMeshData.vertices.push(
             ...new Vector3(0, 0, 0).applyMatrix4(rts).add(additionalTranslation).toArray(),
         );
