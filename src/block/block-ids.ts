@@ -11,3 +11,5 @@ export const MYCELIUM_BLOCK_ID = 9;
 export const SUGAR_CANE_BLOCK_ID = 10;
 export const GLASS_BLOCK_ID = 11;
 export const OAK_PLANKS_BLOCK_ID = 12;
+export const BRICKS_BLOCK_ID = 13;
+export const TNT_BLOCK_ID = 14;

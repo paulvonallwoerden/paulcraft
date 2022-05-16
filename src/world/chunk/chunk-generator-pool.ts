@@ -6,6 +6,7 @@ import { ArrayMap2D, Map2D, PaletteMap2D } from "../../util/map-2d";
 import { CHUNK_WIDTH } from "./chunk-constants";
 import { Vector2 } from "three";
 import { randomElement } from "../../util/random-element";
+import { BlockPos } from "../../block/block-pos";
 
 export class ChunkGeneratorPool {
     private readonly workers: Remote<ChunkGenerator>[] = [];
@@ -20,8 +21,11 @@ export class ChunkGeneratorPool {
         }
     }
 
-    public async buildBaseTerrain(heightMap: Map2D<number>): Promise<Uint8Array> {
-        return this.getWorker().buildBaseTerrain(heightMap.serialize());
+    public async buildBaseTerrain(chunkPosition: BlockPos, heightMap: Map2D<number>): Promise<Uint8Array> {
+        return this.getWorker().buildBaseTerrain(
+            [chunkPosition.x, chunkPosition.y, chunkPosition.z],
+            heightMap.serialize(),
+        );
     }
 
     public async generateBiomeMap(chunkPosition: Vector2): Promise<Map2D<Biome>> {
@@ -30,8 +34,8 @@ export class ChunkGeneratorPool {
         return PaletteMap2D.fromArray(biomes, CHUNK_WIDTH);
     }
 
-    public async generateHeightMap(chunkPosition: Vector2, biomeMap: Map2D<Biome>): Promise<Map2D<number>> {
-        const heights = await this.getWorker().generateHeightMap(chunkPosition, biomeMap.serialize());
+    public async generateHeightMap(chunkPosition: [number, number]): Promise<Map2D<number>> {
+        const heights = await this.getWorker().generateHeightMap(chunkPosition);
 
         return new ArrayMap2D(heights, CHUNK_WIDTH);
     }

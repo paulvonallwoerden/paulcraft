@@ -3,6 +3,7 @@ import { Level } from "../level";
 import { World } from "../world/world";
 import { BlockFace } from "./block-face";
 import { AIR_BLOCK_ID, DIRT_BLOCK_ID, GRASS_BLOCK_ID, SUGAR_CANE_BLOCK_ID } from "./block-ids";
+import { BlockModel } from "./block-model/block-model";
 import { BlockPos } from "./block-pos";
 
 export enum BlockRenderMode {
@@ -10,20 +11,29 @@ export enum BlockRenderMode {
     CustomMesh,
 }
 
-export abstract class Block {
-    public readonly renderMode: BlockRenderMode = BlockRenderMode.Solid;
+export class Block {
+    public constructor(
+        public readonly name: string,
+        public readonly blockModel: BlockModel,
+    ) {}
 
-    public constructor(public readonly id: number) {}
-
-    public abstract getTexture(face: BlockFace): string;
-    public abstract getTextures(): string[];
-
-    public onTick(world: Level, pos: BlockPos): void {}
-
-    public getCustomMesh(): Mesh | undefined {
-        return undefined;
-    }
+    public static onRandomTick(level: Level, pos: BlockPos) {}
 }
+
+// export abstract class Block {
+//     public readonly renderMode: BlockRenderMode = BlockRenderMode.Solid;
+
+//     public constructor(public readonly id: number) {}
+
+//     public abstract getTexture(face: BlockFace): string;
+//     public abstract getTextures(): string[];
+
+//     public onTick(world: Level, pos: BlockPos): void {}
+
+//     public getCustomMesh(): Mesh | undefined {
+//         return undefined;
+//     }
+// }
 
 export class AirBlock extends Block {
     public getTexture(): string {
@@ -173,3 +183,18 @@ export class SugarCaneBlock extends UniTextureBlock {
         return mesh;
      }
 }
+
+export class TntBlock extends UniTextureBlock {
+    private readonly blastRadius = 3;
+
+    public onTick(level: Level, pos: BlockPos): void {
+        for (let x = -this.blastRadius; x <= this.blastRadius; x++) {
+            for (let y = -this.blastRadius; y <= this.blastRadius; y++) {
+                for (let z = -this.blastRadius; z <= this.blastRadius; z++) {
+                   level.setBlockAt(new Vector3(pos.x + x, pos.y + y, pos.z + z), AIR_BLOCK_ID);
+                }
+            }
+        }
+    }
+}
+

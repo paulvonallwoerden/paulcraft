@@ -1,6 +1,7 @@
 import SimplexNoise from "simplex-noise";
-import { Mesh, Scene, Vector2, Vector2Tuple, Vector3, Vector3Tuple } from "three";
+import { BoxGeometry, Color, Mesh, MeshStandardMaterial, Scene, SphereGeometry, Vector2, Vector2Tuple, Vector3, Vector3Tuple } from "three";
 import { AIR_BLOCK_ID, GRASS_BLOCK_ID, MYCELIUM_BLOCK_ID } from "../block/block-ids";
+import { Game } from "../game";
 import { ITickable } from "../tickable";
 import { indexToXZ } from "../util/index-to-vector2";
 import { Map2D } from "../util/map-2d";
@@ -9,35 +10,35 @@ import { Chunk, CHUNK_HEIGHT, CHUNK_WIDTH } from "./chunk";
 import { ChunkColumnManager } from "./chunk-column-manager";
 import { OakTreeFeature } from "./feature/oak-tree-feature";
 import { WorldFeatureBuilder } from "./feature/world-feature";
+import pEachSeries from "p-each-series";
+import pAll from "p-all";
 
 export enum ChunkColumnPriority {
-    // Render
+    // Render & Tick
     High = 3,
-    // Don't render; just tick
+    // Render
     Middle = 2,
-    // Don't render; don't tick; just generate
+    // Generate
     Low = 1,
-    // Idle - do nothing
-    Lowest = -1,
+    // Prepare
+    Lowest = 0,
 }
 
-export class ChunkColumn implements ITickable {
-    private isDirty = true;
-
-    private fullyGenerated = false;
-
-    public readonly chunks: Chunk[];
-
+export class ChunkColumn implements ITickable {    
+    public readonly chunks: Chunk[] = [];
+    public heightMap?: Map2D<number>;
+    
+    private chunksBuilt = false;
+    private chunksGenerated = false;
     private priority: ChunkColumnPriority = ChunkColumnPriority.Lowest;
-    private biomeMap?: Map2D<Biome>;
-    private heightMap?: Map2D<number>;
+
+    private indiMesh = new Mesh(new BoxGeometry(4, 0.2, 4), new MeshStandardMaterial({ color: 'white' }));
 
     public constructor(
         private readonly manager: ChunkColumnManager,
         private readonly position: [number, number],
-        private readonly height: number,
+        height: number,
     ) {
-        this.chunks = [];
         for (let i = 0; i < height; i++) {
             this.chunks.push(new Chunk(this, new Vector3(position[0], i, position[1])));
         }
@@ -45,54 +46,104 @@ export class ChunkColumn implements ITickable {
 
     public register(scene: Scene) {
         this.chunks.forEach((chunk) => chunk.register(scene));
+        // scene.add(this.indiMesh);
+        // this.indiMesh.position.set(this.position[0] * 16 + 6, 64, this.position[1] * 16 + 6);
     }
 
     public unregister(scene: Scene) {
         this.chunks.forEach((chunk) => chunk.unregister(scene));
+        // scene.remove(this.indiMesh);
     }
 
-    public setPriority(priority: ChunkColumnPriority) {
+    public async generatePrototype() {
+        if (this.heightMap) {
+            return;
+        }
+
+        this.heightMap = await Game.main.chunkGeneratorPool.generateHeightMap(this.position);
+    }
+
+    public async setPriority(priority: ChunkColumnPriority) {
         if (this.priority === priority) {
             return;
         }
 
-        if (priority > ChunkColumnPriority.Low && priority > this.priority) {
-            if (!this.fullyGenerated) {
-                this.chunks.forEach((chunk) => chunk.generateTerrain());
-                this.fullyGenerated = true;
-            }
-        }
-
-        if (priority >= ChunkColumnPriority.Middle && priority > this.priority) {
-
-        }
-
+        const oldPriority = this.priority;
         this.priority = priority;
+
+        if (priority >= ChunkColumnPriority.Low && priority > oldPriority) {
+            if (!this.chunksGenerated) {
+                await pEachSeries(this.chunks, (chunk) => chunk.generateTerrain(true));
+                this.chunksGenerated = true;
+            }
+
+            this.manager.requestChunkUpdate(this);
+        }
     }
 
-    public load(): void {
-        // this.chunks.forEach((chunk) => chunk.generateTerrain());
+    public async requestedUpdate(): Promise<void> {
+        if (
+            this.chunksGenerated
+            && !this.chunksBuilt
+            && this.areNeighborsGenerated()
+        ) {
+            await Promise.all(this.chunks.map((chunk) => chunk.buildMesh()));
+            this.chunksBuilt = true;
+            this.requestNeighborColumnsToUpdate();
+        }
+    }
+
+    private areNeighborsGenerated() {
+        return [[-1, 0], [1, 0], [0, -1], [0, 1]].reduce((result, pos) => {
+            if (!result) {
+                return false;
+            }
+
+            return this.manager.getChunkColumn(
+                this.position[0] + pos[0],
+                this.position[1] + pos[1],
+            )?.chunksGenerated ?? false;
+        }, true);
+    }
+
+    private requestNeighborColumnsToUpdate() {
+        [[-1, 0], [1, 0], [0, -1], [0, 1]].forEach((pos) => {
+            const neighbor = this.manager.getChunkColumn(
+                this.position[0] + pos[0],
+                this.position[1] + pos[1],
+            );
+            if (!neighbor) {
+                return;
+            }
+
+            this.manager.requestChunkUpdate(neighbor);
+        });
     }
 
     public onTick(deltaTime: number): void {
+        this.indiMesh.material.color = (function(c: ChunkColumn): Color {
+            let r = 0;
+            let g = 0;
+            let b = 0;
+            if (c.chunksGenerated) {
+                r = 1;
+            }
+            if (c.chunksBuilt) {
+                g = 1;
+            }
+            if (c.priority >= ChunkColumnPriority.Low) {
+                b = 1;
+            }
+
+            return new Color(r, g, b);
+        }(this));
+
         this.chunks.forEach((chunk) => {
             chunk.onTick(deltaTime);
             if (this.priority === ChunkColumnPriority.High) {
                 chunk.tickBlocks();
             }
         });
-
-        if (!this.isDirty) {
-            return;
-        }
-
-        // console.log(this.chunks.filter((chunk) => chunk.isGenerated).length);
-
-        const isChunkGenerating = this.chunks.some((chunk) => !chunk.isGenerated);
-        if (!isChunkGenerating) {
-            // this.chunks.forEach((chunk) => chunk.buildMesh());
-            this.isDirty = false;
-        }
     }
 
     public lateUpdate(deltaTime: number) {
@@ -101,47 +152,6 @@ export class ChunkColumn implements ITickable {
         }
 
         this.chunks.forEach((chunk) => chunk.lateUpdate(deltaTime));
-    }
-
-    private generateFeatures() {
-        const featureBuilder: WorldFeatureBuilder = {
-            setBlock: ([x, y, z], blockId) => {
-                const chunkRow = Math.floor(y / CHUNK_HEIGHT);
-                const chunkLocalY = y - chunkRow * CHUNK_HEIGHT;
-
-                // TODO: Handle by placing block in neighbor chunk column.
-                if (x < 0 || z < 0 || x >= CHUNK_WIDTH || z >= CHUNK_WIDTH) return;
-
-                this.chunks[chunkRow].setBlock([x, chunkLocalY, z], blockId);
-            },
-        };
-
-        // const numberOfTrees = Math.round(this.simplexNoise.noise2D(this.position.x * 0.1, this.position.y * 0.1) + 1);
-        // const oakTreeFeature = new OakTreeFeature();
-        // for (let i = 0; i < numberOfTrees; i++) {
-        //     const x = Math.round(Math.random() * 16);
-        //     const z = Math.round(Math.random() * 16);
-        //     const y = this.getHeightAt([x, z]);
-        //     if (y < 0) continue;
-        //     if (this.getBlockAt([x, y, z]) !== GRASS_BLOCK_ID) continue;
-
-        //     oakTreeFeature.place([x, y + 1, z], featureBuilder);
-        // }
-    }
-
-    private getHeightAt([x, z]: Vector2Tuple): number {
-        for (let i = 0; i < this.chunks.length; i++) {
-            for (let y = 0; y < CHUNK_HEIGHT; y++) {
-                const block = this.chunks[i].getBlock([x, y, z]);
-                if (block !== AIR_BLOCK_ID) {
-                    continue;
-                }
-
-                return i * CHUNK_HEIGHT + y - 1;
-            }
-        }
-
-        return this.height * CHUNK_HEIGHT;
     }
 
     public setBlockAt([x, y, z]: Vector3Tuple, blockId: number): void {
@@ -178,16 +188,4 @@ export class ChunkColumn implements ITickable {
 
         return neighborColumn.chunks[absolutePos[1]];
     }
-
-    // private generateFeatures() {
-    //     if (this.position.y !== 0) {
-    //         return;
-    //     }
-
-    //     const builder: WorldFeatureBuilder = {
-    //         setBlock: ([x, y, z], blockId) => this.blockData[xyzTupelToIndex(x, y, z, CHUNK_WIDTH, CHUNK_HEIGHT)] = blockId,
-    //     };
-    //     const oakTreeFeature = new OakTreeFeature();
-    //     oakTreeFeature.place([0, 0, 0], builder);
-    // }
 }

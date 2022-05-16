@@ -10,7 +10,7 @@ export class World {
     private readonly chunkColumnManager: ChunkColumnManager;
 
     public constructor(readonly scene: Scene) {
-        this.chunkColumnManager = new ChunkColumnManager(scene, 7, 5);
+        this.chunkColumnManager = new ChunkColumnManager(scene, 7, 3, 4);
         // this.chunkColumnManager = new ChunkColumnManager(scene, 14, 3);
     }
 
@@ -20,6 +20,10 @@ export class World {
 
     public tick(deltaTime: number) {
         this.chunkColumnManager.tick(deltaTime);
+    }
+
+    public update(deltaTime: number) {
+        this.chunkColumnManager.update(deltaTime);
     }
 
     public lateUpdate(deltaTime: number) {

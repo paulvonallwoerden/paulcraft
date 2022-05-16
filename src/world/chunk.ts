@@ -13,13 +13,10 @@ export const CHUNK_WIDTH = 16;
 export const CHUNK_HEIGHT = 16;
 
 export class Chunk implements ITickable {
-    public isGenerated = false;
     public isBlockDataDirty = false;
     public shouldRebuild = false;
 
     private blockData: Uint8Array = new Uint8Array(CHUNK_WIDTH * CHUNK_WIDTH * CHUNK_HEIGHT);
-    private isWaitingForBlockData = false;
-    private isWaitingForGeometryData = false;
     private timeSinceFirstRender = -1;
 
     public readonly solidMesh: Mesh;
@@ -30,25 +27,10 @@ export class Chunk implements ITickable {
         private readonly chunkColumn: ChunkColumn,
         private readonly position: Vector3,
     ) {
-        const chunkMaterial = new MeshStandardMaterial({
-            map: Game.main.blocks.getBlockTexture(),
-            opacity: 0,
-            transparent: true,
-        });
-        this.solidMesh = new Mesh(undefined, chunkMaterial);
-
-        const waterMaterial = new MeshStandardMaterial({
-            map: Game.main.blocks.getBlockTexture(),
-            opacity: 0.8,
-            transparent: true,
-        });
-        this.waterMesh = new Mesh(undefined, waterMaterial);
-
-        const transparentMaterial = new MeshStandardMaterial({
-            map: Game.main.blocks.getBlockTexture(),
-            alphaTest: 0.5,
-        });
-        this.transparentMesh = new Mesh(undefined, transparentMaterial);
+        const { solid, transparent, water } = Game.main.blocks.getBlockMaterials();
+        this.solidMesh = new Mesh(undefined, solid);
+        this.transparentMesh = new Mesh(undefined, transparent);
+        this.waterMesh = new Mesh(undefined, water);
     }
 
     public register(scene: Scene) {
@@ -56,7 +38,6 @@ export class Chunk implements ITickable {
         this.solidMesh.position.set(worldPosition.x, worldPosition.y, worldPosition.z);
         this.waterMesh.position.set(worldPosition.x, worldPosition.y, worldPosition.z);
         this.transparentMesh.position.set(worldPosition.x, worldPosition.y, worldPosition.z);
-
         scene.add(this.solidMesh);
         scene.add(this.waterMesh);
         scene.add(this.transparentMesh);
@@ -68,30 +49,7 @@ export class Chunk implements ITickable {
         scene.remove(this.transparentMesh);
     }
 
-    public generateTerrain() {
-        this.generateBlocks();
-    }
-
-    public onTick(deltaTime: number): void {
-        this.waitForBlockData();
-        // this.waitForGeometryData();
-    }
-
-    public lateUpdate(deltaTime: number) {
-        if (this.isBlockDataDirty || this.shouldRebuild) {
-            this.isBlockDataDirty = false;
-            this.shouldRebuild = false;
-            this.buildMesh();
-        }
-
-        if (!Array.isArray(this.solidMesh.material)) {
-            if (this.timeSinceFirstRender >= 0 && this.solidMesh.material.transparent) {
-                this.timeSinceFirstRender += deltaTime;
-                this.solidMesh.material.opacity = this.timeSinceFirstRender / 1000;
-                this.solidMesh.material.transparent = this.timeSinceFirstRender < 1000;
-            }
-        }
-    }
+    public onTick(deltaTime: number): void {}
 
     public tickBlocks() {
         for (let i = 0; i < 10; i++) {
@@ -115,49 +73,43 @@ export class Chunk implements ITickable {
         });
     }
 
-    private waitForBlockData() {
-        if (!this.isWaitingForBlockData) {
-            return;
+    public lateUpdate(deltaTime: number) {
+        if (this.isBlockDataDirty || this.shouldRebuild) {
+            this.isBlockDataDirty = false;
+            this.shouldRebuild = false;
+            this.buildMesh();
         }
 
-        const newBlockData = Game.main.getMaybeChunkData(this.position);
-        if (!newBlockData) {
-            return;
+        if (this.timeSinceFirstRender >= 0 && !Array.isArray(this.solidMesh.material) && this.solidMesh.material.transparent) {
+            this.timeSinceFirstRender += deltaTime;
+            this.solidMesh.material.opacity = this.timeSinceFirstRender / 1000;
+            this.solidMesh.material.transparent = this.timeSinceFirstRender < 1000;
         }
-
-        this.blockData = newBlockData;
-        this.isBlockDataDirty = true;
-
-        this.isWaitingForBlockData = false;
     }
 
-    private waitForGeometryData() {
-        if (!this.isWaitingForGeometryData) {
+    public async generateTerrain(skipMeshBuild = false) {
+        const { heightMap } = this.chunkColumn;
+        if (!heightMap) {
             return;
         }
 
-        const newGeometryData = Game.main.getMaybeChunkGeometry(this.position);
-        if (!newGeometryData) {
-            return;
-        }
-
-        // this.renderMeshFromChunkMeshData(this.solidMesh, newGeometryData.solid);
-        // this.renderMeshFromChunkMeshData(this.transparentMesh, newGeometryData.transparent);
-        // this.isWaitingForGeometryData = false;
+        this.blockData = await Game.main.chunkGeneratorPool.buildBaseTerrain(
+            this.position,
+            heightMap,
+        );
+        this.isBlockDataDirty = !skipMeshBuild;
     }
 
-    private buildMesh() {
+    public async buildMesh() {
         const blockData: Uint8Array[] = [this, ...this.getNeighborChunks()].map((chunk) => chunk?.blockData ?? new Uint8Array());
+        const geometry = await Game.main.chunkGeometryBuilderPool.buildGeometry(blockData);
+        this.solidMesh.geometry = geometry.solid;
+        this.waterMesh.geometry = geometry.water;
+        this.transparentMesh.geometry = geometry.transparent;
 
-        Game.main.chunkGeometryBuilderPool.buildGeometry(blockData).then((geometry) => {
-            this.solidMesh.geometry = geometry.solid;
-            this.waterMesh.geometry = geometry.water;
-            this.transparentMesh.geometry = geometry.transparent;
-
-            if (this.timeSinceFirstRender < 0) {
-                this.timeSinceFirstRender = 0;
-            }
-        });
+        if (this.timeSinceFirstRender < 0) {
+            this.timeSinceFirstRender = 0;
+        }
     }
 
     private getNeighborChunks() {
@@ -192,10 +144,5 @@ export class Chunk implements ITickable {
         }
 
         return this.blockData![index];
-    }
-
-    private generateBlocks() {
-        Game.main.generateChunkData(this.position);
-        this.isWaitingForBlockData = true;
     }
 }

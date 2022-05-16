@@ -8,6 +8,7 @@
     "serve": "webpack-dev-server"
   },
   "devDependencies": {
+    "@types/stats.js": "^0.17.0",
     "@types/three": "^0.137.0",
     "serve": "^13.0.2",
     "ts-loader": "^9.2.6",
@@ -24,8 +25,11 @@
     "curve-interpolator": "^2.0.8",
     "fp-ts": "^2.11.8",
     "io-ts": "^2.2.16",
+    "p-all": "^4.0.0",
+    "p-each-series": "^3.0.0",
     "p-map": "^5.3.0",
     "simplex-noise": "^3.0.1",
+    "stats.js": "^0.17.0",
     "three": "^0.137.5",
     "three-nebula": "^10.0.3"
   }

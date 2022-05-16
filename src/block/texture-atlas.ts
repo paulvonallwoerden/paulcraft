@@ -3,6 +3,7 @@ import pMap from "p-map";
 import { indexToXZ } from "../util/index-to-vector2";
 
 // FIXME: The same texture will be included multiple times.
+// TODO: Add mipmaps
 export class TextureAtlas {
     private atlas?: Texture;
     private readonly atlasWidth: number;

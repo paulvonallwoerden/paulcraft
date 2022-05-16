@@ -19,7 +19,7 @@ export class Player {
     private velocity = new Vector3();
 
     private flying = true;
-    private noclip = false;
+    private noclip = true;
 
     private start = false;
 
@@ -244,7 +244,7 @@ export class Player {
             }
 
             if (this.input.isKeyPressed(' ') && (this.isOnGround || this.flying)) {
-                inputVector.setY(0.015);
+                inputVector.setY(0.012);
             }
 
             if (this.input.isKeyPressed('Shift') && this.flying) {

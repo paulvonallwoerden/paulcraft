@@ -1,7 +1,7 @@
 import { AmbientLight, Audio, AudioListener, AudioLoader, Camera, Fog, FogExp2, PerspectiveCamera, Scene, Vector2, Vector3, WebGLRenderer } from 'three';
 import { AirBlock, BlockRenderMode } from './block/block';
 import { AIR_BLOCK_ID } from './block/block-ids';
-import { airBlock, Blocks, dirtBlock, GlassBlock, grassBlock, MyceliumBlock, OakLeavesBlock, OakLogBlock, OakPlanksBlock, SandBlock, SnowBlock, StoneBlock, sugarCaneBlock, WaterBlock } from './block/blocks';
+import { airBlock, Blocks, BricksBlock, dirtBlock, GlassBlock, grassBlock, MyceliumBlock, OakLeavesBlock, OakLogBlock, OakPlanksBlock, SandBlock, SnowBlock, StoneBlock, sugarCaneBlock, tntBlock, WaterBlock } from './block/blocks';
 import { Input } from './input/input';
 import { Level } from './level';
 import { OriginCross } from './origin-cross';
@@ -11,6 +11,7 @@ import { BuildGeometryResult } from './world/chunk-renderer';
 import { ChunkGeneratorPool } from './world/chunk/chunk-generator-pool';
 import { ChunkGeometryBuilderPool } from './world/chunk/chunk-geometry-builder-pool';
 import { World } from './world/world';
+import Stats from 'stats.js';
 
 export class Game {
     public static main: Game;
@@ -28,15 +29,13 @@ export class Game {
     public blocks!: Blocks;
     public level!: Level;
 
-    private chunkDataGeneratorWorker!: ChunkDataGeneratorWorker;
     private chunkDataGeneratorWorkerPool: ChunkDataGeneratorWorker[] = [];
-
     private chunkDataGenerationResults: Record<string, Uint8Array | undefined> = {};
     private chunkGeometryResults: Record<string, BuildGeometryResult> = {};
 
     public readonly input: Input;
 
-    private readonly seed = 'Date.now()ss4221242';
+    private readonly seed = 'ijn3fi3fin3fim';
 
     public readonly audioListener: AudioListener = new AudioListener();
     private readonly musicAudio: Audio = new Audio(this.audioListener);
@@ -44,13 +43,13 @@ export class Game {
     public readonly chunkGeneratorPool: ChunkGeneratorPool = new ChunkGeneratorPool();
     public readonly chunkGeometryBuilderPool: ChunkGeometryBuilderPool = new ChunkGeometryBuilderPool();
 
-    // NEW
+    private readonly stats: Stats = new Stats();
 
     public constructor(readonly root: HTMLElement) {
         Game.main = this;
 
         this.scene = new Scene();
-        // this.scene.fog = new Fog(0xe6fcff, 110, 128)
+        this.scene.fog = new Fog(0xe6fcff, 90, 110)
         const { clientWidth: width, clientHeight: height } = root;
 
         const ambientLight = new AmbientLight(0x888888);
@@ -73,12 +72,21 @@ export class Game {
 
         // this.world = new World(this.scene);
 
+        this.stats.showPanel(0);
+        root.appendChild(this.stats.dom);
+
+        // Observe a scene or a renderer
+        if (typeof (window as any).__THREE_DEVTOOLS__ !== 'undefined') {
+            (window as any).__THREE_DEVTOOLS__.dispatchEvent(new CustomEvent('observe', { detail: this.scene }));
+            (window as any).__THREE_DEVTOOLS__.dispatchEvent(new CustomEvent('observe', { detail: this.renderer }));
+        }
+
         this.onAnimationFrame = this.onAnimationFrame.bind(this);
     }
 
     public async init() {
         console.log("Crafting the blocks...");
-        this.blocks = new Blocks([airBlock, StoneBlock, grassBlock, dirtBlock, WaterBlock, SandBlock, OakLogBlock, OakLeavesBlock, SnowBlock, MyceliumBlock, sugarCaneBlock, GlassBlock, OakPlanksBlock]);
+        this.blocks = new Blocks([airBlock, StoneBlock, grassBlock, dirtBlock, WaterBlock, SandBlock, OakLogBlock, OakLeavesBlock, SnowBlock, MyceliumBlock, sugarCaneBlock, GlassBlock, OakPlanksBlock, BricksBlock, tntBlock]);
         await this.blocks.init();
 
         // Workers
@@ -183,12 +191,14 @@ export class Game {
             return;
         }
 
+        this.stats.begin();
         if (this.lastAnimationFrameAt === 0) {
             this.lastAnimationFrameAt = time;
         }
         const deltaTime = time - this.lastAnimationFrameAt;
         this.lastAnimationFrameAt = time;
         this.loop(deltaTime);
+        this.stats.end();
 
         window.requestAnimationFrame(this.onAnimationFrame);
     }

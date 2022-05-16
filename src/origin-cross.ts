@@ -6,10 +6,6 @@ export class OriginCross {
     private readonly materialY = new LineBasicMaterial( { color: 0x00ff00 } );
     private readonly materialZ = new LineBasicMaterial( { color: 0x0000ff } );
 
-    private readonly pointsX = [new Vector3(0, 0, 0), new Vector3(1, 0, 0)];
-    private readonly pointsY = [new Vector3(0, 0, 0), new Vector3(0, 1, 0)];
-    private readonly pointsZ = [new Vector3(0, 0, 0), new Vector3(0, 0, 1)];
-    
     private readonly geometryX = new CylinderGeometry(0.05, 0.05, 1, 8, 1);
     private readonly geometryY = new CylinderGeometry(0.05, 0.05, 1, 8, 1);
     private readonly geometryZ = new CylinderGeometry(0.05, 0.05, 1, 8, 1);
@@ -52,4 +48,3 @@ export class ThinOriginCross {
         scene.add(this.lineX, this.lineY, this.lineZ);
     }
 }
-

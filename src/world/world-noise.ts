@@ -1,6 +1,8 @@
 import SimplexNoise from "simplex-noise";
 import { CurveInterpolator } from 'curve-interpolator';
 import { clamp } from "../util/clamp";
+import bezierEasing from "bezier-easing";
+import { lerp } from "three/src/math/MathUtils";
 
 export class WorldNoise {
     private simplexNoise: SimplexNoise;
@@ -8,10 +10,10 @@ export class WorldNoise {
         [0, 30],
         [0.5, 40],
         [1, 64],
-        [1.05, 68],
+        [1.001, 80],
         [1.24, 90],
         [2, 90],
-    ], { tension: 1, arcDivisions: 1 });
+    ], { tension: 1, arcDivisions: 0 });
     private erosionCurveInterpolator = new CurveInterpolator([
         [0, 0],
         [0.5, 0],
@@ -19,6 +21,8 @@ export class WorldNoise {
         [0.9, 70],
         [1, 74],
     ], { tension: 1, arcDivisions: 1 });
+
+    private erosionEasing = bezierEasing(.41, .04, .61, 1);
 
     public constructor(seed: number) {
         this.simplexNoise = new SimplexNoise(seed);
@@ -43,16 +47,38 @@ export class WorldNoise {
             octaves: 5,
             octavePower: 3,
             amplitude: 2,
-            frequency: 0.0004523,
+            frequency: 0.001523,
         });
-        const vector = this.erosionCurveInterpolator.getPointAt(
-            noiseValue * 0.5 + 0.5,
-        );
+        // if (noiseValue <= 0) {
+        //     return 63;
+        // }
 
-        return Math.round(vector[1]);
+        // const vector = -0.58 * Math.pow(noiseValue, 5) + 1.4 * Math.pow(noiseValue, 2) + 0.1 * noiseValue;
+        const vector = this.erosionEasing(noiseValue);
+
+        return Math.round(vector * 64 + 63) - 1;
+
+        // const vector = this.erosionCurveInterpolator.getPointAt(
+        //     noiseValue * 0.5 + 0.5,
+        // );
+
+        // return Math.round(vector[1]);
     }
 
-    public sample3DFactor() {}
+    public sample3DFactor(x: number, y: number) {
+        return this.sampleNoise2D(x, y, {
+            octaves: 3,
+            octavePower: 2,
+            amplitude: 1,
+            frequency: 0.003523,
+        });
+    }
+
+    public sample3D(x: number, y: number, z: number) {
+        const value = this.simplexNoise.noise3D(x * 0.01, y * 0.01, z * 0.01);
+
+        return lerp(1, -1, (clamp(value, -1, 1) + 1) / 2);
+    }
 
     // public sampleRainfall(pos: Vector2) {
     //     const regionNoise = this.smoothNoise.sample2DV(pos, 0.0005);
