@@ -22,7 +22,7 @@ export class ChunkGeneratorPool {
     }
 
     public async buildBaseTerrain(chunkPosition: BlockPos, heightMap: Map2D<number>): Promise<Uint8Array> {
-        return this.getWorker().buildBaseTerrain(
+        return this.getWorker().buildTerrain(
             [chunkPosition.x, chunkPosition.y, chunkPosition.z],
             heightMap.serialize(),
         );
