@@ -1,6 +1,6 @@
 # Paulcraft
 
-A clone of Minecraft that runs in the browser.
+A clone of Minecraft that runs in the browser. **[Play it now!](https://paulvonallwoerden.github.io/paulcraft/dist/index.html)**
 
 ## Details
 
