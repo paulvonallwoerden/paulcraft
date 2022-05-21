@@ -1,7 +1,7 @@
 import { Remote, wrap } from "comlink";
 import { Blocks, SerializedBlockModels } from "../../block/blocks";
 import { WorkerPool } from "../../worker/worker-pool";
-import { ChunkMeshData } from "../chunk-renderer";
+import { ChunkBlockData, ChunkMeshData } from "../chunk-renderer";
 import ChunkGeometryBuilderWorker from "./chunk-geometry-builder.worker.ts";
 import { ChunkGeometryBuilder } from "./chunk-geometry-builder.worker";
 import { BufferAttribute, BufferGeometry } from "three";
@@ -17,7 +17,7 @@ export class ChunkGeometryBuilderPool extends WorkerPool<ChunkGeometryBuilder> {
         this.blockModels = blocks.serializeBlockModels();
     }
 
-    public async buildGeometry(blockData: Uint8Array[]): Promise<{ solid: BufferGeometry, water: BufferGeometry, transparent: BufferGeometry }> {
+    public async buildGeometry(blockData: ChunkBlockData): Promise<{ solid: BufferGeometry, water: BufferGeometry, transparent: BufferGeometry }> {
         const { solid, water, transparent } = await this.getWorker().buildGeometry(blockData);
 
         return {

@@ -69,6 +69,10 @@ export class Level implements ITickable {
         return this.world.getBlock({ x: pos.x, y: pos.y, z: pos.z });
     }
 
+    public getWorld(): World {
+        return this.world;
+    }
+
     public getChunkMeshes(): Mesh[] {
         return this.world.__tempGetChunkMeshes();
     }

@@ -1,11 +1,11 @@
-import { Vector3 } from "three";
 import { Level } from "../level";
+import { randomElement } from "../util/random-element";
+import { World } from "../world/world";
 import { Block } from "./block";
 import { BlockFace, BlockFaces } from "./block-face";
 import { BlockModel, BlockModelElement } from "./block-model/block-model";
 import { BlockPos } from "./block-pos";
-import { BlockState, BlockStateValues } from "./block-state/block-state";
-import { Blocks } from "./blocks";
+import { BlockState } from "./block-state/block-state";
 
 const CauldronBlockModelSideFaces: BlockModelElement['faces'] = {
     [BlockFace.TOP]: { texture: 'textures/blocks/cauldron_top.png' },
@@ -106,11 +106,15 @@ export function makeCauldronBlockModel(level: number): BlockModel {
     return model;
 };
 
-export interface IBlockState<T extends BlockStateValues> {
-    getDefaultState(): T;
+type CauldronBlockStateValues = {
+    level: 0 | 1 | 2 | 3;
 }
 
-export class CauldronBlock extends Block implements IBlockState<{ level: number }> {
+const DefaultCauldronBlockStateValues: CauldronBlockStateValues = {
+    level: 0,
+};
+
+export class CauldronBlock extends Block {
     public constructor() {
         super('cauldron', [
             makeCauldronBlockModel(0),
@@ -120,11 +124,18 @@ export class CauldronBlock extends Block implements IBlockState<{ level: number 
         ]);
     }
 
-    public getDefaultState(): { level: number; } {
-        return { level: 0 };
+    public getBlockModel(blockState: BlockState<CauldronBlockStateValues>): number {
+        return blockState.get('level');
     }
 
-    public getBlockModel(level: Level, pos: BlockPos): number {
-        return 3;
+    public onSetBlock(world: World, pos: BlockPos): void {
+        world.setBlockState(pos, new BlockState(DefaultCauldronBlockStateValues));
+    }
+
+    public onRandomTick(level: Level, pos: BlockPos): void {
+        const newState = new BlockState({ ...DefaultCauldronBlockStateValues });
+        newState.set('level', randomElement([0, 1, 2, 3]));
+
+        level.getWorld().setBlockState(pos, newState);
     }
 }

@@ -2,24 +2,28 @@ import { Block } from "./block";
 import { BlockFaces } from "./block-face";
 import { BlockModel } from "./block-model/block-model";
 
-export const StoneBlockModel: BlockModel = {
+export const WaterBlockModel: BlockModel = {
     elements: [
         {
             from: [0, 0, 0],
-            to: [15, 15, 15],
+            to: [15, 13, 15],
             faces: BlockFaces.reduce((faces, face) => ({
                 ...faces,
                 [face]: {
                     cull: true,
-                    texture: 'textures/blocks/stone.png',
+                    texture: 'textures/blocks/water.png',
                 },
             }), {}),
         },
     ],
 }
 
-export class StoneBlock extends Block {
+export class WaterBlock extends Block {
     public constructor() {
-        super('stone', [StoneBlockModel]);
+        super('water', [WaterBlockModel]);
+    }
+
+    public isCollidable(): boolean {
+        return false;
     }
 }

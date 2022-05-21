@@ -1,9 +1,8 @@
 import { Mesh, Scene } from "three";
 import { Block } from "../block/block";
-import { STONE_BLOCK_ID, SUGAR_CANE_BLOCK_ID } from "../block/block-ids";
 import { BlockPos } from "../block/block-pos";
+import { BlockState, BlockStateValues } from "../block/block-state/block-state";
 import { mod } from "../util/mod";
-import { ChunkColumn } from "./chunk-column";
 import { ChunkColumnManager } from "./chunk-column-manager";
 
 export class World {
@@ -39,7 +38,8 @@ export class World {
             return undefined;
         }
 
-        return chunk.setBlock(
+        block.onSetBlock(this, pos);
+        chunk.setBlock(
             [
                 mod(pos.x, 16),
                 mod(pos.y, 16),
@@ -60,6 +60,37 @@ export class World {
             mod(pos.y, 16),
             mod(pos.z, 16),
         ]);
+    }
+
+    // public getBlockState<T extends BlockStateValues>(pos: BlockPos): BlockState<T> | undefined {
+    //     const state = this.blockStates[`${pos.x};${pos.y};${pos.z}`];
+    //     if (!state) {
+    //         return undefined;
+    //     }
+
+    //     return this.blockStates[`${pos.x};${pos.y};${pos.z}`] as BlockState<T>;
+    // }
+
+    public getBlockState<T extends BlockStateValues>(pos: BlockPos): BlockState<T> | undefined {
+        const chunk = this.chunkColumnManager.getChunkByBlockPos(pos);
+        if (!chunk) {
+            return undefined;
+        }
+
+        return chunk.getBlockState([
+            mod(pos.x, 16),
+            mod(pos.y, 16),
+            mod(pos.z, 16),
+        ]) as BlockState<T>;
+    }
+
+    public setBlockState(pos: BlockPos, blockState: BlockState) {
+        const chunk = this.chunkColumnManager.getChunkByBlockPos(pos);
+        if (!chunk) {
+            return undefined;
+        }
+
+        chunk.setBlockState([mod(pos.x, 16), mod(pos.y, 16), mod(pos.z, 16)], blockState);
     }
 
     public __tempGetChunkMeshes(): Mesh[] {

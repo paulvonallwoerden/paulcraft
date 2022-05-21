@@ -46,10 +46,6 @@ export class GrassBlock extends Block {
         super('grass', [GrassBlockModel]);
     }
 
-    public getBlockModel(): number {
-        return 0;
-    }
-
     public onRandomTick(level: Level, pos: BlockPos): void {
         const blockAbove = level.getBlockAt(new Vector3(pos.x, pos.y + 1, pos.z));
         if (blockAbove === Blocks.AIR) {

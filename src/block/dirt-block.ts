@@ -27,10 +27,6 @@ export class DirtBlock extends Block {
         super('dirt', [DirtBlockModel]);
     }
 
-    public getBlockModel(): number {
-        return 0;
-    }
-
     public onRandomTick(level: Level, pos: BlockPos): void {
         if (level.getBlockAt(new Vector3(pos.x, pos.y + 1, pos.z)) !== Blocks.AIR) {
             return;

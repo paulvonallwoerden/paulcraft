@@ -37,14 +37,15 @@ export class WorldNoise {
 
     public sampleErosion(x: number, y: number) {
         const noiseValue = this.sampleNoise2D(x, y, {
-            octaves: 5,
-            octavePower: 3,
+            octaves: 4,
+            octavePower: 2,
             amplitude: 2,
             frequency: 0.001523,
+            noClamp: true,
         });
-        const vector = this.erosionEasing(noiseValue);
+        // const vector = this.erosionEasing(noiseValue);
 
-        return Math.round(vector * 64 + 63) - 1;
+        return (noiseValue + 1) / 2; // Math.round(noiseValue * 48 + 64);
     }
 
     public sample3DFactor(x: number, y: number) {
@@ -57,12 +58,12 @@ export class WorldNoise {
     }
 
     public sample3D(x: number, y: number, z: number) {
-        const value = this.simplexNoise.noise3D(x * 0.01, y * 0.01, z * 0.01);
+        const value = this.simplexNoise.noise3D(x * 0.02, y * 0.02, z * 0.02);
 
         return lerp(1, -1, (clamp(value, -1, 1) + 1) / 2);
     }
 
-    private sampleNoise2D(x: number, y: number, options?: { octaves?: number, octavePower?: number, amplitude?: number, frequency?: number }): number {
+    private sampleNoise2D(x: number, y: number, options?: { octaves?: number, octavePower?: number, amplitude?: number, frequency?: number, noClamp?: boolean }): number {
         const amplitude = options?.amplitude ?? 1;
         const frequency = options?.frequency ?? 1;
         const octaves = options?.octaves ?? 1;
@@ -72,6 +73,10 @@ export class WorldNoise {
         for (let i = 0; i < octaves; i++) {
             const octave = Math.pow(i + 1, octavePower);
             value += (this.simplexNoise.noise2D(x * frequency * octave, y * frequency * octave) * amplitude) / octave;
+        }
+
+        if (options?.noClamp) {
+            return value;
         }
 
         return clamp(value, -1, 1);

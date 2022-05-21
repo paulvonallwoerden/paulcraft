@@ -1,11 +1,14 @@
 import pMap from "p-map";
-import { Audio, AudioLoader, Box3, Camera, Intersection, MathUtils, Raycaster, Vector2, Vector3, Vector3Tuple } from "three";
+import { Audio, AudioLoader, Box3, BoxGeometry, Camera, Intersection, Material, MathUtils, Mesh, MeshStandardMaterial, Raycaster, Vector2, Vector3, Vector3Tuple } from "three";
 import { degToRad } from "three/src/math/MathUtils";
 import { Game } from "../game";
 import { Input, LeftMouseButton, RightMouseButton } from "../input/input";
 import { xyzTupelToIndex } from "../util/index-to-vector3";
 import { randomElement } from "../util/random-element";
 import { Blocks } from "../block/blocks";
+import { BlockPos } from "../block/block-pos";
+import { createWorldCursorMaterial } from "./world-cursor-material";
+import { WorldCursor } from "./world-cursor";
 
 // TODO: Re-factor to:
 // - don't use createTerrainCollisionBoxes as it's stupid.
@@ -34,6 +37,8 @@ export class Player {
     private readonly audio: Audio;
 
     private selectedBlockId: number = Blocks.getBlockId(Blocks.CAULDRON);
+
+    private readonly worldCursor: WorldCursor = new WorldCursor();
 
     public constructor(
         private readonly camera: Camera,
@@ -71,8 +76,9 @@ export class Player {
             ],
             async (src) => audioLoader.loadAsync(src),
         );
-
         this.audio.setVolume(0.2);
+
+        this.worldCursor.register(Game.main.scene);
     }
 
     public update(deltaTime: number) {
@@ -84,36 +90,75 @@ export class Player {
         );
         if (intersection !== undefined && intersection.face) {
             const normalOffset = intersection.face.normal.normalize().multiplyScalar(0.1);
-            {
-                const samplePoint = intersection.point.clone().sub(normalOffset);
-                const [hitX, hitY, hitZ] = [
-                    Math.floor(samplePoint.x),
-                    Math.floor(samplePoint.y),
-                    Math.floor(samplePoint.z),
-                ];
-                const blockPos = new Vector3(hitX, hitY, hitZ);
+            const hitBlockPos: BlockPos = {
+                x: Math.floor(intersection.point.x - normalOffset.x),
+                y: Math.floor(intersection.point.y - normalOffset.y),
+                z: Math.floor(intersection.point.z - normalOffset.z),
+            };
 
-                if (this.input.isKeyDowned(LeftMouseButton)) {
-                    if (this.audio.isPlaying) this.audio.stop();
-                    this.audio.setBuffer(randomElement(this.digBlockSounds));
-                    this.audio.play();
-                    Game.main.level.setBlockAt(blockPos, Blocks.AIR);
-                }
+            if (this.input.isKeyDowned(LeftMouseButton)) {
+                if (this.audio.isPlaying) this.audio.stop();
+                this.audio.setBuffer(randomElement(this.digBlockSounds));
+                this.audio.play();
+
+                const world = Game.main.level.getWorld();
+                const blockToBreak = world.getBlock(hitBlockPos)!;
+                world.setBlock(hitBlockPos, Blocks.AIR);
+                blockToBreak?.onBreak(world, hitBlockPos);
             }
 
             {
-                const samplePoint = intersection.point.clone().add(normalOffset);
-                const [hitX, hitY, hitZ] = [
-                    Math.floor(samplePoint.x),
-                    Math.floor(samplePoint.y),
-                    Math.floor(samplePoint.z),
-                ];
-                const blockPos = new Vector3(hitX, hitY, hitZ);
+                const world = Game.main.level.getWorld();
+                this.worldCursor.set(world, hitBlockPos);
+
+                const hitBlock = world.getBlock(hitBlockPos);
+
+                // if (hitBlock) {
+                //     const modelIndex = hitBlock.getBlockModel(world.getBlockState(hitBlockPos)!);
+                //     const model = hitBlock.blockModels[modelIndex];
+                //     const [element] = model.elements;
+                //     if (element !== undefined) {
+                //         const distance = 0.001;
+
+                //         const [x, y, z] = element.from;
+                //         const [width, height, depth] = [
+                //             (element.to[0] - x) / 15 + distance * 2,
+                //             (element.to[1] - y) / 15 + distance * 2,
+                //             (element.to[2] - z) / 15 + distance * 2,
+                //         ];
+
+                //         this.worldCursorGeometry = new BoxGeometry(width, height, depth);
+                //         this.worldCursorGeometry.translate(
+                //             (hitBlockPos.x + width / 2) + x / 15 - distance,
+                //             (hitBlockPos.y + height / 2) + y / 15 - distance,
+                //             (hitBlockPos.z + depth / 2) + z / 15 - distance,
+                //         );
+                //         this.worldCursorMaterial = createWorldCursorMaterial(this.worldCursorGeometry);
+
+                //         this.worldCursor.material = this.worldCursorMaterial;
+                //         this.worldCursor.geometry = this.worldCursorGeometry;
+                //     }
+                // }
+
                 if (this.input.isKeyDowned(RightMouseButton)) {
-                    if (this.audio.isPlaying) this.audio.stop();
-                    this.audio.setBuffer(randomElement(this.placeBlockSounds));
-                    this.audio.play();
-                    Game.main.level.setBlockAt(blockPos, Blocks.getBlockById(this.selectedBlockId));
+                    const interactionResult = hitBlock?.onInteract(world, hitBlockPos)
+
+                    if (interactionResult === false) {
+                        if (this.audio.isPlaying) this.audio.stop();
+                        this.audio.setBuffer(randomElement(this.placeBlockSounds));
+                        this.audio.play();
+
+                        const samplePoint = intersection.point.clone().add(normalOffset);
+                        const [hitX, hitY, hitZ] = [
+                            Math.floor(samplePoint.x),
+                            Math.floor(samplePoint.y),
+                            Math.floor(samplePoint.z),
+                        ];
+                        const blockPos = new Vector3(hitX, hitY, hitZ);
+                        const blockToPlace = Blocks.getBlockById(this.selectedBlockId);
+                        Game.main.level.setBlockAt(blockPos, blockToPlace);
+                        blockToPlace.onPlace(world, blockPos);
+                    }
                 }
             }
         }
@@ -204,7 +249,7 @@ export class Player {
                 } else {
                     this.isOnGround = false;
                 }
-    
+
                 this.velocity.setY(0);
             } else {
                 this.isOnGround = false;
@@ -220,6 +265,8 @@ export class Player {
     private createTerrainCollisionBoxes([x, y, z]: Vector3Tuple): boolean {
         this.collisionBox.set(new Vector3(x - 0.35, y, z - 0.35), new Vector3(x + 0.35, y + 1.8, z + 0.35));
 
+        const world = Game.main.level.getWorld();
+
         const [blockX, blockY, blockZ] = [Math.floor(x + 0.5), Math.floor(y + 0.5), Math.floor(z + 0.5)];
         for (let ix = -2; ix < 2; ix += 1) {
             for (let iy = -2; iy < 3; iy += 1) {
@@ -229,8 +276,9 @@ export class Player {
                         this.terrainCollisionBoxes[boxIndex] = new Box3();
                     }
 
-                    const block = Game.main.level.getBlockAt(new Vector3(blockX + ix, blockY + iy, blockZ + iz));
-                    const solidBlock = block !== undefined && block !== Blocks.AIR;
+                    const blockPos = new Vector3(blockX + ix, blockY + iy, blockZ + iz);
+                    const block = Game.main.level.getBlockAt(blockPos);
+                    const solidBlock = block !== undefined && block.isCollidable(world, blockPos);
                     this.terrainCollisionBoxes[boxIndex].set(
                         new Vector3(blockX + ix, blockY + iy, blockZ + iz),
                         new Vector3(blockX + ix + 1, blockY + iy + 1, blockZ + iz + 1),
