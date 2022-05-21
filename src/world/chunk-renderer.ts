@@ -72,7 +72,7 @@ export class ChunkRenderer {
             water: this.buildGeometryWithOptions(
                 // There currently is no water.
                 blockData,
-                (blockId) => false,
+                (blockId) => blockId === 7,
             ),
             transparent: this.buildGeometryWithOptions(
                 // There currently are no transparent blocks.

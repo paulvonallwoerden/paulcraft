@@ -12,6 +12,7 @@ import { GrassBlock } from "./grass-block";
 import { SandBlock } from "./sand-block";
 import { StoneBlock } from "./stone-block";
 import { TextureAtlas } from "./texture-atlas";
+import { WaterBlock } from "./water-block";
 
 export type BlockTextureToUvMap = Record<string, number[]>;
 
@@ -28,6 +29,7 @@ export class Blocks {
     public static readonly SAND = new SandBlock();
     public static readonly CAULDRON = new CauldronBlock();
     public static readonly DOOR = new DoorBlock();
+    public static readonly WATER = new WaterBlock();
 
     private static readonly blocks: Block[] = [
         Blocks.AIR,
@@ -37,6 +39,7 @@ export class Blocks {
         Blocks.SAND,
         Blocks.CAULDRON,
         Blocks.DOOR,
+        Blocks.WATER,
     ];
 
     private textureAtlas: TextureAtlas;
