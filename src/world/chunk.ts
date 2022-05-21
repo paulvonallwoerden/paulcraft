@@ -1,13 +1,10 @@
-import { BufferAttribute, BufferGeometry, DoubleSide, Material, Mesh, MeshStandardMaterial, Scene, Vector3, Vector3Tuple } from "three";
+import { Mesh, Scene, Vector3, Vector3Tuple } from "three";
 import { Game } from "../game";
 import { xyzTupelToIndex, xzyToIndex } from "../util/index-to-vector3";
-import { ChunkMeshData } from "./chunk-renderer";
-import SimplexNoise from 'simplex-noise';
-import { OakTreeFeature } from "./feature/oak-tree-feature";
-import { WorldFeatureBuilder } from "./feature/world-feature";
 import { ITickable } from "../tickable";
-import { STONE_BLOCK_ID } from "../block/block-ids";
 import { ChunkColumn } from "./chunk-column";
+import { Blocks } from "../block/blocks";
+import { Block } from "../block/block";
 
 export const CHUNK_WIDTH = 16;
 export const CHUNK_HEIGHT = 16;
@@ -64,9 +61,12 @@ export class Chunk implements ITickable {
             Math.floor(Math.random() * CHUNK_WIDTH),
         );
         const blockId = this.blockData[xzyToIndex(blockPos, CHUNK_WIDTH, CHUNK_WIDTH)];
-        const block = Game.main.blocks.getBlockById(blockId);
-        if (!block) return;
-        block.onTick(Game.main.level, {
+        const block = Blocks.getBlockById(blockId);
+        if (!block) {
+            return;
+        }
+
+        block.onRandomTick(Game.main.level, {
             x: blockPos.x + this.position.x * CHUNK_WIDTH,
             y: blockPos.y + this.position.y * CHUNK_HEIGHT,
             z: blockPos.z + this.position.z * CHUNK_WIDTH,
@@ -123,8 +123,8 @@ export class Chunk implements ITickable {
         ];
     }
 
-    public setBlock([x, y, z]: Vector3Tuple, blockId: number) {
-        this.blockData[xyzTupelToIndex(x, y, z, CHUNK_WIDTH, CHUNK_WIDTH)] = blockId;
+    public setBlock([x, y, z]: Vector3Tuple, block: Block): void {
+        this.blockData[xyzTupelToIndex(x, y, z, CHUNK_WIDTH, CHUNK_WIDTH)] = Blocks.getBlockId(block);
         this.isBlockDataDirty = true;
 
         // TODO: Only update the relevant chunk
@@ -133,7 +133,7 @@ export class Chunk implements ITickable {
         }
     }
 
-    public getBlock([x, y, z]: Vector3Tuple): number | undefined {
+    public getBlock([x, y, z]: Vector3Tuple): Block | undefined {
         if (!this.blockData) {
             return undefined;
         }
@@ -143,6 +143,6 @@ export class Chunk implements ITickable {
             return undefined;
         }
 
-        return this.blockData![index];
+        return Blocks.getBlockById(this.blockData![index]);
     }
 }

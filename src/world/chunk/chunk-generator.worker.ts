@@ -46,10 +46,11 @@ export class ChunkGenerator {
                     
                     let block = this.sampleBlock([worldX, worldY, worldZ], height);
                     if (block !== AIR_BLOCK_ID && Math.abs(worldY - height) < 4) {
-                        block = GRASS_BLOCK_ID;
+                        block = 2;
                     }
                     if (worldY <= 64 && block === AIR_BLOCK_ID) {
-                        block = WATER_BLOCK_ID;
+                        // FIXME: There currently is no water in the game.
+                        // block = WATER_BLOCK_ID;
                     }
                     blockData[xyzTupelToIndex(x, mod(y, 16), z, CHUNK_WIDTH, CHUNK_WIDTH)] = block;
                 }
@@ -97,6 +98,7 @@ export class ChunkGenerator {
         return height;
     }
 
+    // TODO: Re-add terrain smoothing.
     // private getSmoothedHeightMapSample(localPosition: Vector2, worldPosition: Vector2, biomeMap: Map2D<Biome>, kernelSize: number) {
     //     let result = 0;
     //     for (let x = -kernelSize; x <= kernelSize; x++) {

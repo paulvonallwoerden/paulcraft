@@ -1,74 +1,70 @@
 import { Material, MeshStandardMaterial, Texture } from "three";
-import { AirBlock, BarrelTextureBlock, Block, DirtBlock, GrassBlock, MultiTextureBlock, SugarCaneBlock, TntBlock, UniTextureBlock } from "./block";
+import { removeDuplicates } from "../util/remove-duplicates";
+import { AirBlock } from "./air-block";
+import { Block } from "./block";
 import { BlockFace, BlockFaces } from "./block-face";
 import { AIR_BLOCK_ID, BRICKS_BLOCK_ID, DIRT_BLOCK_ID, GLASS_BLOCK_ID, GRASS_BLOCK_ID, MYCELIUM_BLOCK_ID, OAK_LEAVES_BLOCK_ID, OAK_LOG_BLOCK_ID, OAK_PLANKS_BLOCK_ID, SAND_BLOCK_ID, SNOW_BLOCK_ID, STONE_BLOCK_ID, SUGAR_CANE_BLOCK_ID, TNT_BLOCK_ID, WATER_BLOCK_ID } from "./block-ids";
+import { BlockModel, getBlockModelTextures } from "./block-model/block-model";
+import { CauldronBlock } from "./cauldron-block";
+import { DirtBlock } from "./dirt-block";
+import { GrassBlock } from "./grass-block";
+import { SandBlock } from "./sand-block";
+import { StoneBlock } from "./stone-block";
 import { TextureAtlas } from "./texture-atlas";
 
-export interface SerializedBlockUvs {
-    [blockId: number]: Record<BlockFace, number[]>;
-}
+export type BlockTextureToUvMap = Record<string, number[]>;
 
 export interface SerializedBlockModels {
-    [blockId: number]: {};
+    textureUvs: BlockTextureToUvMap;
+    blockModels: Array<BlockModel[]>;
 }
 
-export const airBlock = new AirBlock(AIR_BLOCK_ID);
-export const StoneBlock = new UniTextureBlock(STONE_BLOCK_ID, 'textures/blocks/stone.png');
-export const grassBlock = new GrassBlock(
-    GRASS_BLOCK_ID,
-    {
-        [BlockFace.TOP]: 'textures/blocks/grass_block_top.png',
-        [BlockFace.BOTTOM]: 'textures/blocks/dirt.png',
-        [BlockFace.LEFT]: 'textures/blocks/grass_block_side.png',
-        [BlockFace.RIGHT]: 'textures/blocks/grass_block_side.png',
-        [BlockFace.FRONT]: 'textures/blocks/grass_block_side.png',
-        [BlockFace.BACK]: 'textures/blocks/grass_block_side.png',
-    },
-);
-export const dirtBlock = new DirtBlock(DIRT_BLOCK_ID, 'textures/blocks/dirt.png');
-export const WaterBlock = new UniTextureBlock(WATER_BLOCK_ID, 'textures/blocks/water.png');
-export const SandBlock = new UniTextureBlock(SAND_BLOCK_ID, 'textures/blocks/sand.png');
-export const OakLogBlock = new BarrelTextureBlock(OAK_LOG_BLOCK_ID, 'textures/blocks/oak_log_top.png', 'textures/blocks/oak_log.png');
-export const OakLeavesBlock = new UniTextureBlock(OAK_LEAVES_BLOCK_ID, 'textures/blocks/oak_leaves_color.png');
-export const SnowBlock = new UniTextureBlock(SNOW_BLOCK_ID, 'textures/blocks/snow.png');
-export const MyceliumBlock = new UniTextureBlock(MYCELIUM_BLOCK_ID, 'textures/blocks/mycelium.png');
-export const sugarCaneBlock = new SugarCaneBlock(SUGAR_CANE_BLOCK_ID, 'textures/blocks/sugar_cane.png');
-export const GlassBlock = new UniTextureBlock(GLASS_BLOCK_ID, 'textures/blocks/glass.png');
-export const OakPlanksBlock = new UniTextureBlock(OAK_PLANKS_BLOCK_ID, 'textures/blocks/oak_planks.png');
-export const BricksBlock = new UniTextureBlock(BRICKS_BLOCK_ID, 'textures/blocks/bricks.png');
-export const tntBlock = new TntBlock(TNT_BLOCK_ID, 'textures/blocks/tnt_side.png');
-
 export class Blocks {
-    private readonly blocksById: Record<number, Block>;
-    private readonly textureAtlas: TextureAtlas;
-    private readonly textureAtlasIndexMap: Record<string, number>;
+    public static readonly AIR = new AirBlock();
+    public static readonly STONE = new StoneBlock();
+    public static readonly GRASS = new GrassBlock();
+    public static readonly DIRT = new DirtBlock();
+    public static readonly SAND = new SandBlock();
+    public static readonly CAULDRON = new CauldronBlock();
+
+    private static readonly blocks: Block[] = [
+        Blocks.AIR,
+        Blocks.STONE,
+        Blocks.GRASS,
+        Blocks.DIRT,
+        Blocks.SAND,
+        Blocks.CAULDRON,
+    ];
+
+    private textureAtlas: TextureAtlas;
+    private blockTextureSources: string[];
 
     private solidMaterial = new MeshStandardMaterial({ opacity: 1, transparent: false });
     private waterMaterial = new MeshStandardMaterial({ opacity: 0.8, transparent: true });
     private transparentMaterial = new MeshStandardMaterial({ alphaTest: 0.5 });
 
-    public constructor(private readonly blocks: Block[]) {
-        this.blocksById = blocks.reduce((dict, block) => ({ ...dict, [block.id]: block }), {});
+    public constructor() {
+        const blockTextures = Blocks.blocks.flatMap(
+            (block) => block.blockModels.flatMap((blockModel) => getBlockModelTextures(blockModel)),
+        );
 
-        const blockTextures = blocks.map((block) => block.getTextures()).flat();
-        this.textureAtlas = new TextureAtlas(blockTextures);
-
-        this.textureAtlasIndexMap = {};
-        for (let i = 0; i < blockTextures.length; i++) {
-            this.textureAtlasIndexMap[blockTextures[i]] = i;
-        }
+        this.blockTextureSources = removeDuplicates(blockTextures);
+        this.textureAtlas = new TextureAtlas(this.blockTextureSources);
     }
 
     public async init() {
-        await this.textureAtlas.buildAtlas();
-
-        this.solidMaterial.map = this.textureAtlas.getAtlas();
-        this.transparentMaterial.map = this.textureAtlas.getAtlas();
-        this.waterMaterial.map = this.textureAtlas.getAtlas();
+        const atlas = await this.textureAtlas.buildAtlas();
+        this.solidMaterial.map = atlas;
+        this.transparentMaterial.map = atlas;
+        this.waterMaterial.map = atlas;
     }
 
-    public getBlockById(id: number) {
-        return this.blocksById[id];
+    public static getBlockId(block: Block): number {
+        return Blocks.blocks.indexOf(block);
+    }
+
+    public static getBlockById(id: number): Block {
+        return Blocks.blocks[id];
     }
 
     public getBlockMaterials(): { solid: Material, transparent: Material, water: Material } {
@@ -79,25 +75,21 @@ export class Blocks {
         };
     }
 
-    public getBlockTextureUv(blockId: number, face: BlockFace): number[] {
-        return this.textureAtlas.getTextureUv(this.textureAtlasIndexMap[this.getBlockById(blockId).getTexture(face)]);
-    }
-
-    public serializeBlockUvs(): SerializedBlockUvs {
-        return this.blocks.reduce((blockFaceUvs, block) => ({
-            ...blockFaceUvs,
-            [block.id]: BlockFaces.reduce((faceUvs, face) => ({
-                ...faceUvs,
-                [face]: this.getBlockTextureUv(block.id, face),
-            }), {}),
-        }), {});
+    public getBlockTexture(texture: string): number[] {
+        return this.textureAtlas!.getTextureUv(texture);
     }
 
     public serializeBlockModels(): SerializedBlockModels {
-        return {};
+        return {
+            textureUvs: this.blockTextureSources.reduce((uvs, source) => ({
+                ...uvs,
+                [source]: this.textureAtlas.getTextureUv(source),
+            }), {}),
+            blockModels: Blocks.blocks.map((block) => block.blockModels),
+        };
     }
 
     public getNumberOfBlocks() {
-        return this.blocks.length;
+        return Blocks.blocks.length;
     }
 }

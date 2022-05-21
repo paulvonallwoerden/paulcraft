@@ -1,3 +1,4 @@
+// TODO: Legacy code. Remove it. Blocks are now referenced by name.
 export const AIR_BLOCK_ID = 0;
 export const STONE_BLOCK_ID = 1;
 export const GRASS_BLOCK_ID = 2;

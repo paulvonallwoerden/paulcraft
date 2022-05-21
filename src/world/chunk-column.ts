@@ -1,17 +1,11 @@
-import SimplexNoise from "simplex-noise";
-import { BoxGeometry, Color, Mesh, MeshStandardMaterial, Scene, SphereGeometry, Vector2, Vector2Tuple, Vector3, Vector3Tuple } from "three";
-import { AIR_BLOCK_ID, GRASS_BLOCK_ID, MYCELIUM_BLOCK_ID } from "../block/block-ids";
+import { Mesh, Scene, Vector3, Vector3Tuple } from "three";
 import { Game } from "../game";
 import { ITickable } from "../tickable";
-import { indexToXZ } from "../util/index-to-vector2";
 import { Map2D } from "../util/map-2d";
-import { Biome } from "./biome/biome";
 import { Chunk, CHUNK_HEIGHT, CHUNK_WIDTH } from "./chunk";
 import { ChunkColumnManager } from "./chunk-column-manager";
-import { OakTreeFeature } from "./feature/oak-tree-feature";
-import { WorldFeatureBuilder } from "./feature/world-feature";
 import pEachSeries from "p-each-series";
-import pAll from "p-all";
+import { Block } from "../block/block";
 
 export enum ChunkColumnPriority {
     // Render & Tick
@@ -32,8 +26,6 @@ export class ChunkColumn implements ITickable {
     private chunksGenerated = false;
     private priority: ChunkColumnPriority = ChunkColumnPriority.Lowest;
 
-    private indiMesh = new Mesh(new BoxGeometry(4, 0.2, 4), new MeshStandardMaterial({ color: 'white' }));
-
     public constructor(
         private readonly manager: ChunkColumnManager,
         private readonly position: [number, number],
@@ -46,13 +38,10 @@ export class ChunkColumn implements ITickable {
 
     public register(scene: Scene) {
         this.chunks.forEach((chunk) => chunk.register(scene));
-        // scene.add(this.indiMesh);
-        // this.indiMesh.position.set(this.position[0] * 16 + 6, 64, this.position[1] * 16 + 6);
     }
 
     public unregister(scene: Scene) {
         this.chunks.forEach((chunk) => chunk.unregister(scene));
-        // scene.remove(this.indiMesh);
     }
 
     public async generatePrototype() {
@@ -121,23 +110,6 @@ export class ChunkColumn implements ITickable {
     }
 
     public onTick(deltaTime: number): void {
-        this.indiMesh.material.color = (function(c: ChunkColumn): Color {
-            let r = 0;
-            let g = 0;
-            let b = 0;
-            if (c.chunksGenerated) {
-                r = 1;
-            }
-            if (c.chunksBuilt) {
-                g = 1;
-            }
-            if (c.priority >= ChunkColumnPriority.Low) {
-                b = 1;
-            }
-
-            return new Color(r, g, b);
-        }(this));
-
         this.chunks.forEach((chunk) => {
             chunk.onTick(deltaTime);
             if (this.priority === ChunkColumnPriority.High) {
@@ -154,16 +126,16 @@ export class ChunkColumn implements ITickable {
         this.chunks.forEach((chunk) => chunk.lateUpdate(deltaTime));
     }
 
-    public setBlockAt([x, y, z]: Vector3Tuple, blockId: number): void {
+    public setBlockAt([x, y, z]: Vector3Tuple, block: Block): void {
         const chunkLocalY = Math.floor(y / CHUNK_HEIGHT);
         if (chunkLocalY < 0 || chunkLocalY >= this.chunks.length) {
             return;
         }
-
-        return this.chunks[chunkLocalY].setBlock([x, y - chunkLocalY * CHUNK_HEIGHT, z], blockId);
+        
+        return this.chunks[chunkLocalY].setBlock([x, y - chunkLocalY * CHUNK_HEIGHT, z], block);
     }
 
-    public getBlockAt([x, y, z]: Vector3Tuple): number | undefined {
+    public getBlockAt([x, y, z]: Vector3Tuple): Block | undefined {
         const chunkLocalY = Math.floor(y / CHUNK_HEIGHT);
         if (!this.chunks[chunkLocalY]) {
             return undefined;

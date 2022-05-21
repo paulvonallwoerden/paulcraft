@@ -4,7 +4,9 @@ import { Player } from "./player/player";
 import { Game } from "./game";
 import { degToRad } from "three/src/math/MathUtils";
 import { World } from "./world/world";
+import { Block } from "./block/block";
 
+// TODO: The abstraction between level & world isn't really clear. Come up with a concept.
 export class Level implements ITickable {
     private sun: DirectionalLight;
     private sunTarget: Object3D;
@@ -59,13 +61,11 @@ export class Level implements ITickable {
         this.world.tick(deltaTime);
     }
 
-    public setBlockAt(pos: Vector3, blockId: number): void {
-        const block = Game.main.blocks.getBlockById(blockId);
-
+    public setBlockAt(pos: Vector3, block: Block): void {
         return this.world.setBlock({ x: pos.x, y: pos.y, z: pos.z }, block);
     }
 
-    public getBlockAt(pos: Vector3): number | undefined {
+    public getBlockAt(pos: Vector3): Block | undefined {
         return this.world.getBlock({ x: pos.x, y: pos.y, z: pos.z });
     }
 

@@ -1,18 +1,15 @@
-import { AmbientLight, Audio, AudioListener, AudioLoader, Camera, Fog, FogExp2, PerspectiveCamera, Scene, Vector2, Vector3, WebGLRenderer } from 'three';
-import { AirBlock, BlockRenderMode } from './block/block';
-import { AIR_BLOCK_ID } from './block/block-ids';
-import { airBlock, Blocks, BricksBlock, dirtBlock, GlassBlock, grassBlock, MyceliumBlock, OakLeavesBlock, OakLogBlock, OakPlanksBlock, SandBlock, SnowBlock, StoneBlock, sugarCaneBlock, tntBlock, WaterBlock } from './block/blocks';
+import { AmbientLight, Audio, AudioListener, AudioLoader, Camera, Fog, PerspectiveCamera, Scene, Vector3, WebGLRenderer } from 'three';
+import { Blocks } from './block/blocks';
 import { Input } from './input/input';
 import { Level } from './level';
 import { OriginCross } from './origin-cross';
-import { SpectatorCamera } from './spectator-camera';
 import ChunkDataGeneratorWorker from './world/chunk-data-generator.worker.ts';
 import { BuildGeometryResult } from './world/chunk-renderer';
 import { ChunkGeneratorPool } from './world/chunk/chunk-generator-pool';
 import { ChunkGeometryBuilderPool } from './world/chunk/chunk-geometry-builder-pool';
-import { World } from './world/world';
 import Stats from 'stats.js';
 
+// TODO: This class has too many responsibilities. Factor it out.
 export class Game {
     public static main: Game;
 
@@ -35,6 +32,7 @@ export class Game {
 
     public readonly input: Input;
 
+    // TODO: Make this configurable or at least random.
     private readonly seed = 'ijn3fi3fin3fim';
 
     public readonly audioListener: AudioListener = new AudioListener();
@@ -61,7 +59,6 @@ export class Game {
         const canvas = root.appendChild(this.renderer.domElement);
         canvas.addEventListener('click', () => canvas.requestPointerLock());
 
-        // this.camera = new SpectatorCamera(width / height);
         this.camera = new PerspectiveCamera(75, width / height, 0.1, 100000);
         this.camera.add(this.audioListener);
 
@@ -69,8 +66,6 @@ export class Game {
 
         const originCross = new OriginCross();
         originCross.addToScene(this.scene);
-
-        // this.world = new World(this.scene);
 
         this.stats.showPanel(0);
         root.appendChild(this.stats.dom);
@@ -86,7 +81,7 @@ export class Game {
 
     public async init() {
         console.log("Crafting the blocks...");
-        this.blocks = new Blocks([airBlock, StoneBlock, grassBlock, dirtBlock, WaterBlock, SandBlock, OakLogBlock, OakLeavesBlock, SnowBlock, MyceliumBlock, sugarCaneBlock, GlassBlock, OakPlanksBlock, BricksBlock, tntBlock]);
+        this.blocks = new Blocks();
         await this.blocks.init();
 
         // Workers
@@ -138,16 +133,6 @@ export class Game {
         this.instructWorker({
             type: 'generate',
             position: position.toArray(),
-        });
-    }
-
-    public buildChunkGeometry(position: Vector3, blockData: Uint8Array): void {
-        // const blockDataN = blockData.map((blockId) => this.blocks.getBlockById(blockId) && this.blocks.getBlockById(blockId).renderMode === BlockRenderMode.Solid ? blockId : AIR_BLOCK_ID);
-        this.instructWorker({
-            type: 'build-mesh',
-            position: position.toArray(),
-            blockTextureUvs: this.blocks.serializeBlockUvs(),
-            blockData: blockData,
         });
     }
 
@@ -209,8 +194,6 @@ export class Game {
             this.tick(deltaTime);
             this.timeSinceLastTick -= 1000 / this.ticksPerSecond;
         }
-
-        // this.camera.update(deltaTime);
 
         this.level.update(deltaTime);
         this.renderer.render(this.scene, this.camera);

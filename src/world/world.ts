@@ -11,7 +11,6 @@ export class World {
 
     public constructor(readonly scene: Scene) {
         this.chunkColumnManager = new ChunkColumnManager(scene, 7, 3, 4);
-        // this.chunkColumnManager = new ChunkColumnManager(scene, 14, 3);
     }
 
     public async init() {
@@ -46,11 +45,11 @@ export class World {
                 mod(pos.y, 16),
                 mod(pos.z, 16),
             ],
-            block.id,
+            block,
         );
     }
 
-    public getBlock(pos: BlockPos): number | undefined {
+    public getBlock(pos: BlockPos): Block | undefined {
         const chunk = this.chunkColumnManager.getChunkByBlockPos(pos);
         if (!chunk) {
             return undefined;

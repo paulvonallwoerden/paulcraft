@@ -1,10 +1,10 @@
 export enum BlockFace {
-    TOP,
-    BOTTOM,
-    RIGHT,
-    LEFT,
-    FRONT,
-    BACK,
+    TOP = 'top',
+    BOTTOM = 'bottom',
+    RIGHT = 'right',
+    LEFT = 'left',
+    FRONT = 'front',
+    BACK = 'back',
 }
 
 export const BlockFaces = [

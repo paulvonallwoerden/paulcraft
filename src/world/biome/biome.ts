@@ -1,6 +1,4 @@
-import { Block } from "../../block/block";
 import { BlockPos } from "../../block/block-pos";
-import { airBlock, SandBlock, StoneBlock } from "../../block/blocks";
 import { World } from "../world";
 
 export type BiomeDecoratorPass = (world: World, pos: BlockPos) => void;
@@ -22,42 +20,42 @@ export class DesertBiomeDecorator extends BiomeDecorator {
     public constructor() {
         super(
             [
-                DesertBiomeDecorator.replaceSurface,
-                DesertBiomeDecorator.placeCactee,
+                // DesertBiomeDecorator.replaceSurface,
+                // DesertBiomeDecorator.placeCactee,
             ],
         );
     }
 
-    protected static replaceSurface(world: World, pos: BlockPos): void {
-        const isSurfaceBlock = world.getBlock({ ...pos, y: pos.y + 1 }) === airBlock.id;
-        if (!isSurfaceBlock) {
-            return;
-        }
+    // protected static replaceSurface(world: World, pos: BlockPos): void {
+    //     const isSurfaceBlock = world.getBlock({ ...pos, y: pos.y + 1 }) === airBlock.id;
+    //     if (!isSurfaceBlock) {
+    //         return;
+    //     }
 
-        for (let i = 0; i < this.sandHeight; i++) {
-            const curPos: BlockPos = { ...pos, y: pos.y - i };
-            if (world.getBlock(curPos) === airBlock.id) {
-                return;
-            }
+    //     for (let i = 0; i < this.sandHeight; i++) {
+    //         const curPos: BlockPos = { ...pos, y: pos.y - i };
+    //         if (world.getBlock(curPos) === B.id) {
+    //             return;
+    //         }
 
-            world.setBlock(curPos, SandBlock);   
-        }
-    }
+    //         world.setBlock(curPos, SandBlock);   
+    //     }
+    // }
 
-    protected static placeCactee(world: World, pos: BlockPos): void {
-        if (world.getBlock(pos) !== SandBlock.id) {
-            return;
-        }
+    // protected static placeCactee(world: World, pos: BlockPos): void {
+    //     if (world.getBlock(pos) !== SandBlock.id) {
+    //         return;
+    //     }
 
-        for (let i = 1; i <= this.cactusHeight; i++) {
-            const curPos: BlockPos = { ...pos, y: pos.y + i };
-            if (world.getBlock(curPos) !== airBlock.id) {
-                return;
-            }
+    //     for (let i = 1; i <= this.cactusHeight; i++) {
+    //         const curPos: BlockPos = { ...pos, y: pos.y + i };
+    //         if (world.getBlock(curPos) !== airBlock.id) {
+    //             return;
+    //         }
 
-            world.setBlock(curPos, SandBlock);   
-        }
-    }
+    //         world.setBlock(curPos, SandBlock);   
+    //     }
+    // }
 }
 
 export enum Biome {

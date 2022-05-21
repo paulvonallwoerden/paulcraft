@@ -1,27 +1,13 @@
 import SimplexNoise from "simplex-noise";
-import { NumberKeyframeTrack, Vector3 } from "three";
+import { Vector3 } from "three";
 import { xyzTupelToIndex } from "../util/index-to-vector3";
-import { ChunkRenderer } from "./chunk-renderer";
 import bezierEasing from 'bezier-easing';
-import { OakTreeFeature } from "./feature/oak-tree-feature";
-import { WorldFeatureBuilder } from "./feature/world-feature";
 
 const CHUNK_WIDTH = 16;
 const CHUNK_HEIGHT = 16;
 
-const LandToSeaEasing = bezierEasing(
-
-    .02, .88, .63, 1
-
-);
-
-const CliffnessEasing = bezierEasing(
-
-
-    1, -0.34, .86, .78
-
-
-);
+const LandToSeaEasing = bezierEasing(0.02, 0.88, 0.63, 1);
+const CliffnessEasing = bezierEasing(1, -0.34, 0.86, 0.78);
 
 function generateChunkData(
     position: Vector3,
@@ -39,9 +25,6 @@ function generateChunkData(
             let landmassNoise = noise2(worldX * 0.0005, worldZ * 0.0005) * 0.95 + noise2(worldX * 0.005, worldZ * 0.005) * 0.05;
             landmassNoise = landmassNoise * 0.9 + noise2(worldX * 0.01, worldZ * 0.01) * 0.1;
             landmassNoise = landmassNoise * 0.97 + noise2(worldX * 0.05, worldZ * 0.05) * 0.03;
-
-            // 0 - 0.4 = Water
-            // landmassNoise / 0.4
 
             const isLandmass = landmassNoise > 0.4;
             if (!isLandmass) {
@@ -115,17 +98,8 @@ function main() {
                 ctx.postMessage({ type: 'generate--complete', position: data.position, result });
                 break;
             }
-            case 'build-mesh': {
-                // const chunkRenderer = new ChunkRenderer(data.blockTextureUvs);
-                // const result = chunkRenderer.buildGeometry(data.blockData);
-
-                // ctx.postMessage({ type: 'build-mesh--complete', position: data.position, result });
-                break;
-            }
         }
     }
 }
 
-// Beach = '1'
-// Cliff = '12'
 main();

@@ -1,5 +1,5 @@
 import { expose, transfer } from "comlink";
-import { SerializedBlockUvs } from "../../block/blocks";
+import { SerializedBlockModels } from "../../block/blocks";
 import { BuildGeometryResult, ChunkRenderer } from "../chunk-renderer";
 
 (globalThis as any).a = Math.random();
@@ -8,9 +8,9 @@ export class ChunkGeometryBuilder {
     private readonly chunkRenderer: ChunkRenderer;
 
     public constructor(
-        readonly blockUvs: SerializedBlockUvs
+        readonly blockModels: SerializedBlockModels
     ) {
-        this.chunkRenderer = new ChunkRenderer(blockUvs);
+        this.chunkRenderer = new ChunkRenderer(blockModels);
     }
 
     public buildGeometry(blockData: Uint8Array[]): BuildGeometryResult {
