@@ -2,7 +2,6 @@
   "name": "game",
   "version": "1.0.0",
   "main": "index.js",
-  "license": "MIT",
   "scripts": {
     "build": "rm -rf dist && tsc && webpack",
     "serve": "webpack-dev-server"
