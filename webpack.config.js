@@ -1,8 +1,8 @@
+const CopyPlugin = require('copy-webpack-plugin');
 const path = require('path');
 
 module.exports = {
     mode: 'development',
-    // devtool: "source-map",
     entry: './src/main.ts',
     output: {
         filename: 'bundle.js',
@@ -20,7 +20,7 @@ module.exports = {
                 loader: "worker-loader",
                 options: {
                     filename: "[name].[contenthash].worker.js",
-                },  
+                },
             },
             {
                 test: /\.ts$/,
@@ -28,4 +28,11 @@ module.exports = {
             },
         ],
     },
+    plugins: [
+        new CopyPlugin({
+            patterns: [
+                { from: "public" },
+            ],
+        }),
+    ]
 };
