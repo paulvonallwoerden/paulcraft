@@ -5,6 +5,7 @@ import { ITickable } from "../tickable";
 import { ChunkColumn } from "./chunk-column";
 import { Blocks } from "../block/blocks";
 import { Block } from "../block/block";
+import { BlockState } from "../block/block-state/block-state";
 
 export const CHUNK_WIDTH = 16;
 export const CHUNK_HEIGHT = 16;
@@ -14,6 +15,8 @@ export class Chunk implements ITickable {
     public shouldRebuild = false;
 
     private blockData: Uint8Array = new Uint8Array(CHUNK_WIDTH * CHUNK_WIDTH * CHUNK_HEIGHT);
+    private blockStates: Map<number, BlockState> = new Map();
+
     private timeSinceFirstRender = -1;
 
     public readonly solidMesh: Mesh;
@@ -101,8 +104,17 @@ export class Chunk implements ITickable {
     }
 
     public async buildMesh() {
-        const blockData: Uint8Array[] = [this, ...this.getNeighborChunks()].map((chunk) => chunk?.blockData ?? new Uint8Array());
-        const geometry = await Game.main.chunkGeometryBuilderPool.buildGeometry(blockData);
+        const blockModelIndices: Record<number, number> = {};
+        this.blockStates.forEach((state, index) => {
+            const block = Blocks.getBlockById(this.blockData[index]);
+            blockModelIndices[index] = block.getBlockModel(state);
+        });
+
+        const geometry = await Game.main.chunkGeometryBuilderPool.buildGeometry({
+            blockModelIndices,
+            blocks: this.blockData,
+            neighborBlocks: this.getNeighborChunks().map((chunk) => chunk?.blockData ?? new Uint8Array()),
+        });
         this.solidMesh.geometry = geometry.solid;
         this.waterMesh.geometry = geometry.water;
         this.transparentMesh.geometry = geometry.transparent;
@@ -144,5 +156,14 @@ export class Chunk implements ITickable {
         }
 
         return Blocks.getBlockById(this.blockData![index]);
+    }
+
+    public setBlockState([x, y, z]: Vector3Tuple, state: BlockState): void {
+        this.blockStates.set(xyzTupelToIndex(x, y, z, CHUNK_WIDTH, CHUNK_WIDTH), state);
+        this.shouldRebuild = true;
+    }
+
+    public getBlockState([x, y, z]: Vector3Tuple): BlockState | undefined {
+        return this.blockStates.get(xyzTupelToIndex(x, y, z, CHUNK_WIDTH, CHUNK_WIDTH));
     }
 }

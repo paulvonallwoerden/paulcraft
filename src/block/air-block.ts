@@ -10,7 +10,7 @@ export class AirBlock extends Block {
         super('air', [AirBlockModel]);
     }
 
-    public getBlockModel(): number {
-        return 0;
+    public isCollidable(): boolean {
+        return false;
     }
 }

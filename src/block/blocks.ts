@@ -7,6 +7,7 @@ import { AIR_BLOCK_ID, BRICKS_BLOCK_ID, DIRT_BLOCK_ID, GLASS_BLOCK_ID, GRASS_BLO
 import { BlockModel, getBlockModelTextures } from "./block-model/block-model";
 import { CauldronBlock } from "./cauldron-block";
 import { DirtBlock } from "./dirt-block";
+import { DoorBlock } from "./door-block";
 import { GrassBlock } from "./grass-block";
 import { SandBlock } from "./sand-block";
 import { StoneBlock } from "./stone-block";
@@ -26,6 +27,7 @@ export class Blocks {
     public static readonly DIRT = new DirtBlock();
     public static readonly SAND = new SandBlock();
     public static readonly CAULDRON = new CauldronBlock();
+    public static readonly DOOR = new DoorBlock();
 
     private static readonly blocks: Block[] = [
         Blocks.AIR,
@@ -34,6 +36,7 @@ export class Blocks {
         Blocks.DIRT,
         Blocks.SAND,
         Blocks.CAULDRON,
+        Blocks.DOOR,
     ];
 
     private textureAtlas: TextureAtlas;

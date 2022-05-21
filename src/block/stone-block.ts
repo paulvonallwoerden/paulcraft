@@ -22,8 +22,4 @@ export class StoneBlock extends Block {
     public constructor() {
         super('stone', [StoneBlockModel]);
     }
-
-    public getBlockModel(): number {
-        return 0;
-    }
 }

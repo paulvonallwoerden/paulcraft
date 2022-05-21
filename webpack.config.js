@@ -1,9 +1,13 @@
 const CopyPlugin = require('copy-webpack-plugin');
 const path = require('path');
 
+/**
+ * @type import('webpack').Configuration
+ */
 module.exports = {
     mode: 'development',
     entry: './src/main.ts',
+    devtool: 'source-map',
     output: {
         filename: 'bundle.js',
         path: path.resolve(__dirname, 'dist'),
