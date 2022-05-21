@@ -42,6 +42,7 @@ import { LeftMouseButton, RightMouseButton } from "../input/input";
 import { xyzTupelToIndex } from "../util/index-to-vector3";
 import { randomElement } from "../util/random-element";
 import { Blocks } from "../block/blocks";
+import { WorldCursor } from "./world-cursor";
 // TODO: Re-factor to:
 // - don't use createTerrainCollisionBoxes as it's stupid.
 // - use block-based ray-casting and not mesh-based ray-casting.
@@ -67,6 +68,7 @@ var Player = /** @class */ (function () {
         this.placeBlockSounds = [];
         this.digBlockSounds = [];
         this.selectedBlockId = Blocks.getBlockId(Blocks.CAULDRON);
+        this.worldCursor = new WorldCursor();
         this.audio = new Audio(Game.main.audioListener);
         this.updateMovement(0, 0);
         this.updateCamera(0);
@@ -105,6 +107,7 @@ var Player = /** @class */ (function () {
                     case 2:
                         _b.placeBlockSounds = _c.sent();
                         this.audio.setVolume(0.2);
+                        this.worldCursor.register(Game.main.scene);
                         return [2 /*return*/];
                 }
             });
@@ -116,36 +119,66 @@ var Player = /** @class */ (function () {
         var intersection = intersections.reduce(function (nearestIntersection, intersection) { return nearestIntersection && nearestIntersection.distance < intersection.distance ? nearestIntersection : intersection; }, undefined);
         if (intersection !== undefined && intersection.face) {
             var normalOffset = intersection.face.normal.normalize().multiplyScalar(0.1);
-            {
-                var samplePoint = intersection.point.clone().sub(normalOffset);
-                var _a = [
-                    Math.floor(samplePoint.x),
-                    Math.floor(samplePoint.y),
-                    Math.floor(samplePoint.z),
-                ], hitX = _a[0], hitY = _a[1], hitZ = _a[2];
-                var blockPos = new Vector3(hitX, hitY, hitZ);
-                if (this.input.isKeyDowned(LeftMouseButton)) {
-                    if (this.audio.isPlaying)
-                        this.audio.stop();
-                    this.audio.setBuffer(randomElement(this.digBlockSounds));
-                    this.audio.play();
-                    Game.main.level.setBlockAt(blockPos, Blocks.AIR);
-                }
+            var hitBlockPos = {
+                x: Math.floor(intersection.point.x - normalOffset.x),
+                y: Math.floor(intersection.point.y - normalOffset.y),
+                z: Math.floor(intersection.point.z - normalOffset.z),
+            };
+            if (this.input.isKeyDowned(LeftMouseButton)) {
+                if (this.audio.isPlaying)
+                    this.audio.stop();
+                this.audio.setBuffer(randomElement(this.digBlockSounds));
+                this.audio.play();
+                var world = Game.main.level.getWorld();
+                var blockToBreak = world.getBlock(hitBlockPos);
+                world.setBlock(hitBlockPos, Blocks.AIR);
+                blockToBreak === null || blockToBreak === void 0 ? void 0 : blockToBreak.onBreak(world, hitBlockPos);
             }
             {
-                var samplePoint = intersection.point.clone().add(normalOffset);
-                var _b = [
-                    Math.floor(samplePoint.x),
-                    Math.floor(samplePoint.y),
-                    Math.floor(samplePoint.z),
-                ], hitX = _b[0], hitY = _b[1], hitZ = _b[2];
-                var blockPos = new Vector3(hitX, hitY, hitZ);
+                var world = Game.main.level.getWorld();
+                this.worldCursor.set(world, hitBlockPos);
+                var hitBlock = world.getBlock(hitBlockPos);
+                // if (hitBlock) {
+                //     const modelIndex = hitBlock.getBlockModel(world.getBlockState(hitBlockPos)!);
+                //     const model = hitBlock.blockModels[modelIndex];
+                //     const [element] = model.elements;
+                //     if (element !== undefined) {
+                //         const distance = 0.001;
+                //         const [x, y, z] = element.from;
+                //         const [width, height, depth] = [
+                //             (element.to[0] - x) / 15 + distance * 2,
+                //             (element.to[1] - y) / 15 + distance * 2,
+                //             (element.to[2] - z) / 15 + distance * 2,
+                //         ];
+                //         this.worldCursorGeometry = new BoxGeometry(width, height, depth);
+                //         this.worldCursorGeometry.translate(
+                //             (hitBlockPos.x + width / 2) + x / 15 - distance,
+                //             (hitBlockPos.y + height / 2) + y / 15 - distance,
+                //             (hitBlockPos.z + depth / 2) + z / 15 - distance,
+                //         );
+                //         this.worldCursorMaterial = createWorldCursorMaterial(this.worldCursorGeometry);
+                //         this.worldCursor.material = this.worldCursorMaterial;
+                //         this.worldCursor.geometry = this.worldCursorGeometry;
+                //     }
+                // }
                 if (this.input.isKeyDowned(RightMouseButton)) {
-                    if (this.audio.isPlaying)
-                        this.audio.stop();
-                    this.audio.setBuffer(randomElement(this.placeBlockSounds));
-                    this.audio.play();
-                    Game.main.level.setBlockAt(blockPos, Blocks.getBlockById(this.selectedBlockId));
+                    var interactionResult = hitBlock === null || hitBlock === void 0 ? void 0 : hitBlock.onInteract(world, hitBlockPos);
+                    if (interactionResult === false) {
+                        if (this.audio.isPlaying)
+                            this.audio.stop();
+                        this.audio.setBuffer(randomElement(this.placeBlockSounds));
+                        this.audio.play();
+                        var samplePoint = intersection.point.clone().add(normalOffset);
+                        var _a = [
+                            Math.floor(samplePoint.x),
+                            Math.floor(samplePoint.y),
+                            Math.floor(samplePoint.z),
+                        ], hitX = _a[0], hitY = _a[1], hitZ = _a[2];
+                        var blockPos = new Vector3(hitX, hitY, hitZ);
+                        var blockToPlace = Blocks.getBlockById(this.selectedBlockId);
+                        Game.main.level.setBlockAt(blockPos, blockToPlace);
+                        blockToPlace.onPlace(world, blockPos);
+                    }
                 }
             }
         }
@@ -208,7 +241,7 @@ var Player = /** @class */ (function () {
         }
         if (!this.noclip) {
             var potentialPosition = this.position.clone().add(this.velocity.clone().multiplyScalar(deltaTime).multiply(new Vector3(movementSpeed, 1, movementSpeed)));
-            var _c = potentialPosition.toArray(), potentialX = _c[0], potentialY = _c[1], potentialZ = _c[2];
+            var _b = potentialPosition.toArray(), potentialX = _b[0], potentialY = _b[1], potentialZ = _b[2];
             var collisionX = this.createTerrainCollisionBoxes([potentialX, this.position.y, this.position.z]);
             if (collisionX)
                 this.velocity.setX(0);
@@ -235,6 +268,7 @@ var Player = /** @class */ (function () {
     Player.prototype.createTerrainCollisionBoxes = function (_a) {
         var x = _a[0], y = _a[1], z = _a[2];
         this.collisionBox.set(new Vector3(x - 0.35, y, z - 0.35), new Vector3(x + 0.35, y + 1.8, z + 0.35));
+        var world = Game.main.level.getWorld();
         var _b = [Math.floor(x + 0.5), Math.floor(y + 0.5), Math.floor(z + 0.5)], blockX = _b[0], blockY = _b[1], blockZ = _b[2];
         for (var ix = -2; ix < 2; ix += 1) {
             for (var iy = -2; iy < 3; iy += 1) {
@@ -243,8 +277,9 @@ var Player = /** @class */ (function () {
                     if (!this.terrainCollisionBoxes[boxIndex]) {
                         this.terrainCollisionBoxes[boxIndex] = new Box3();
                     }
-                    var block = Game.main.level.getBlockAt(new Vector3(blockX + ix, blockY + iy, blockZ + iz));
-                    var solidBlock = block !== undefined && block !== Blocks.AIR;
+                    var blockPos = new Vector3(blockX + ix, blockY + iy, blockZ + iz);
+                    var block = Game.main.level.getBlockAt(blockPos);
+                    var solidBlock = block !== undefined && block.isCollidable(world, blockPos);
                     this.terrainCollisionBoxes[boxIndex].set(new Vector3(blockX + ix, blockY + iy, blockZ + iz), new Vector3(blockX + ix + 1, blockY + iy + 1, blockZ + iz + 1));
                     if (!solidBlock) {
                         continue;

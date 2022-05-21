@@ -34,12 +34,12 @@ var ChunkRenderer = /** @class */ (function () {
         // TODO: Is there a need for block models being included in two meshes? E.g. solid cauldron with water?
         return {
             solid: this.buildGeometryWithOptions(blockData, function (blockId) { return [1, 2, 3, 4, 5].includes(blockId); }),
-            water: this.buildGeometryWithOptions(blockData, 
+            water: this.buildGeometryWithOptions(
             // There currently is no water.
-            function (blockId) { return false; }),
-            transparent: this.buildGeometryWithOptions(blockData, 
+            blockData, function (blockId) { return blockId === 7; }),
+            transparent: this.buildGeometryWithOptions(
             // There currently are no transparent blocks.
-            function (blockId) { return false; }),
+            blockData, function (blockId) { return blockId === 6; }),
         };
     };
     ChunkRenderer.prototype.buildGeometryWithOptions = function (blockData, isVisible) {
@@ -49,9 +49,9 @@ var ChunkRenderer = /** @class */ (function () {
             uv: [],
             vertices: [],
         };
-        for (var i = 0; i < blockData[0].length; i += 1) {
+        for (var i = 0; i < blockData.blocks.length; i += 1) {
             var pos = indexToXZY(i, CHUNK_WIDTH, CHUNK_WIDTH);
-            if (!isVisible(blockData[0][i])) {
+            if (!isVisible(blockData.blocks[i])) {
                 continue;
             }
             this.renderBlock(blockData, pos, partialChunkMeshData, isVisible);
@@ -65,7 +65,9 @@ var ChunkRenderer = /** @class */ (function () {
     };
     ChunkRenderer.prototype.renderBlock = function (blockData, position, partialChunkMeshData, isVisible) {
         var _a, _b, _c, _d;
-        var blockId = blockData[0][xzyToIndex(position, CHUNK_WIDTH, CHUNK_WIDTH)];
+        var _e;
+        var blockDataBlocksIndex = xzyToIndex(position, CHUNK_WIDTH, CHUNK_WIDTH);
+        var blockId = blockData.blocks[blockDataBlocksIndex];
         // TODO: Don't recreate the block model renderer for each block.
         var modelRenderer = new BlockModelRenderer(this.blockModels.textureUvs);
         var solidityMap = (_a = {},
@@ -76,11 +78,8 @@ var ChunkRenderer = /** @class */ (function () {
             _a[BlockFace.FRONT] = !this.isFaceVisible(blockData, position, BlockFace.FRONT, isVisible),
             _a[BlockFace.BACK] = !this.isFaceVisible(blockData, position, BlockFace.BACK, isVisible),
             _a);
-        // TODO: Don't use a random model but use the block model returned by the Block::getBlockModel() method.
-        var posHash = 137 * position.x + 149 * position.y + 163 * position.z;
-        var numberOfModels = this.blockModels.blockModels[blockId].length;
-        var modelIndex = mod(posHash, numberOfModels);
         // TODO: Only render block models once and translate the vertices to the correct position.
+        var modelIndex = (_e = blockData.blockModelIndices[blockDataBlocksIndex]) !== null && _e !== void 0 ? _e : 0;
         var modelMesh = modelRenderer.render(position, this.blockModels.blockModels[blockId][modelIndex], solidityMap);
         (_b = partialChunkMeshData.normals).push.apply(_b, modelMesh.normals);
         (_c = partialChunkMeshData.uv).push.apply(_c, modelMesh.uv);
@@ -101,33 +100,34 @@ var ChunkRenderer = /** @class */ (function () {
         // transparent blocks wouldn't render adjacent faces despite them being different block types.
         return !isVisible(neighbor);
     };
-    ChunkRenderer.prototype.getBlock = function (blockData, position) {
+    ChunkRenderer.prototype.getBlock = function (_a, position) {
+        var blocks = _a.blocks, neighborBlocks = _a.neighborBlocks;
         // Above
         if (position.y >= CHUNK_HEIGHT) {
-            return blockData[1][xzyToIndex(new Vector3(position.x, mod(position.y, CHUNK_HEIGHT), position.z), CHUNK_WIDTH, CHUNK_WIDTH)];
+            return neighborBlocks[0][xzyToIndex(new Vector3(position.x, mod(position.y, CHUNK_HEIGHT), position.z), CHUNK_WIDTH, CHUNK_WIDTH)];
         }
         // Below
         if (position.y < 0) {
-            return blockData[2][xzyToIndex(new Vector3(position.x, mod(position.y, CHUNK_HEIGHT), position.z), CHUNK_WIDTH, CHUNK_WIDTH)];
+            return neighborBlocks[1][xzyToIndex(new Vector3(position.x, mod(position.y, CHUNK_HEIGHT), position.z), CHUNK_WIDTH, CHUNK_WIDTH)];
         }
         // Left
         if (position.x < 0) {
-            return blockData[3][xzyToIndex(new Vector3(mod(position.x, CHUNK_WIDTH), position.y, position.z), CHUNK_WIDTH, CHUNK_WIDTH)];
+            return neighborBlocks[2][xzyToIndex(new Vector3(mod(position.x, CHUNK_WIDTH), position.y, position.z), CHUNK_WIDTH, CHUNK_WIDTH)];
         }
         // Right
         if (position.x >= CHUNK_WIDTH) {
-            return blockData[4][xzyToIndex(new Vector3(mod(position.x, CHUNK_WIDTH), position.y, position.z), CHUNK_WIDTH, CHUNK_WIDTH)];
+            return neighborBlocks[3][xzyToIndex(new Vector3(mod(position.x, CHUNK_WIDTH), position.y, position.z), CHUNK_WIDTH, CHUNK_WIDTH)];
         }
         // Back
         if (position.z < 0) {
-            return blockData[5][xzyToIndex(new Vector3(position.x, position.y, mod(position.z, CHUNK_WIDTH)), CHUNK_WIDTH, CHUNK_WIDTH)];
+            return neighborBlocks[4][xzyToIndex(new Vector3(position.x, position.y, mod(position.z, CHUNK_WIDTH)), CHUNK_WIDTH, CHUNK_WIDTH)];
         }
         // Front
         if (position.z >= CHUNK_WIDTH) {
-            return blockData[6][xzyToIndex(new Vector3(position.x, position.y, mod(position.z, CHUNK_WIDTH)), CHUNK_WIDTH, CHUNK_WIDTH)];
+            return neighborBlocks[5][xzyToIndex(new Vector3(position.x, position.y, mod(position.z, CHUNK_WIDTH)), CHUNK_WIDTH, CHUNK_WIDTH)];
         }
         // Within
-        return blockData[0][xzyToIndex(position, CHUNK_WIDTH, CHUNK_WIDTH)];
+        return blocks[xzyToIndex(position, CHUNK_WIDTH, CHUNK_WIDTH)];
     };
     return ChunkRenderer;
 }());

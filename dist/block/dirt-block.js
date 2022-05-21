@@ -48,9 +48,6 @@ var DirtBlock = /** @class */ (function (_super) {
     function DirtBlock() {
         return _super.call(this, 'dirt', [DirtBlockModel]) || this;
     }
-    DirtBlock.prototype.getBlockModel = function () {
-        return 0;
-    };
     DirtBlock.prototype.onRandomTick = function (level, pos) {
         if (level.getBlockAt(new Vector3(pos.x, pos.y + 1, pos.z)) !== Blocks.AIR) {
             return;

@@ -5,6 +5,9 @@ var BlockState = /** @class */ (function () {
     BlockState.prototype.get = function (name) {
         return this.values[name];
     };
+    BlockState.prototype.set = function (name, value) {
+        this.values[name] = value;
+    };
     BlockState.prototype.toJson = function () {
         return this.values;
     };

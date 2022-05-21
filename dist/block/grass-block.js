@@ -57,9 +57,6 @@ var GrassBlock = /** @class */ (function (_super) {
     function GrassBlock() {
         return _super.call(this, 'grass', [GrassBlockModel]) || this;
     }
-    GrassBlock.prototype.getBlockModel = function () {
-        return 0;
-    };
     GrassBlock.prototype.onRandomTick = function (level, pos) {
         var blockAbove = level.getBlockAt(new Vector3(pos.x, pos.y + 1, pos.z));
         if (blockAbove === Blocks.AIR) {

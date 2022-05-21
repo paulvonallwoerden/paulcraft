@@ -1,2179 +1,119 @@
 /******/ (() => { // webpackBootstrap
 /******/ 	var __webpack_modules__ = ({
 
-/***/ "./node_modules/stats.js/build/stats.min.js":
-/*!**************************************************!*\
-  !*** ./node_modules/stats.js/build/stats.min.js ***!
-  \**************************************************/
-/***/ (function(module) {
+/***/ "./node_modules/bezier-easing/src/index.js":
+/*!*************************************************!*\
+  !*** ./node_modules/bezier-easing/src/index.js ***!
+  \*************************************************/
+/***/ ((module) => {
 
-// stats.js - http://github.com/mrdoob/stats.js
-(function(f,e){ true?module.exports=e():0})(this,function(){var f=function(){function e(a){c.appendChild(a.dom);return a}function u(a){for(var d=0;d<c.children.length;d++)c.children[d].style.display=d===a?"block":"none";l=a}var l=0,c=document.createElement("div");c.style.cssText="position:fixed;top:0;left:0;cursor:pointer;opacity:0.9;z-index:10000";c.addEventListener("click",function(a){a.preventDefault();
-u(++l%c.children.length)},!1);var k=(performance||Date).now(),g=k,a=0,r=e(new f.Panel("FPS","#0ff","#002")),h=e(new f.Panel("MS","#0f0","#020"));if(self.performance&&self.performance.memory)var t=e(new f.Panel("MB","#f08","#201"));u(0);return{REVISION:16,dom:c,addPanel:e,showPanel:u,begin:function(){k=(performance||Date).now()},end:function(){a++;var c=(performance||Date).now();h.update(c-k,200);if(c>g+1E3&&(r.update(1E3*a/(c-g),100),g=c,a=0,t)){var d=performance.memory;t.update(d.usedJSHeapSize/
-1048576,d.jsHeapSizeLimit/1048576)}return c},update:function(){k=this.end()},domElement:c,setMode:u}};f.Panel=function(e,f,l){var c=Infinity,k=0,g=Math.round,a=g(window.devicePixelRatio||1),r=80*a,h=48*a,t=3*a,v=2*a,d=3*a,m=15*a,n=74*a,p=30*a,q=document.createElement("canvas");q.width=r;q.height=h;q.style.cssText="width:80px;height:48px";var b=q.getContext("2d");b.font="bold "+9*a+"px Helvetica,Arial,sans-serif";b.textBaseline="top";b.fillStyle=l;b.fillRect(0,0,r,h);b.fillStyle=f;b.fillText(e,t,v);
-b.fillRect(d,m,n,p);b.fillStyle=l;b.globalAlpha=.9;b.fillRect(d,m,n,p);return{dom:q,update:function(h,w){c=Math.min(c,h);k=Math.max(k,h);b.fillStyle=l;b.globalAlpha=1;b.fillRect(0,0,r,m);b.fillStyle=f;b.fillText(g(h)+" "+e+" ("+g(c)+"-"+g(k)+")",t,v);b.drawImage(q,d+a,m,n-a,p,d,m,n-a,p);b.fillRect(d+n-a,m,a,p);b.fillStyle=l;b.globalAlpha=.9;b.fillRect(d+n-a,m,a,g((1-h/w)*p))}}};return f});
+/**
+ * https://github.com/gre/bezier-easing
+ * BezierEasing - use bezier curve for transition easing function
+ * by Gaëtan Renaudeau 2014 - 2015 – MIT License
+ */
 
+// These values are established by empiricism with tests (tradeoff: performance VS precision)
+var NEWTON_ITERATIONS = 4;
+var NEWTON_MIN_SLOPE = 0.001;
+var SUBDIVISION_PRECISION = 0.0000001;
+var SUBDIVISION_MAX_ITERATIONS = 10;
 
-/***/ }),
+var kSplineTableSize = 11;
+var kSampleStepSize = 1.0 / (kSplineTableSize - 1.0);
 
-/***/ "./src/block/air-block.ts":
-/*!********************************!*\
-  !*** ./src/block/air-block.ts ***!
-  \********************************/
-/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+var float32ArraySupported = typeof Float32Array === 'function';
 
-"use strict";
-__webpack_require__.r(__webpack_exports__);
-/* harmony export */ __webpack_require__.d(__webpack_exports__, {
-/* harmony export */   "AirBlockModel": () => (/* binding */ AirBlockModel),
-/* harmony export */   "AirBlock": () => (/* binding */ AirBlock)
-/* harmony export */ });
-/* harmony import */ var _block__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./block */ "./src/block/block.ts");
-var __extends = (undefined && undefined.__extends) || (function () {
-    var extendStatics = function (d, b) {
-        extendStatics = Object.setPrototypeOf ||
-            ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
-            function (d, b) { for (var p in b) if (Object.prototype.hasOwnProperty.call(b, p)) d[p] = b[p]; };
-        return extendStatics(d, b);
-    };
-    return function (d, b) {
-        if (typeof b !== "function" && b !== null)
-            throw new TypeError("Class extends value " + String(b) + " is not a constructor or null");
-        extendStatics(d, b);
-        function __() { this.constructor = d; }
-        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
-    };
-})();
+function A (aA1, aA2) { return 1.0 - 3.0 * aA2 + 3.0 * aA1; }
+function B (aA1, aA2) { return 3.0 * aA2 - 6.0 * aA1; }
+function C (aA1)      { return 3.0 * aA1; }
 
-var AirBlockModel = {
-    elements: [],
-};
-var AirBlock = /** @class */ (function (_super) {
-    __extends(AirBlock, _super);
-    function AirBlock() {
-        return _super.call(this, 'air', [AirBlockModel]) || this;
+// Returns x(t) given t, x1, and x2, or y(t) given t, y1, and y2.
+function calcBezier (aT, aA1, aA2) { return ((A(aA1, aA2) * aT + B(aA1, aA2)) * aT + C(aA1)) * aT; }
+
+// Returns dx/dt given t, x1, and x2, or dy/dt given t, y1, and y2.
+function getSlope (aT, aA1, aA2) { return 3.0 * A(aA1, aA2) * aT * aT + 2.0 * B(aA1, aA2) * aT + C(aA1); }
+
+function binarySubdivide (aX, aA, aB, mX1, mX2) {
+  var currentX, currentT, i = 0;
+  do {
+    currentT = aA + (aB - aA) / 2.0;
+    currentX = calcBezier(currentT, mX1, mX2) - aX;
+    if (currentX > 0.0) {
+      aB = currentT;
+    } else {
+      aA = currentT;
     }
-    AirBlock.prototype.isCollidable = function () {
-        return false;
-    };
-    return AirBlock;
-}(_block__WEBPACK_IMPORTED_MODULE_0__.Block));
-
-
-
-/***/ }),
-
-/***/ "./src/block/block-face.ts":
-/*!*********************************!*\
-  !*** ./src/block/block-face.ts ***!
-  \*********************************/
-/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
-
-"use strict";
-__webpack_require__.r(__webpack_exports__);
-/* harmony export */ __webpack_require__.d(__webpack_exports__, {
-/* harmony export */   "BlockFace": () => (/* binding */ BlockFace),
-/* harmony export */   "BlockFaces": () => (/* binding */ BlockFaces)
-/* harmony export */ });
-var BlockFace;
-(function (BlockFace) {
-    BlockFace["TOP"] = "top";
-    BlockFace["BOTTOM"] = "bottom";
-    BlockFace["RIGHT"] = "right";
-    BlockFace["LEFT"] = "left";
-    BlockFace["FRONT"] = "front";
-    BlockFace["BACK"] = "back";
-})(BlockFace || (BlockFace = {}));
-var BlockFaces = [
-    BlockFace.TOP,
-    BlockFace.BOTTOM,
-    BlockFace.RIGHT,
-    BlockFace.LEFT,
-    BlockFace.FRONT,
-    BlockFace.BACK,
-];
-
-
-/***/ }),
-
-/***/ "./src/block/block-model/block-model.ts":
-/*!**********************************************!*\
-  !*** ./src/block/block-model/block-model.ts ***!
-  \**********************************************/
-/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
-
-"use strict";
-__webpack_require__.r(__webpack_exports__);
-/* harmony export */ __webpack_require__.d(__webpack_exports__, {
-/* harmony export */   "getBlockModelTextures": () => (/* binding */ getBlockModelTextures)
-/* harmony export */ });
-function getBlockModelTextures(blockModel) {
-    var faces = blockModel.elements.flatMap(function (element) { return Object.values(element.faces); });
-    return faces.map(function (face) { return face.texture; });
+  } while (Math.abs(currentX) > SUBDIVISION_PRECISION && ++i < SUBDIVISION_MAX_ITERATIONS);
+  return currentT;
 }
 
-
-/***/ }),
-
-/***/ "./src/block/block-state/block-state.ts":
-/*!**********************************************!*\
-  !*** ./src/block/block-state/block-state.ts ***!
-  \**********************************************/
-/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
-
-"use strict";
-__webpack_require__.r(__webpack_exports__);
-/* harmony export */ __webpack_require__.d(__webpack_exports__, {
-/* harmony export */   "BlockState": () => (/* binding */ BlockState)
-/* harmony export */ });
-var BlockState = /** @class */ (function () {
-    function BlockState(values) {
-        this.values = values;
-    }
-    BlockState.prototype.get = function (name) {
-        return this.values[name];
-    };
-    BlockState.prototype.set = function (name, value) {
-        this.values[name] = value;
-    };
-    BlockState.prototype.toJson = function () {
-        return this.values;
-    };
-    BlockState.fromJson = function (raw) {
-        return new BlockState(raw);
-    };
-    return BlockState;
-}());
-
-
-
-/***/ }),
-
-/***/ "./src/block/block.ts":
-/*!****************************!*\
-  !*** ./src/block/block.ts ***!
-  \****************************/
-/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
-
-"use strict";
-__webpack_require__.r(__webpack_exports__);
-/* harmony export */ __webpack_require__.d(__webpack_exports__, {
-/* harmony export */   "Block": () => (/* binding */ Block)
-/* harmony export */ });
-var Block = /** @class */ (function () {
-    function Block(name, blockModels) {
-        this.name = name;
-        this.blockModels = blockModels;
-    }
-    Block.prototype.getBlockModel = function (blockState) { return 0; };
-    Block.prototype.onRandomTick = function (level, pos) { };
-    Block.prototype.onSetBlock = function (world, pos) { };
-    Block.prototype.onPlace = function (world, pos) { return true; };
-    Block.prototype.onBreak = function (world, pos) { };
-    Block.prototype.onInteract = function (world, pos) { return false; };
-    Block.prototype.isCollidable = function (world, pos) { return true; };
-    return Block;
-}());
-
-
-
-/***/ }),
-
-/***/ "./src/block/blocks.ts":
-/*!*****************************!*\
-  !*** ./src/block/blocks.ts ***!
-  \*****************************/
-/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
-
-"use strict";
-__webpack_require__.r(__webpack_exports__);
-/* harmony export */ __webpack_require__.d(__webpack_exports__, {
-/* harmony export */   "Blocks": () => (/* binding */ Blocks)
-/* harmony export */ });
-/* harmony import */ var three__WEBPACK_IMPORTED_MODULE_11__ = __webpack_require__(/*! three */ "./node_modules/three/build/three.module.js");
-/* harmony import */ var _util_remove_duplicates__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../util/remove-duplicates */ "./src/util/remove-duplicates.ts");
-/* harmony import */ var _air_block__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./air-block */ "./src/block/air-block.ts");
-/* harmony import */ var _block_model_block_model__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./block-model/block-model */ "./src/block/block-model/block-model.ts");
-/* harmony import */ var _cauldron_block__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./cauldron-block */ "./src/block/cauldron-block.ts");
-/* harmony import */ var _dirt_block__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./dirt-block */ "./src/block/dirt-block.ts");
-/* harmony import */ var _door_block__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ./door-block */ "./src/block/door-block.ts");
-/* harmony import */ var _grass_block__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ./grass-block */ "./src/block/grass-block.ts");
-/* harmony import */ var _sand_block__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ./sand-block */ "./src/block/sand-block.ts");
-/* harmony import */ var _stone_block__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ./stone-block */ "./src/block/stone-block.ts");
-/* harmony import */ var _texture_atlas__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! ./texture-atlas */ "./src/block/texture-atlas.ts");
-/* harmony import */ var _water_block__WEBPACK_IMPORTED_MODULE_10__ = __webpack_require__(/*! ./water-block */ "./src/block/water-block.ts");
-var __assign = (undefined && undefined.__assign) || function () {
-    __assign = Object.assign || function(t) {
-        for (var s, i = 1, n = arguments.length; i < n; i++) {
-            s = arguments[i];
-            for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p))
-                t[p] = s[p];
-        }
-        return t;
-    };
-    return __assign.apply(this, arguments);
-};
-var __awaiter = (undefined && undefined.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
-var __generator = (undefined && undefined.__generator) || function (thisArg, body) {
-    var _ = { label: 0, sent: function() { if (t[0] & 1) throw t[1]; return t[1]; }, trys: [], ops: [] }, f, y, t, g;
-    return g = { next: verb(0), "throw": verb(1), "return": verb(2) }, typeof Symbol === "function" && (g[Symbol.iterator] = function() { return this; }), g;
-    function verb(n) { return function (v) { return step([n, v]); }; }
-    function step(op) {
-        if (f) throw new TypeError("Generator is already executing.");
-        while (_) try {
-            if (f = 1, y && (t = op[0] & 2 ? y["return"] : op[0] ? y["throw"] || ((t = y["return"]) && t.call(y), 0) : y.next) && !(t = t.call(y, op[1])).done) return t;
-            if (y = 0, t) op = [op[0] & 2, t.value];
-            switch (op[0]) {
-                case 0: case 1: t = op; break;
-                case 4: _.label++; return { value: op[1], done: false };
-                case 5: _.label++; y = op[1]; op = [0]; continue;
-                case 7: op = _.ops.pop(); _.trys.pop(); continue;
-                default:
-                    if (!(t = _.trys, t = t.length > 0 && t[t.length - 1]) && (op[0] === 6 || op[0] === 2)) { _ = 0; continue; }
-                    if (op[0] === 3 && (!t || (op[1] > t[0] && op[1] < t[3]))) { _.label = op[1]; break; }
-                    if (op[0] === 6 && _.label < t[1]) { _.label = t[1]; t = op; break; }
-                    if (t && _.label < t[2]) { _.label = t[2]; _.ops.push(op); break; }
-                    if (t[2]) _.ops.pop();
-                    _.trys.pop(); continue;
-            }
-            op = body.call(thisArg, _);
-        } catch (e) { op = [6, e]; y = 0; } finally { f = t = 0; }
-        if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
-    }
-};
-
-
-
-
-
-
-
-
-
-
-
-
-var Blocks = /** @class */ (function () {
-    function Blocks() {
-        this.solidMaterial = new three__WEBPACK_IMPORTED_MODULE_11__.MeshStandardMaterial({ opacity: 1, transparent: false });
-        this.waterMaterial = new three__WEBPACK_IMPORTED_MODULE_11__.MeshStandardMaterial({ opacity: 0.8, transparent: true });
-        this.transparentMaterial = new three__WEBPACK_IMPORTED_MODULE_11__.MeshStandardMaterial({ alphaTest: 0.5 });
-        var blockTextures = Blocks.blocks.flatMap(function (block) { return block.blockModels.flatMap(function (blockModel) { return (0,_block_model_block_model__WEBPACK_IMPORTED_MODULE_2__.getBlockModelTextures)(blockModel); }); });
-        this.blockTextureSources = (0,_util_remove_duplicates__WEBPACK_IMPORTED_MODULE_0__.removeDuplicates)(blockTextures);
-        this.textureAtlas = new _texture_atlas__WEBPACK_IMPORTED_MODULE_9__.TextureAtlas(this.blockTextureSources);
-    }
-    Blocks.prototype.init = function () {
-        return __awaiter(this, void 0, void 0, function () {
-            var atlas;
-            return __generator(this, function (_a) {
-                switch (_a.label) {
-                    case 0: return [4 /*yield*/, this.textureAtlas.buildAtlas()];
-                    case 1:
-                        atlas = _a.sent();
-                        this.solidMaterial.map = atlas;
-                        this.transparentMaterial.map = atlas;
-                        this.waterMaterial.map = atlas;
-                        return [2 /*return*/];
-                }
-            });
-        });
-    };
-    Blocks.getBlockId = function (block) {
-        return Blocks.blocks.indexOf(block);
-    };
-    Blocks.getBlockById = function (id) {
-        return Blocks.blocks[id];
-    };
-    Blocks.prototype.getBlockMaterials = function () {
-        return {
-            solid: this.solidMaterial,
-            transparent: this.transparentMaterial,
-            water: this.waterMaterial,
-        };
-    };
-    Blocks.prototype.getBlockTexture = function (texture) {
-        return this.textureAtlas.getTextureUv(texture);
-    };
-    Blocks.prototype.serializeBlockModels = function () {
-        var _this = this;
-        return {
-            textureUvs: this.blockTextureSources.reduce(function (uvs, source) {
-                var _a;
-                return (__assign(__assign({}, uvs), (_a = {}, _a[source] = _this.textureAtlas.getTextureUv(source), _a)));
-            }, {}),
-            blockModels: Blocks.blocks.map(function (block) { return block.blockModels; }),
-        };
-    };
-    Blocks.prototype.getNumberOfBlocks = function () {
-        return Blocks.blocks.length;
-    };
-    Blocks.AIR = new _air_block__WEBPACK_IMPORTED_MODULE_1__.AirBlock();
-    Blocks.STONE = new _stone_block__WEBPACK_IMPORTED_MODULE_8__.StoneBlock();
-    Blocks.GRASS = new _grass_block__WEBPACK_IMPORTED_MODULE_6__.GrassBlock();
-    Blocks.DIRT = new _dirt_block__WEBPACK_IMPORTED_MODULE_4__.DirtBlock();
-    Blocks.SAND = new _sand_block__WEBPACK_IMPORTED_MODULE_7__.SandBlock();
-    Blocks.CAULDRON = new _cauldron_block__WEBPACK_IMPORTED_MODULE_3__.CauldronBlock();
-    Blocks.DOOR = new _door_block__WEBPACK_IMPORTED_MODULE_5__.DoorBlock();
-    Blocks.WATER = new _water_block__WEBPACK_IMPORTED_MODULE_10__.WaterBlock();
-    Blocks.blocks = [
-        Blocks.AIR,
-        Blocks.STONE,
-        Blocks.GRASS,
-        Blocks.DIRT,
-        Blocks.SAND,
-        Blocks.CAULDRON,
-        Blocks.DOOR,
-        Blocks.WATER,
-    ];
-    return Blocks;
-}());
-
-
-
-/***/ }),
-
-/***/ "./src/block/cauldron-block.ts":
-/*!*************************************!*\
-  !*** ./src/block/cauldron-block.ts ***!
-  \*************************************/
-/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
-
-"use strict";
-__webpack_require__.r(__webpack_exports__);
-/* harmony export */ __webpack_require__.d(__webpack_exports__, {
-/* harmony export */   "makeCauldronBlockModel": () => (/* binding */ makeCauldronBlockModel),
-/* harmony export */   "CauldronBlock": () => (/* binding */ CauldronBlock)
-/* harmony export */ });
-/* harmony import */ var _util_random_element__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../util/random-element */ "./src/util/random-element.ts");
-/* harmony import */ var _block__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./block */ "./src/block/block.ts");
-/* harmony import */ var _block_face__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./block-face */ "./src/block/block-face.ts");
-/* harmony import */ var _block_state_block_state__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./block-state/block-state */ "./src/block/block-state/block-state.ts");
-var __extends = (undefined && undefined.__extends) || (function () {
-    var extendStatics = function (d, b) {
-        extendStatics = Object.setPrototypeOf ||
-            ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
-            function (d, b) { for (var p in b) if (Object.prototype.hasOwnProperty.call(b, p)) d[p] = b[p]; };
-        return extendStatics(d, b);
-    };
-    return function (d, b) {
-        if (typeof b !== "function" && b !== null)
-            throw new TypeError("Class extends value " + String(b) + " is not a constructor or null");
-        extendStatics(d, b);
-        function __() { this.constructor = d; }
-        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
-    };
-})();
-var __assign = (undefined && undefined.__assign) || function () {
-    __assign = Object.assign || function(t) {
-        for (var s, i = 1, n = arguments.length; i < n; i++) {
-            s = arguments[i];
-            for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p))
-                t[p] = s[p];
-        }
-        return t;
-    };
-    return __assign.apply(this, arguments);
-};
-var _a;
-
-
-
-
-var CauldronBlockModelSideFaces = (_a = {},
-    _a[_block_face__WEBPACK_IMPORTED_MODULE_2__.BlockFace.TOP] = { texture: 'textures/blocks/cauldron_top.png' },
-    _a[_block_face__WEBPACK_IMPORTED_MODULE_2__.BlockFace.BOTTOM] = { texture: 'textures/blocks/cauldron_bottom.png' },
-    _a[_block_face__WEBPACK_IMPORTED_MODULE_2__.BlockFace.LEFT] = { texture: 'textures/blocks/cauldron_side.png' },
-    _a[_block_face__WEBPACK_IMPORTED_MODULE_2__.BlockFace.RIGHT] = { texture: 'textures/blocks/cauldron_side.png' },
-    _a[_block_face__WEBPACK_IMPORTED_MODULE_2__.BlockFace.FRONT] = { texture: 'textures/blocks/cauldron_side.png' },
-    _a[_block_face__WEBPACK_IMPORTED_MODULE_2__.BlockFace.BACK] = { texture: 'textures/blocks/cauldron_side.png' },
-    _a);
-function makeCauldronBlockModel(level) {
-    var _a;
-    var model = {
-        elements: [
-            // Sides
-            {
-                from: [0, 2, 0],
-                to: [15, 15, 2],
-                faces: CauldronBlockModelSideFaces,
-            },
-            {
-                from: [0, 2, 13],
-                to: [15, 15, 15],
-                faces: CauldronBlockModelSideFaces,
-            },
-            {
-                from: [0, 2, 2],
-                to: [2, 15, 13],
-                faces: CauldronBlockModelSideFaces,
-            },
-            {
-                from: [13, 2, 2],
-                to: [15, 15, 13],
-                faces: CauldronBlockModelSideFaces,
-            },
-            // Legs
-            {
-                from: [0, 0, 0],
-                to: [5, 2, 5],
-                faces: _block_face__WEBPACK_IMPORTED_MODULE_2__.BlockFaces.reduce(function (faces, face) {
-                    var _a;
-                    return (__assign(__assign({}, faces), (_a = {}, _a[face] = {
-                        cull: false,
-                        texture: 'textures/blocks/cauldron_side.png',
-                    }, _a)));
-                }, {}),
-            },
-            {
-                from: [13, 0, 0],
-                to: [15, 4, 2],
-                faces: _block_face__WEBPACK_IMPORTED_MODULE_2__.BlockFaces.reduce(function (faces, face) {
-                    var _a;
-                    return (__assign(__assign({}, faces), (_a = {}, _a[face] = {
-                        cull: false,
-                        texture: 'textures/blocks/cauldron_side.png',
-                    }, _a)));
-                }, {}),
-            },
-            {
-                from: [0, 0, 13],
-                to: [2, 4, 15],
-                faces: _block_face__WEBPACK_IMPORTED_MODULE_2__.BlockFaces.reduce(function (faces, face) {
-                    var _a;
-                    return (__assign(__assign({}, faces), (_a = {}, _a[face] = {
-                        cull: false,
-                        texture: 'textures/blocks/cauldron_side.png',
-                    }, _a)));
-                }, {}),
-            },
-            {
-                from: [13, 0, 13],
-                to: [15, 4, 15],
-                faces: _block_face__WEBPACK_IMPORTED_MODULE_2__.BlockFaces.reduce(function (faces, face) {
-                    var _a;
-                    return (__assign(__assign({}, faces), (_a = {}, _a[face] = {
-                        cull: false,
-                        texture: 'textures/blocks/cauldron_side.png',
-                    }, _a)));
-                }, {}),
-            },
-        ],
-    };
-    if (level <= 0) {
-        return model;
-    }
-    model.elements.push({
-        from: [2, 3 + (level - 1) * 5, 2],
-        to: [13, 3 + (level - 1) * 5, 13],
-        faces: (_a = {},
-            _a[_block_face__WEBPACK_IMPORTED_MODULE_2__.BlockFace.TOP] = {
-                cull: false,
-                texture: 'textures/blocks/water.png',
-            },
-            _a),
-    });
-    return model;
-}
-;
-var DefaultCauldronBlockStateValues = {
-    level: 0,
-};
-var CauldronBlock = /** @class */ (function (_super) {
-    __extends(CauldronBlock, _super);
-    function CauldronBlock() {
-        return _super.call(this, 'cauldron', [
-            makeCauldronBlockModel(0),
-            makeCauldronBlockModel(1),
-            makeCauldronBlockModel(2),
-            makeCauldronBlockModel(3),
-        ]) || this;
-    }
-    CauldronBlock.prototype.getBlockModel = function (blockState) {
-        return blockState.get('level');
-    };
-    CauldronBlock.prototype.onSetBlock = function (world, pos) {
-        world.setBlockState(pos, new _block_state_block_state__WEBPACK_IMPORTED_MODULE_3__.BlockState(DefaultCauldronBlockStateValues));
-    };
-    CauldronBlock.prototype.onRandomTick = function (level, pos) {
-        var newState = new _block_state_block_state__WEBPACK_IMPORTED_MODULE_3__.BlockState(__assign({}, DefaultCauldronBlockStateValues));
-        newState.set('level', (0,_util_random_element__WEBPACK_IMPORTED_MODULE_0__.randomElement)([0, 1, 2, 3]));
-        level.getWorld().setBlockState(pos, newState);
-    };
-    return CauldronBlock;
-}(_block__WEBPACK_IMPORTED_MODULE_1__.Block));
-
-
-
-/***/ }),
-
-/***/ "./src/block/dirt-block.ts":
-/*!*********************************!*\
-  !*** ./src/block/dirt-block.ts ***!
-  \*********************************/
-/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
-
-"use strict";
-__webpack_require__.r(__webpack_exports__);
-/* harmony export */ __webpack_require__.d(__webpack_exports__, {
-/* harmony export */   "DirtBlockModel": () => (/* binding */ DirtBlockModel),
-/* harmony export */   "DirtBlock": () => (/* binding */ DirtBlock)
-/* harmony export */ });
-/* harmony import */ var three__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! three */ "./node_modules/three/build/three.module.js");
-/* harmony import */ var _block__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./block */ "./src/block/block.ts");
-/* harmony import */ var _block_face__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./block-face */ "./src/block/block-face.ts");
-/* harmony import */ var _blocks__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./blocks */ "./src/block/blocks.ts");
-var __extends = (undefined && undefined.__extends) || (function () {
-    var extendStatics = function (d, b) {
-        extendStatics = Object.setPrototypeOf ||
-            ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
-            function (d, b) { for (var p in b) if (Object.prototype.hasOwnProperty.call(b, p)) d[p] = b[p]; };
-        return extendStatics(d, b);
-    };
-    return function (d, b) {
-        if (typeof b !== "function" && b !== null)
-            throw new TypeError("Class extends value " + String(b) + " is not a constructor or null");
-        extendStatics(d, b);
-        function __() { this.constructor = d; }
-        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
-    };
-})();
-var __assign = (undefined && undefined.__assign) || function () {
-    __assign = Object.assign || function(t) {
-        for (var s, i = 1, n = arguments.length; i < n; i++) {
-            s = arguments[i];
-            for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p))
-                t[p] = s[p];
-        }
-        return t;
-    };
-    return __assign.apply(this, arguments);
-};
-
-
-
-
-var DirtBlockModel = {
-    elements: [
-        {
-            from: [0, 0, 0],
-            to: [15, 15, 15],
-            faces: _block_face__WEBPACK_IMPORTED_MODULE_1__.BlockFaces.reduce(function (faces, face) {
-                var _a;
-                return (__assign(__assign({}, faces), (_a = {}, _a[face] = {
-                    cull: true,
-                    texture: 'textures/blocks/dirt.png',
-                }, _a)));
-            }, {}),
-        },
-    ],
-};
-var DirtBlock = /** @class */ (function (_super) {
-    __extends(DirtBlock, _super);
-    function DirtBlock() {
-        return _super.call(this, 'dirt', [DirtBlockModel]) || this;
-    }
-    DirtBlock.prototype.onRandomTick = function (level, pos) {
-        if (level.getBlockAt(new three__WEBPACK_IMPORTED_MODULE_3__.Vector3(pos.x, pos.y + 1, pos.z)) !== _blocks__WEBPACK_IMPORTED_MODULE_2__.Blocks.AIR) {
-            return;
-        }
-        if (this.isNearGrass(level, pos)) {
-            level.setBlockAt(new three__WEBPACK_IMPORTED_MODULE_3__.Vector3(pos.x, pos.y, pos.z), _blocks__WEBPACK_IMPORTED_MODULE_2__.Blocks.GRASS);
-        }
-    };
-    DirtBlock.prototype.isNearGrass = function (level, pos) {
-        for (var i = -1; i < 2; i++) {
-            if (this.isGrassAtRelative(level, pos, { x: 1, y: i, z: 0 })) {
-                return true;
-            }
-        }
-        for (var i = -1; i < 2; i++) {
-            if (this.isGrassAtRelative(level, pos, { x: -1, y: i, z: 0 })) {
-                return true;
-            }
-        }
-        for (var i = -1; i < 2; i++) {
-            if (this.isGrassAtRelative(level, pos, { x: 0, y: i, z: 1 })) {
-                return true;
-            }
-        }
-        for (var i = -1; i < 2; i++) {
-            if (this.isGrassAtRelative(level, pos, { x: 0, y: i, z: -1 })) {
-                return true;
-            }
-        }
-        return false;
-    };
-    DirtBlock.prototype.isGrassAtRelative = function (level, pos, offset) {
-        return level.getBlockAt(new three__WEBPACK_IMPORTED_MODULE_3__.Vector3(pos.x + offset.x, pos.y + offset.y, pos.z + offset.z)) === _blocks__WEBPACK_IMPORTED_MODULE_2__.Blocks.GRASS;
-    };
-    return DirtBlock;
-}(_block__WEBPACK_IMPORTED_MODULE_0__.Block));
-
-
-
-/***/ }),
-
-/***/ "./src/block/door-block.ts":
-/*!*********************************!*\
-  !*** ./src/block/door-block.ts ***!
-  \*********************************/
-/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
-
-"use strict";
-__webpack_require__.r(__webpack_exports__);
-/* harmony export */ __webpack_require__.d(__webpack_exports__, {
-/* harmony export */   "makeClosedDoorBlockModel": () => (/* binding */ makeClosedDoorBlockModel),
-/* harmony export */   "makeOpenedDoorBlockModel": () => (/* binding */ makeOpenedDoorBlockModel),
-/* harmony export */   "DoorBlock": () => (/* binding */ DoorBlock)
-/* harmony export */ });
-/* harmony import */ var _block__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./block */ "./src/block/block.ts");
-/* harmony import */ var _block_face__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./block-face */ "./src/block/block-face.ts");
-/* harmony import */ var _block_state_block_state__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./block-state/block-state */ "./src/block/block-state/block-state.ts");
-/* harmony import */ var _blocks__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./blocks */ "./src/block/blocks.ts");
-var __extends = (undefined && undefined.__extends) || (function () {
-    var extendStatics = function (d, b) {
-        extendStatics = Object.setPrototypeOf ||
-            ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
-            function (d, b) { for (var p in b) if (Object.prototype.hasOwnProperty.call(b, p)) d[p] = b[p]; };
-        return extendStatics(d, b);
-    };
-    return function (d, b) {
-        if (typeof b !== "function" && b !== null)
-            throw new TypeError("Class extends value " + String(b) + " is not a constructor or null");
-        extendStatics(d, b);
-        function __() { this.constructor = d; }
-        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
-    };
-})();
-var __assign = (undefined && undefined.__assign) || function () {
-    __assign = Object.assign || function(t) {
-        for (var s, i = 1, n = arguments.length; i < n; i++) {
-            s = arguments[i];
-            for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p))
-                t[p] = s[p];
-        }
-        return t;
-    };
-    return __assign.apply(this, arguments);
-};
-
-
-
-
-function makeClosedDoorBlockModel(rotation, texture) {
-    return {
-        rotation: {
-            angle: rotation,
-            axis: 'y'
-        },
-        elements: [
-            {
-                from: [0, 0, 0],
-                to: [2, 15, 15],
-                faces: _block_face__WEBPACK_IMPORTED_MODULE_1__.BlockFaces.reduce(function (faces, face) {
-                    var _a;
-                    return (__assign(__assign({}, faces), (_a = {}, _a[face] = { texture: texture }, _a)));
-                }, {}),
-            },
-        ],
-    };
-}
-function makeOpenedDoorBlockModel(rotation, texture) {
-    return {
-        rotation: {
-            angle: rotation,
-            axis: 'y'
-        },
-        elements: [
-            {
-                from: [0, 0, 0],
-                to: [15, 15, 2],
-                faces: _block_face__WEBPACK_IMPORTED_MODULE_1__.BlockFaces.reduce(function (faces, face) {
-                    var _a;
-                    return (__assign(__assign({}, faces), (_a = {}, _a[face] = { texture: texture }, _a)));
-                }, {}),
-            },
-        ],
-    };
-}
-var DefaultDoorBlockStateValues = { open: false, isTop: false };
-var DoorBlock = /** @class */ (function (_super) {
-    __extends(DoorBlock, _super);
-    function DoorBlock() {
-        return _super.call(this, 'door', [
-            makeClosedDoorBlockModel(0, 'textures/blocks/oak_door_bottom.png'),
-            makeOpenedDoorBlockModel(0, 'textures/blocks/oak_door_bottom.png'),
-            makeClosedDoorBlockModel(0, 'textures/blocks/oak_door_top.png'),
-            makeOpenedDoorBlockModel(0, 'textures/blocks/oak_door_top.png'),
-        ]) || this;
-    }
-    DoorBlock.prototype.getBlockModel = function (blockState) {
-        var open = blockState.get('open');
-        var top = blockState.get('isTop');
-        return (top ? 2 : 0) + (open ? 1 : 0);
-    };
-    DoorBlock.prototype.onSetBlock = function (world, pos) {
-        var existingState = world.getBlockState(pos);
-        if (existingState !== undefined) {
-            return;
-        }
-        world.setBlockState(pos, new _block_state_block_state__WEBPACK_IMPORTED_MODULE_2__.BlockState(__assign({}, DefaultDoorBlockStateValues)));
-    };
-    DoorBlock.prototype.onPlace = function (world, pos) {
-        var topPos = __assign(__assign({}, pos), { y: pos.y + 1 });
-        world.setBlockState(topPos, new _block_state_block_state__WEBPACK_IMPORTED_MODULE_2__.BlockState(__assign(__assign({}, DefaultDoorBlockStateValues), { isTop: true })));
-        world.setBlock(topPos, _blocks__WEBPACK_IMPORTED_MODULE_3__.Blocks.DOOR);
-        return true;
-    };
-    DoorBlock.prototype.onInteract = function (world, pos) {
-        var topPos = __assign(__assign({}, pos), { y: pos.y + 1 });
-        var top = world.getBlock(topPos);
-        if (top instanceof DoorBlock) {
-            top.toggleOpen(world, topPos);
-            this.toggleOpen(world, pos);
-        }
-        else {
-            var bottomPos = __assign(__assign({}, pos), { y: pos.y - 1 });
-            var bottom = world.getBlock(bottomPos);
-            if (bottom instanceof DoorBlock) {
-                bottom.toggleOpen(world, bottomPos);
-                this.toggleOpen(world, pos);
-            }
-        }
-        return true;
-    };
-    DoorBlock.prototype.onBreak = function (world, pos) {
-        var topPos = __assign(__assign({}, pos), { y: pos.y + 1 });
-        var top = world.getBlock(topPos);
-        if (top instanceof DoorBlock) {
-            world.setBlock(topPos, _blocks__WEBPACK_IMPORTED_MODULE_3__.Blocks.AIR);
-        }
-        else {
-            var bottomPos = __assign(__assign({}, pos), { y: pos.y - 1 });
-            var bottom = world.getBlock(bottomPos);
-            if (bottom instanceof DoorBlock) {
-                world.setBlock(bottomPos, _blocks__WEBPACK_IMPORTED_MODULE_3__.Blocks.AIR);
-            }
-        }
-    };
-    DoorBlock.prototype.isCollidable = function (world, pos) {
-        var state = world.getBlockState(pos);
-        return !state.get('open');
-    };
-    DoorBlock.prototype.toggleOpen = function (world, pos) {
-        var state = world.getBlockState(pos);
-        state.set('open', !state.get('open'));
-        world.setBlockState(pos, state);
-    };
-    return DoorBlock;
-}(_block__WEBPACK_IMPORTED_MODULE_0__.Block));
-
-
-
-/***/ }),
-
-/***/ "./src/block/grass-block.ts":
-/*!**********************************!*\
-  !*** ./src/block/grass-block.ts ***!
-  \**********************************/
-/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
-
-"use strict";
-__webpack_require__.r(__webpack_exports__);
-/* harmony export */ __webpack_require__.d(__webpack_exports__, {
-/* harmony export */   "GrassBlockModel": () => (/* binding */ GrassBlockModel),
-/* harmony export */   "GrassBlock": () => (/* binding */ GrassBlock)
-/* harmony export */ });
-/* harmony import */ var three__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! three */ "./node_modules/three/build/three.module.js");
-/* harmony import */ var _block__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./block */ "./src/block/block.ts");
-/* harmony import */ var _block_face__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./block-face */ "./src/block/block-face.ts");
-/* harmony import */ var _blocks__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./blocks */ "./src/block/blocks.ts");
-var __extends = (undefined && undefined.__extends) || (function () {
-    var extendStatics = function (d, b) {
-        extendStatics = Object.setPrototypeOf ||
-            ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
-            function (d, b) { for (var p in b) if (Object.prototype.hasOwnProperty.call(b, p)) d[p] = b[p]; };
-        return extendStatics(d, b);
-    };
-    return function (d, b) {
-        if (typeof b !== "function" && b !== null)
-            throw new TypeError("Class extends value " + String(b) + " is not a constructor or null");
-        extendStatics(d, b);
-        function __() { this.constructor = d; }
-        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
-    };
-})();
-var _a;
-
-
-
-
-var GrassBlockModel = {
-    elements: [
-        {
-            from: [0, 0, 0],
-            to: [15, 15, 15],
-            faces: (_a = {},
-                _a[_block_face__WEBPACK_IMPORTED_MODULE_1__.BlockFace.TOP] = {
-                    cull: true,
-                    texture: 'textures/blocks/grass_block_top.png',
-                },
-                _a[_block_face__WEBPACK_IMPORTED_MODULE_1__.BlockFace.LEFT] = {
-                    cull: true,
-                    texture: 'textures/blocks/grass_block_side.png',
-                },
-                _a[_block_face__WEBPACK_IMPORTED_MODULE_1__.BlockFace.RIGHT] = {
-                    cull: true,
-                    texture: 'textures/blocks/grass_block_side.png',
-                },
-                _a[_block_face__WEBPACK_IMPORTED_MODULE_1__.BlockFace.FRONT] = {
-                    cull: true,
-                    texture: 'textures/blocks/grass_block_side.png',
-                },
-                _a[_block_face__WEBPACK_IMPORTED_MODULE_1__.BlockFace.BACK] = {
-                    cull: true,
-                    texture: 'textures/blocks/grass_block_side.png',
-                },
-                _a[_block_face__WEBPACK_IMPORTED_MODULE_1__.BlockFace.BOTTOM] = {
-                    cull: true,
-                    texture: 'textures/blocks/dirt.png',
-                },
-                _a)
-        },
-    ],
-};
-var GrassBlock = /** @class */ (function (_super) {
-    __extends(GrassBlock, _super);
-    function GrassBlock() {
-        return _super.call(this, 'grass', [GrassBlockModel]) || this;
-    }
-    GrassBlock.prototype.onRandomTick = function (level, pos) {
-        var blockAbove = level.getBlockAt(new three__WEBPACK_IMPORTED_MODULE_3__.Vector3(pos.x, pos.y + 1, pos.z));
-        if (blockAbove === _blocks__WEBPACK_IMPORTED_MODULE_2__.Blocks.AIR) {
-            return;
-        }
-        level.setBlockAt(new three__WEBPACK_IMPORTED_MODULE_3__.Vector3(pos.x, pos.y, pos.z), _blocks__WEBPACK_IMPORTED_MODULE_2__.Blocks.DIRT);
-    };
-    return GrassBlock;
-}(_block__WEBPACK_IMPORTED_MODULE_0__.Block));
-
-
-
-/***/ }),
-
-/***/ "./src/block/sand-block.ts":
-/*!*********************************!*\
-  !*** ./src/block/sand-block.ts ***!
-  \*********************************/
-/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
-
-"use strict";
-__webpack_require__.r(__webpack_exports__);
-/* harmony export */ __webpack_require__.d(__webpack_exports__, {
-/* harmony export */   "SandBlockModel": () => (/* binding */ SandBlockModel),
-/* harmony export */   "SandBlock": () => (/* binding */ SandBlock)
-/* harmony export */ });
-/* harmony import */ var three__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! three */ "./node_modules/three/build/three.module.js");
-/* harmony import */ var _block__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./block */ "./src/block/block.ts");
-/* harmony import */ var _block_face__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./block-face */ "./src/block/block-face.ts");
-/* harmony import */ var _blocks__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./blocks */ "./src/block/blocks.ts");
-var __extends = (undefined && undefined.__extends) || (function () {
-    var extendStatics = function (d, b) {
-        extendStatics = Object.setPrototypeOf ||
-            ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
-            function (d, b) { for (var p in b) if (Object.prototype.hasOwnProperty.call(b, p)) d[p] = b[p]; };
-        return extendStatics(d, b);
-    };
-    return function (d, b) {
-        if (typeof b !== "function" && b !== null)
-            throw new TypeError("Class extends value " + String(b) + " is not a constructor or null");
-        extendStatics(d, b);
-        function __() { this.constructor = d; }
-        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
-    };
-})();
-var __assign = (undefined && undefined.__assign) || function () {
-    __assign = Object.assign || function(t) {
-        for (var s, i = 1, n = arguments.length; i < n; i++) {
-            s = arguments[i];
-            for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p))
-                t[p] = s[p];
-        }
-        return t;
-    };
-    return __assign.apply(this, arguments);
-};
-
-
-
-
-var SandBlockModel = {
-    elements: [
-        {
-            from: [0, 0, 0],
-            to: [15, 15, 15],
-            faces: _block_face__WEBPACK_IMPORTED_MODULE_1__.BlockFaces.reduce(function (faces, face) {
-                var _a;
-                return (__assign(__assign({}, faces), (_a = {}, _a[face] = {
-                    cull: true,
-                    texture: 'textures/blocks/sand.png',
-                }, _a)));
-            }, {}),
-        },
-    ],
-};
-var SandBlock = /** @class */ (function (_super) {
-    __extends(SandBlock, _super);
-    function SandBlock() {
-        return _super.call(this, 'sand', [SandBlockModel]) || this;
-    }
-    SandBlock.prototype.onRandomTick = function (level, pos) {
-        if (level.getBlockAt(new three__WEBPACK_IMPORTED_MODULE_3__.Vector3(pos.x, pos.y - 1, pos.z)) !== _blocks__WEBPACK_IMPORTED_MODULE_2__.Blocks.AIR) {
-            return;
-        }
-        level.setBlockAt(new three__WEBPACK_IMPORTED_MODULE_3__.Vector3(pos.x, pos.y, pos.z), _blocks__WEBPACK_IMPORTED_MODULE_2__.Blocks.AIR);
-        level.setBlockAt(new three__WEBPACK_IMPORTED_MODULE_3__.Vector3(pos.x, pos.y - 1, pos.z), _blocks__WEBPACK_IMPORTED_MODULE_2__.Blocks.SAND);
-    };
-    return SandBlock;
-}(_block__WEBPACK_IMPORTED_MODULE_0__.Block));
-
-
-
-/***/ }),
-
-/***/ "./src/block/stone-block.ts":
-/*!**********************************!*\
-  !*** ./src/block/stone-block.ts ***!
-  \**********************************/
-/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
-
-"use strict";
-__webpack_require__.r(__webpack_exports__);
-/* harmony export */ __webpack_require__.d(__webpack_exports__, {
-/* harmony export */   "StoneBlockModel": () => (/* binding */ StoneBlockModel),
-/* harmony export */   "StoneBlock": () => (/* binding */ StoneBlock)
-/* harmony export */ });
-/* harmony import */ var _block__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./block */ "./src/block/block.ts");
-/* harmony import */ var _block_face__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./block-face */ "./src/block/block-face.ts");
-var __extends = (undefined && undefined.__extends) || (function () {
-    var extendStatics = function (d, b) {
-        extendStatics = Object.setPrototypeOf ||
-            ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
-            function (d, b) { for (var p in b) if (Object.prototype.hasOwnProperty.call(b, p)) d[p] = b[p]; };
-        return extendStatics(d, b);
-    };
-    return function (d, b) {
-        if (typeof b !== "function" && b !== null)
-            throw new TypeError("Class extends value " + String(b) + " is not a constructor or null");
-        extendStatics(d, b);
-        function __() { this.constructor = d; }
-        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
-    };
-})();
-var __assign = (undefined && undefined.__assign) || function () {
-    __assign = Object.assign || function(t) {
-        for (var s, i = 1, n = arguments.length; i < n; i++) {
-            s = arguments[i];
-            for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p))
-                t[p] = s[p];
-        }
-        return t;
-    };
-    return __assign.apply(this, arguments);
-};
-
-
-var StoneBlockModel = {
-    elements: [
-        {
-            from: [0, 0, 0],
-            to: [15, 15, 15],
-            faces: _block_face__WEBPACK_IMPORTED_MODULE_1__.BlockFaces.reduce(function (faces, face) {
-                var _a;
-                return (__assign(__assign({}, faces), (_a = {}, _a[face] = {
-                    cull: true,
-                    texture: 'textures/blocks/stone.png',
-                }, _a)));
-            }, {}),
-        },
-    ],
-};
-var StoneBlock = /** @class */ (function (_super) {
-    __extends(StoneBlock, _super);
-    function StoneBlock() {
-        return _super.call(this, 'stone', [StoneBlockModel]) || this;
-    }
-    return StoneBlock;
-}(_block__WEBPACK_IMPORTED_MODULE_0__.Block));
-
-
-
-/***/ }),
-
-/***/ "./src/block/texture-atlas.ts":
-/*!************************************!*\
-  !*** ./src/block/texture-atlas.ts ***!
-  \************************************/
-/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
-
-"use strict";
-__webpack_require__.r(__webpack_exports__);
-/* harmony export */ __webpack_require__.d(__webpack_exports__, {
-/* harmony export */   "TextureAtlas": () => (/* binding */ TextureAtlas)
-/* harmony export */ });
-/* harmony import */ var three__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! three */ "./node_modules/three/build/three.module.js");
-/* harmony import */ var p_map__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! p-map */ "./node_modules/p-map/index.js");
-/* harmony import */ var _util_index_to_vector2__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../util/index-to-vector2 */ "./src/util/index-to-vector2.ts");
-var __awaiter = (undefined && undefined.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
-var __generator = (undefined && undefined.__generator) || function (thisArg, body) {
-    var _ = { label: 0, sent: function() { if (t[0] & 1) throw t[1]; return t[1]; }, trys: [], ops: [] }, f, y, t, g;
-    return g = { next: verb(0), "throw": verb(1), "return": verb(2) }, typeof Symbol === "function" && (g[Symbol.iterator] = function() { return this; }), g;
-    function verb(n) { return function (v) { return step([n, v]); }; }
-    function step(op) {
-        if (f) throw new TypeError("Generator is already executing.");
-        while (_) try {
-            if (f = 1, y && (t = op[0] & 2 ? y["return"] : op[0] ? y["throw"] || ((t = y["return"]) && t.call(y), 0) : y.next) && !(t = t.call(y, op[1])).done) return t;
-            if (y = 0, t) op = [op[0] & 2, t.value];
-            switch (op[0]) {
-                case 0: case 1: t = op; break;
-                case 4: _.label++; return { value: op[1], done: false };
-                case 5: _.label++; y = op[1]; op = [0]; continue;
-                case 7: op = _.ops.pop(); _.trys.pop(); continue;
-                default:
-                    if (!(t = _.trys, t = t.length > 0 && t[t.length - 1]) && (op[0] === 6 || op[0] === 2)) { _ = 0; continue; }
-                    if (op[0] === 3 && (!t || (op[1] > t[0] && op[1] < t[3]))) { _.label = op[1]; break; }
-                    if (op[0] === 6 && _.label < t[1]) { _.label = t[1]; t = op; break; }
-                    if (t && _.label < t[2]) { _.label = t[2]; _.ops.push(op); break; }
-                    if (t[2]) _.ops.pop();
-                    _.trys.pop(); continue;
-            }
-            op = body.call(thisArg, _);
-        } catch (e) { op = [6, e]; y = 0; } finally { f = t = 0; }
-        if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
-    }
-};
-
-
-
-// TODO: Add mip maps
-var TextureAtlas = /** @class */ (function () {
-    function TextureAtlas(textureSources) {
-        this.textureSources = textureSources;
-        // TODO: Make this configurable. Especially, the atlas width should be computed dynamically.
-        this.textureWidth = 32;
-        this.atlasWidth = 16;
-    }
-    TextureAtlas.prototype.buildAtlas = function () {
-        return __awaiter(this, void 0, void 0, function () {
-            var imageLoader, images, canvas, context, i, _a, x, y;
-            return __generator(this, function (_b) {
-                switch (_b.label) {
-                    case 0:
-                        imageLoader = new three__WEBPACK_IMPORTED_MODULE_2__.ImageLoader();
-                        return [4 /*yield*/, (0,p_map__WEBPACK_IMPORTED_MODULE_0__["default"])(this.textureSources, function (source) { return imageLoader.loadAsync(source); })];
-                    case 1:
-                        images = _b.sent();
-                        canvas = document.createElement('canvas');
-                        canvas.setAttribute('style', "image-rendering: pixelated; image-rendering: crisp-edges;");
-                        canvas.width = this.atlasWidth * this.textureWidth;
-                        canvas.height = this.atlasWidth * this.textureWidth;
-                        context = canvas.getContext('2d');
-                        if (!context) {
-                            throw new Error('Canvas context couldn\'t be created!');
-                        }
-                        for (i = 0; i < images.length; i++) {
-                            _a = (0,_util_index_to_vector2__WEBPACK_IMPORTED_MODULE_1__.indexToXZ)(i, this.atlasWidth).toArray(), x = _a[0], y = _a[1];
-                            context.drawImage(images[i], x * this.textureWidth, y * this.textureWidth);
-                        }
-                        return [2 /*return*/, new three__WEBPACK_IMPORTED_MODULE_2__.CanvasTexture(canvas, undefined, undefined, undefined, three__WEBPACK_IMPORTED_MODULE_2__.NearestFilter, three__WEBPACK_IMPORTED_MODULE_2__.NearestFilter)];
-                }
-            });
-        });
-    };
-    TextureAtlas.prototype.getTextureUv = function (name) {
-        var index = this.textureSources.indexOf(name);
-        var _a = (0,_util_index_to_vector2__WEBPACK_IMPORTED_MODULE_1__.indexToXZ)(index, this.atlasWidth).toArray(), x = _a[0], y = _a[1];
-        var unit = 1 / this.atlasWidth;
-        var uvX = x / this.atlasWidth;
-        var uvY = 1 - (y / this.atlasWidth) - unit;
-        return [
-            [uvX, uvY],
-            [uvX + unit, uvY],
-            [uvX, uvY + unit],
-            [uvX + unit, uvY + unit],
-        ].flat();
-    };
-    return TextureAtlas;
-}());
-
-
-
-/***/ }),
-
-/***/ "./src/block/water-block.ts":
-/*!**********************************!*\
-  !*** ./src/block/water-block.ts ***!
-  \**********************************/
-/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
-
-"use strict";
-__webpack_require__.r(__webpack_exports__);
-/* harmony export */ __webpack_require__.d(__webpack_exports__, {
-/* harmony export */   "WaterBlockModel": () => (/* binding */ WaterBlockModel),
-/* harmony export */   "WaterBlock": () => (/* binding */ WaterBlock)
-/* harmony export */ });
-/* harmony import */ var _block__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./block */ "./src/block/block.ts");
-/* harmony import */ var _block_face__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./block-face */ "./src/block/block-face.ts");
-var __extends = (undefined && undefined.__extends) || (function () {
-    var extendStatics = function (d, b) {
-        extendStatics = Object.setPrototypeOf ||
-            ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
-            function (d, b) { for (var p in b) if (Object.prototype.hasOwnProperty.call(b, p)) d[p] = b[p]; };
-        return extendStatics(d, b);
-    };
-    return function (d, b) {
-        if (typeof b !== "function" && b !== null)
-            throw new TypeError("Class extends value " + String(b) + " is not a constructor or null");
-        extendStatics(d, b);
-        function __() { this.constructor = d; }
-        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
-    };
-})();
-var __assign = (undefined && undefined.__assign) || function () {
-    __assign = Object.assign || function(t) {
-        for (var s, i = 1, n = arguments.length; i < n; i++) {
-            s = arguments[i];
-            for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p))
-                t[p] = s[p];
-        }
-        return t;
-    };
-    return __assign.apply(this, arguments);
-};
-
-
-var WaterBlockModel = {
-    elements: [
-        {
-            from: [0, 0, 0],
-            to: [15, 13, 15],
-            faces: _block_face__WEBPACK_IMPORTED_MODULE_1__.BlockFaces.reduce(function (faces, face) {
-                var _a;
-                return (__assign(__assign({}, faces), (_a = {}, _a[face] = {
-                    cull: true,
-                    texture: 'textures/blocks/water.png',
-                }, _a)));
-            }, {}),
-        },
-    ],
-};
-var WaterBlock = /** @class */ (function (_super) {
-    __extends(WaterBlock, _super);
-    function WaterBlock() {
-        return _super.call(this, 'water', [WaterBlockModel]) || this;
-    }
-    WaterBlock.prototype.isCollidable = function () {
-        return false;
-    };
-    return WaterBlock;
-}(_block__WEBPACK_IMPORTED_MODULE_0__.Block));
-
-
-
-/***/ }),
-
-/***/ "./src/game.ts":
-/*!*********************!*\
-  !*** ./src/game.ts ***!
-  \*********************/
-/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
-
-"use strict";
-__webpack_require__.r(__webpack_exports__);
-/* harmony export */ __webpack_require__.d(__webpack_exports__, {
-/* harmony export */   "Game": () => (/* binding */ Game)
-/* harmony export */ });
-/* harmony import */ var three__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! three */ "./node_modules/three/build/three.module.js");
-/* harmony import */ var _block_blocks__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./block/blocks */ "./src/block/blocks.ts");
-/* harmony import */ var _input_input__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./input/input */ "./src/input/input.ts");
-/* harmony import */ var _level__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./level */ "./src/level.ts");
-/* harmony import */ var _origin_cross__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./origin-cross */ "./src/origin-cross.ts");
-/* harmony import */ var _world_chunk_data_generator_worker_ts__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./world/chunk-data-generator.worker.ts */ "./src/world/chunk-data-generator.worker.ts");
-/* harmony import */ var _world_chunk_chunk_generator_pool__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ./world/chunk/chunk-generator-pool */ "./src/world/chunk/chunk-generator-pool.ts");
-/* harmony import */ var _world_chunk_chunk_geometry_builder_pool__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ./world/chunk/chunk-geometry-builder-pool */ "./src/world/chunk/chunk-geometry-builder-pool.ts");
-/* harmony import */ var stats_js__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! stats.js */ "./node_modules/stats.js/build/stats.min.js");
-/* harmony import */ var stats_js__WEBPACK_IMPORTED_MODULE_7___default = /*#__PURE__*/__webpack_require__.n(stats_js__WEBPACK_IMPORTED_MODULE_7__);
-var __awaiter = (undefined && undefined.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
-var __generator = (undefined && undefined.__generator) || function (thisArg, body) {
-    var _ = { label: 0, sent: function() { if (t[0] & 1) throw t[1]; return t[1]; }, trys: [], ops: [] }, f, y, t, g;
-    return g = { next: verb(0), "throw": verb(1), "return": verb(2) }, typeof Symbol === "function" && (g[Symbol.iterator] = function() { return this; }), g;
-    function verb(n) { return function (v) { return step([n, v]); }; }
-    function step(op) {
-        if (f) throw new TypeError("Generator is already executing.");
-        while (_) try {
-            if (f = 1, y && (t = op[0] & 2 ? y["return"] : op[0] ? y["throw"] || ((t = y["return"]) && t.call(y), 0) : y.next) && !(t = t.call(y, op[1])).done) return t;
-            if (y = 0, t) op = [op[0] & 2, t.value];
-            switch (op[0]) {
-                case 0: case 1: t = op; break;
-                case 4: _.label++; return { value: op[1], done: false };
-                case 5: _.label++; y = op[1]; op = [0]; continue;
-                case 7: op = _.ops.pop(); _.trys.pop(); continue;
-                default:
-                    if (!(t = _.trys, t = t.length > 0 && t[t.length - 1]) && (op[0] === 6 || op[0] === 2)) { _ = 0; continue; }
-                    if (op[0] === 3 && (!t || (op[1] > t[0] && op[1] < t[3]))) { _.label = op[1]; break; }
-                    if (op[0] === 6 && _.label < t[1]) { _.label = t[1]; t = op; break; }
-                    if (t && _.label < t[2]) { _.label = t[2]; _.ops.push(op); break; }
-                    if (t[2]) _.ops.pop();
-                    _.trys.pop(); continue;
-            }
-            op = body.call(thisArg, _);
-        } catch (e) { op = [6, e]; y = 0; } finally { f = t = 0; }
-        if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
-    }
-};
-
-
-
-
-
-
-
-
-
-// TODO: This class has too many responsibilities. Factor it out.
-var Game = /** @class */ (function () {
-    function Game(root) {
-        this.root = root;
-        this.looping = false;
-        this.lastAnimationFrameAt = 0;
-        this.timeSinceLastTick = 0;
-        this.ticksPerSecond = 20;
-        this.chunkDataGeneratorWorkerPool = [];
-        this.chunkDataGenerationResults = {};
-        this.chunkGeometryResults = {};
-        // TODO: Make this configurable or at least random.
-        this.seed = 'ijn3fi3fin3fim';
-        this.audioListener = new three__WEBPACK_IMPORTED_MODULE_8__.AudioListener();
-        this.musicAudio = new three__WEBPACK_IMPORTED_MODULE_8__.Audio(this.audioListener);
-        this.chunkGeneratorPool = new _world_chunk_chunk_generator_pool__WEBPACK_IMPORTED_MODULE_5__.ChunkGeneratorPool();
-        this.chunkGeometryBuilderPool = new _world_chunk_chunk_geometry_builder_pool__WEBPACK_IMPORTED_MODULE_6__.ChunkGeometryBuilderPool();
-        this.stats = new (stats_js__WEBPACK_IMPORTED_MODULE_7___default())();
-        Game.main = this;
-        this.scene = new three__WEBPACK_IMPORTED_MODULE_8__.Scene();
-        this.scene.fog = new three__WEBPACK_IMPORTED_MODULE_8__.Fog(0xe6fcff, 90, 110);
-        var width = root.clientWidth, height = root.clientHeight;
-        var ambientLight = new three__WEBPACK_IMPORTED_MODULE_8__.AmbientLight(0x888888);
-        this.scene.add(ambientLight);
-        this.renderer = new three__WEBPACK_IMPORTED_MODULE_8__.WebGLRenderer();
-        this.renderer.setSize(width, height);
-        this.renderer.setClearColor(0xe6fcff);
-        var canvas = root.appendChild(this.renderer.domElement);
-        canvas.addEventListener('click', function () { return canvas.requestPointerLock(); });
-        this.camera = new three__WEBPACK_IMPORTED_MODULE_8__.PerspectiveCamera(75, width / height, 0.1, 100000);
-        this.camera.add(this.audioListener);
-        this.input = new _input_input__WEBPACK_IMPORTED_MODULE_1__.Input(document.body);
-        var originCross = new _origin_cross__WEBPACK_IMPORTED_MODULE_3__.OriginCross();
-        originCross.addToScene(this.scene);
-        this.stats.showPanel(0);
-        root.appendChild(this.stats.dom);
-        // Observe a scene or a renderer
-        if (typeof window.__THREE_DEVTOOLS__ !== 'undefined') {
-            window.__THREE_DEVTOOLS__.dispatchEvent(new CustomEvent('observe', { detail: this.scene }));
-            window.__THREE_DEVTOOLS__.dispatchEvent(new CustomEvent('observe', { detail: this.renderer }));
-        }
-        this.onAnimationFrame = this.onAnimationFrame.bind(this);
-    }
-    Game.prototype.init = function () {
-        return __awaiter(this, void 0, void 0, function () {
-            var i, worker, musicLoader, shimmer;
-            var _this = this;
-            return __generator(this, function (_a) {
-                switch (_a.label) {
-                    case 0:
-                        console.log("Crafting the blocks...");
-                        this.blocks = new _block_blocks__WEBPACK_IMPORTED_MODULE_0__.Blocks();
-                        return [4 /*yield*/, this.blocks.init()];
-                    case 1:
-                        _a.sent();
-                        // Workers
-                        console.log("Waking up the workers...");
-                        return [4 /*yield*/, this.chunkGeometryBuilderPool.init(this.blocks)];
-                    case 2:
-                        _a.sent();
-                        return [4 /*yield*/, this.chunkGeometryBuilderPool.addWorkers(4)];
-                    case 3:
-                        _a.sent();
-                        return [4 /*yield*/, this.chunkGeneratorPool.addWorkers(1)];
-                    case 4:
-                        _a.sent();
-                        // Legacy
-                        for (i = 0; i < 4; i++) {
-                            worker = new _world_chunk_data_generator_worker_ts__WEBPACK_IMPORTED_MODULE_4__["default"]();
-                            worker.postMessage({
-                                type: 'seed',
-                                seed: this.seed,
-                            });
-                            worker.addEventListener('message', function (_a) {
-                                var data = _a.data;
-                                if (data.type === 'generate--complete') {
-                                    _this.chunkDataGenerationResults[JSON.stringify(data.position)] = data.result;
-                                }
-                                if (data.type === 'build-mesh--complete') {
-                                    _this.chunkGeometryResults[JSON.stringify(data.position)] = data.result;
-                                }
-                            });
-                            this.chunkDataGeneratorWorkerPool.push(worker);
-                        }
-                        // Level
-                        console.log("Leveling...");
-                        this.level = new _level__WEBPACK_IMPORTED_MODULE_2__.Level(this.scene);
-                        return [4 /*yield*/, this.level.init()];
-                    case 5:
-                        _a.sent();
-                        // Audio
-                        console.log("Making it sound nice...");
-                        musicLoader = new three__WEBPACK_IMPORTED_MODULE_8__.AudioLoader();
-                        return [4 /*yield*/, musicLoader.loadAsync('audio/music/shimmer.mp3')];
-                    case 6:
-                        shimmer = _a.sent();
-                        this.musicAudio.setLoop(true);
-                        this.musicAudio.setBuffer(shimmer);
-                        this.musicAudio.setVolume(0.2);
-                        this.musicAudio.play();
-                        return [2 /*return*/];
-                }
-            });
-        });
-    };
-    Game.prototype.generateChunkData = function (position) {
-        var key = JSON.stringify(position.toArray());
-        this.chunkDataGenerationResults[key] = undefined;
-        this.instructWorker({
-            type: 'generate',
-            position: position.toArray(),
-        });
-    };
-    Game.prototype.instructWorker = function (message) {
-        var worker = this.chunkDataGeneratorWorkerPool.pop();
-        if (!worker) {
-            throw new Error('No worker to work :-(');
-        }
-        worker.postMessage(message);
-        this.chunkDataGeneratorWorkerPool.unshift(worker);
-    };
-    Game.prototype.getMaybeChunkData = function (position) {
-        var key = JSON.stringify(position.toArray());
-        if (this.chunkDataGenerationResults[key] === undefined) {
-            return undefined;
-        }
-        return this.chunkDataGenerationResults[key];
-    };
-    Game.prototype.getMaybeChunkGeometry = function (position) {
-        var key = JSON.stringify(position.toArray());
-        if (this.chunkGeometryResults[key] === undefined) {
-            return undefined;
-        }
-        return this.chunkGeometryResults[key];
-    };
-    Game.prototype.startLoop = function () {
-        this.looping = true;
-        this.timeSinceLastTick = 0;
-        window.requestAnimationFrame(this.onAnimationFrame);
-    };
-    Game.prototype.onAnimationFrame = function (time) {
-        if (!this.looping) {
-            return;
-        }
-        this.stats.begin();
-        if (this.lastAnimationFrameAt === 0) {
-            this.lastAnimationFrameAt = time;
-        }
-        var deltaTime = time - this.lastAnimationFrameAt;
-        this.lastAnimationFrameAt = time;
-        this.loop(deltaTime);
-        this.stats.end();
-        window.requestAnimationFrame(this.onAnimationFrame);
-    };
-    Game.prototype.loop = function (deltaTime) {
-        this.timeSinceLastTick += deltaTime;
-        if (this.timeSinceLastTick >= 1000 / this.ticksPerSecond) {
-            this.tick(deltaTime);
-            this.timeSinceLastTick -= 1000 / this.ticksPerSecond;
-        }
-        this.level.update(deltaTime);
-        this.renderer.render(this.scene, this.camera);
-        this.level.lateUpdate(deltaTime);
-        this.input.lateUpdate();
-    };
-    Game.prototype.tick = function (deltaTime) {
-        this.level.onTick(deltaTime);
-    };
-    return Game;
-}());
-
-
-
-/***/ }),
-
-/***/ "./src/input/input.ts":
-/*!****************************!*\
-  !*** ./src/input/input.ts ***!
-  \****************************/
-/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
-
-"use strict";
-__webpack_require__.r(__webpack_exports__);
-/* harmony export */ __webpack_require__.d(__webpack_exports__, {
-/* harmony export */   "LeftMouseButton": () => (/* binding */ LeftMouseButton),
-/* harmony export */   "RightMouseButton": () => (/* binding */ RightMouseButton),
-/* harmony export */   "Input": () => (/* binding */ Input)
-/* harmony export */ });
-var __assign = (undefined && undefined.__assign) || function () {
-    __assign = Object.assign || function(t) {
-        for (var s, i = 1, n = arguments.length; i < n; i++) {
-            s = arguments[i];
-            for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p))
-                t[p] = s[p];
-        }
-        return t;
-    };
-    return __assign.apply(this, arguments);
-};
-var LeftMouseButton = 'mouse:0';
-var RightMouseButton = 'mouse:2';
-var Input = /** @class */ (function () {
-    function Input(domElement) {
-        this.domElement = domElement;
-        this.pressedKeys = {};
-        this.downedKeys = {};
-        this.currentMouseDelta = [0, 0];
-        this.calculatedMouseDelta = [0, 0];
-        domElement.addEventListener('keydown', this.onKeyDown.bind(this));
-        domElement.addEventListener('keyup', this.onKeyUp.bind(this));
-        domElement.addEventListener('mousemove', this.onMouseMove.bind(this));
-        domElement.addEventListener('mousedown', this.onMouseDown.bind(this));
-        domElement.addEventListener('mouseup', this.onMouseUp.bind(this));
-    }
-    Input.prototype.isKeyPressed = function (key) {
-        return this.pressedKeys[key.toLowerCase()] === true;
-    };
-    /**
-     * Like isKeyPressed but only returns true for the frame the key was pressed.
-     */
-    Input.prototype.isKeyDowned = function (key) {
-        return this.downedKeys[key.toLowerCase()] === true;
-    };
-    Input.prototype.getMouseDelta = function () {
-        return this.calculatedMouseDelta;
-    };
-    Input.prototype.lateUpdate = function () {
-        this.calculatedMouseDelta = this.currentMouseDelta;
-        this.currentMouseDelta = [0, 0];
-        this.downedKeys = Object.keys(this.downedKeys).reduce(function (obj, key) {
-            var _a;
-            return (__assign(__assign({}, obj), (_a = {}, _a[key] = false, _a)));
-        }, {});
-    };
-    Input.prototype.onMouseMove = function (event) {
-        this.currentMouseDelta = [
-            this.currentMouseDelta[0] + event.movementX,
-            this.currentMouseDelta[1] + event.movementY,
-        ];
-    };
-    Input.prototype.onMouseDown = function (event) {
-        this.setKey("mouse:".concat(event.button));
-    };
-    Input.prototype.onMouseUp = function (event) {
-        this.unsetKey("mouse:".concat(event.button));
-    };
-    Input.prototype.onKeyDown = function (event) {
-        this.setKey(event.key);
-    };
-    Input.prototype.onKeyUp = function (event) {
-        this.unsetKey(event.key);
-    };
-    Input.prototype.setKey = function (key) {
-        this.pressedKeys[key.toLowerCase()] = true;
-        if (this.downedKeys[key.toLowerCase()] === undefined) {
-            this.downedKeys[key.toLowerCase()] = true;
-        }
-    };
-    Input.prototype.unsetKey = function (key) {
-        this.pressedKeys[key.toLowerCase()] = false;
-        delete this.downedKeys[key.toLowerCase()];
-    };
-    return Input;
-}());
-
-
-
-/***/ }),
-
-/***/ "./src/level.ts":
-/*!**********************!*\
-  !*** ./src/level.ts ***!
-  \**********************/
-/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
-
-"use strict";
-__webpack_require__.r(__webpack_exports__);
-/* harmony export */ __webpack_require__.d(__webpack_exports__, {
-/* harmony export */   "Level": () => (/* binding */ Level)
-/* harmony export */ });
-/* harmony import */ var three__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! three */ "./node_modules/three/build/three.module.js");
-/* harmony import */ var _player_player__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./player/player */ "./src/player/player.ts");
-/* harmony import */ var _game__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./game */ "./src/game.ts");
-/* harmony import */ var three_src_math_MathUtils__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! three/src/math/MathUtils */ "./node_modules/three/src/math/MathUtils.js");
-/* harmony import */ var _world_world__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./world/world */ "./src/world/world.ts");
-var __awaiter = (undefined && undefined.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
-var __generator = (undefined && undefined.__generator) || function (thisArg, body) {
-    var _ = { label: 0, sent: function() { if (t[0] & 1) throw t[1]; return t[1]; }, trys: [], ops: [] }, f, y, t, g;
-    return g = { next: verb(0), "throw": verb(1), "return": verb(2) }, typeof Symbol === "function" && (g[Symbol.iterator] = function() { return this; }), g;
-    function verb(n) { return function (v) { return step([n, v]); }; }
-    function step(op) {
-        if (f) throw new TypeError("Generator is already executing.");
-        while (_) try {
-            if (f = 1, y && (t = op[0] & 2 ? y["return"] : op[0] ? y["throw"] || ((t = y["return"]) && t.call(y), 0) : y.next) && !(t = t.call(y, op[1])).done) return t;
-            if (y = 0, t) op = [op[0] & 2, t.value];
-            switch (op[0]) {
-                case 0: case 1: t = op; break;
-                case 4: _.label++; return { value: op[1], done: false };
-                case 5: _.label++; y = op[1]; op = [0]; continue;
-                case 7: op = _.ops.pop(); _.trys.pop(); continue;
-                default:
-                    if (!(t = _.trys, t = t.length > 0 && t[t.length - 1]) && (op[0] === 6 || op[0] === 2)) { _ = 0; continue; }
-                    if (op[0] === 3 && (!t || (op[1] > t[0] && op[1] < t[3]))) { _.label = op[1]; break; }
-                    if (op[0] === 6 && _.label < t[1]) { _.label = t[1]; t = op; break; }
-                    if (t && _.label < t[2]) { _.label = t[2]; _.ops.push(op); break; }
-                    if (t[2]) _.ops.pop();
-                    _.trys.pop(); continue;
-            }
-            op = body.call(thisArg, _);
-        } catch (e) { op = [6, e]; y = 0; } finally { f = t = 0; }
-        if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
-    }
-};
-
-
-
-
-
-// TODO: The abstraction between level & world isn't really clear. Come up with a concept.
-var Level = /** @class */ (function () {
-    function Level(scene) {
-        this.scene = scene;
-        // Lighting
-        this.sun = new three__WEBPACK_IMPORTED_MODULE_3__.DirectionalLight(0xffffff, 0.6);
-        this.sun.position.set(0, 1, 0);
-        this.sunTarget = new three__WEBPACK_IMPORTED_MODULE_3__.Object3D();
-        this.sunTarget.position.set(0.2, 0, 0.4);
-        this.sun.target = this.sunTarget;
-        this.scene.add(this.sun, this.sunTarget);
-        // Player
-        this.player = new _player_player__WEBPACK_IMPORTED_MODULE_0__.Player(_game__WEBPACK_IMPORTED_MODULE_1__.Game.main.camera, _game__WEBPACK_IMPORTED_MODULE_1__.Game.main.input, new three__WEBPACK_IMPORTED_MODULE_3__.Vector3(0, 40, 0), new three__WEBPACK_IMPORTED_MODULE_3__.Vector2((0,three_src_math_MathUtils__WEBPACK_IMPORTED_MODULE_4__.degToRad)(0), (0,three_src_math_MathUtils__WEBPACK_IMPORTED_MODULE_4__.degToRad)(0)));
-        this.world = new _world_world__WEBPACK_IMPORTED_MODULE_2__.World(this.scene);
-    }
-    Level.prototype.init = function () {
-        return __awaiter(this, void 0, void 0, function () {
-            return __generator(this, function (_a) {
-                switch (_a.label) {
-                    case 0: return [4 /*yield*/, this.player.init()];
-                    case 1:
-                        _a.sent();
-                        return [4 /*yield*/, this.world.init()];
-                    case 2:
-                        _a.sent();
-                        return [2 /*return*/];
-                }
-            });
-        });
-    };
-    Level.prototype.update = function (deltaTime) {
-        var oldPos = this.player.getChunkPosition();
-        this.player.update(deltaTime);
-        var newPos = this.player.getChunkPosition();
-        if (oldPos[0] !== newPos[0] || oldPos[2] !== newPos[2]) {
-            this.world.setPlayerChunk(newPos[0], newPos[2]);
-        }
-        this.world.update(deltaTime);
-    };
-    Level.prototype.lateUpdate = function (deltaTime) {
-        this.world.lateUpdate(deltaTime);
-    };
-    Level.prototype.destroy = function () {
-        if (this.sun)
-            this.scene.remove(this.sun);
-    };
-    Level.prototype.onTick = function (deltaTime) {
-        this.world.tick(deltaTime);
-    };
-    Level.prototype.setBlockAt = function (pos, block) {
-        return this.world.setBlock({ x: pos.x, y: pos.y, z: pos.z }, block);
-    };
-    Level.prototype.getBlockAt = function (pos) {
-        return this.world.getBlock({ x: pos.x, y: pos.y, z: pos.z });
-    };
-    Level.prototype.getWorld = function () {
-        return this.world;
-    };
-    Level.prototype.getChunkMeshes = function () {
-        return this.world.__tempGetChunkMeshes();
-    };
-    return Level;
-}());
-
-
-
-/***/ }),
-
-/***/ "./src/origin-cross.ts":
-/*!*****************************!*\
-  !*** ./src/origin-cross.ts ***!
-  \*****************************/
-/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
-
-"use strict";
-__webpack_require__.r(__webpack_exports__);
-/* harmony export */ __webpack_require__.d(__webpack_exports__, {
-/* harmony export */   "OriginCross": () => (/* binding */ OriginCross),
-/* harmony export */   "ThinOriginCross": () => (/* binding */ ThinOriginCross)
-/* harmony export */ });
-/* harmony import */ var three__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! three */ "./node_modules/three/build/three.module.js");
-/* harmony import */ var three_src_math_MathUtils__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! three/src/math/MathUtils */ "./node_modules/three/src/math/MathUtils.js");
-
-
-var OriginCross = /** @class */ (function () {
-    function OriginCross() {
-        this.materialX = new three__WEBPACK_IMPORTED_MODULE_0__.LineBasicMaterial({ color: 0xff0000 });
-        this.materialY = new three__WEBPACK_IMPORTED_MODULE_0__.LineBasicMaterial({ color: 0x00ff00 });
-        this.materialZ = new three__WEBPACK_IMPORTED_MODULE_0__.LineBasicMaterial({ color: 0x0000ff });
-        this.geometryX = new three__WEBPACK_IMPORTED_MODULE_0__.CylinderGeometry(0.05, 0.05, 1, 8, 1);
-        this.geometryY = new three__WEBPACK_IMPORTED_MODULE_0__.CylinderGeometry(0.05, 0.05, 1, 8, 1);
-        this.geometryZ = new three__WEBPACK_IMPORTED_MODULE_0__.CylinderGeometry(0.05, 0.05, 1, 8, 1);
-        this.meshX = new three__WEBPACK_IMPORTED_MODULE_0__.Mesh(this.geometryX, this.materialX);
-        this.meshY = new three__WEBPACK_IMPORTED_MODULE_0__.Mesh(this.geometryY, this.materialY);
-        this.meshZ = new three__WEBPACK_IMPORTED_MODULE_0__.Mesh(this.geometryZ, this.materialZ);
-    }
-    OriginCross.prototype.addToScene = function (scene) {
-        this.meshX.position.setX(0.5);
-        this.meshX.rotateZ((0,three_src_math_MathUtils__WEBPACK_IMPORTED_MODULE_1__.degToRad)(90));
-        this.meshY.position.setY(0.5);
-        this.meshZ.position.setZ(0.5);
-        this.meshZ.rotateX((0,three_src_math_MathUtils__WEBPACK_IMPORTED_MODULE_1__.degToRad)(90));
-        scene.add(this.meshX, this.meshY, this.meshZ);
-    };
-    return OriginCross;
-}());
-
-var ThinOriginCross = /** @class */ (function () {
-    function ThinOriginCross() {
-        this.materialX = new three__WEBPACK_IMPORTED_MODULE_0__.LineBasicMaterial({ color: 0xff0000 });
-        this.materialY = new three__WEBPACK_IMPORTED_MODULE_0__.LineBasicMaterial({ color: 0x00ff00 });
-        this.materialZ = new three__WEBPACK_IMPORTED_MODULE_0__.LineBasicMaterial({ color: 0x0000ff });
-        this.pointsX = [new three__WEBPACK_IMPORTED_MODULE_0__.Vector3(0, 0, 0), new three__WEBPACK_IMPORTED_MODULE_0__.Vector3(1, 0, 0)];
-        this.pointsY = [new three__WEBPACK_IMPORTED_MODULE_0__.Vector3(0, 0, 0), new three__WEBPACK_IMPORTED_MODULE_0__.Vector3(0, 1, 0)];
-        this.pointsZ = [new three__WEBPACK_IMPORTED_MODULE_0__.Vector3(0, 0, 0), new three__WEBPACK_IMPORTED_MODULE_0__.Vector3(0, 0, 1)];
-        this.geometryX = new three__WEBPACK_IMPORTED_MODULE_0__.BufferGeometry().setFromPoints(this.pointsX);
-        this.geometryY = new three__WEBPACK_IMPORTED_MODULE_0__.BufferGeometry().setFromPoints(this.pointsY);
-        this.geometryZ = new three__WEBPACK_IMPORTED_MODULE_0__.BufferGeometry().setFromPoints(this.pointsZ);
-        this.lineX = new three__WEBPACK_IMPORTED_MODULE_0__.Line(this.geometryX, this.materialX);
-        this.lineY = new three__WEBPACK_IMPORTED_MODULE_0__.Line(this.geometryY, this.materialY);
-        this.lineZ = new three__WEBPACK_IMPORTED_MODULE_0__.Line(this.geometryZ, this.materialZ);
-    }
-    ThinOriginCross.prototype.addToScene = function (scene) {
-        scene.add(this.lineX, this.lineY, this.lineZ);
-    };
-    return ThinOriginCross;
-}());
-
-
-
-/***/ }),
-
-/***/ "./src/player/player.ts":
-/*!******************************!*\
-  !*** ./src/player/player.ts ***!
-  \******************************/
-/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
-
-"use strict";
-__webpack_require__.r(__webpack_exports__);
-/* harmony export */ __webpack_require__.d(__webpack_exports__, {
-/* harmony export */   "Player": () => (/* binding */ Player)
-/* harmony export */ });
-/* harmony import */ var p_map__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! p-map */ "./node_modules/p-map/index.js");
-/* harmony import */ var three__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! three */ "./node_modules/three/build/three.module.js");
-/* harmony import */ var three_src_math_MathUtils__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! three/src/math/MathUtils */ "./node_modules/three/src/math/MathUtils.js");
-/* harmony import */ var _game__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../game */ "./src/game.ts");
-/* harmony import */ var _input_input__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../input/input */ "./src/input/input.ts");
-/* harmony import */ var _util_index_to_vector3__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../util/index-to-vector3 */ "./src/util/index-to-vector3.ts");
-/* harmony import */ var _util_random_element__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../util/random-element */ "./src/util/random-element.ts");
-/* harmony import */ var _block_blocks__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ../block/blocks */ "./src/block/blocks.ts");
-/* harmony import */ var _world_cursor__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ./world-cursor */ "./src/player/world-cursor.ts");
-var __awaiter = (undefined && undefined.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
-var __generator = (undefined && undefined.__generator) || function (thisArg, body) {
-    var _ = { label: 0, sent: function() { if (t[0] & 1) throw t[1]; return t[1]; }, trys: [], ops: [] }, f, y, t, g;
-    return g = { next: verb(0), "throw": verb(1), "return": verb(2) }, typeof Symbol === "function" && (g[Symbol.iterator] = function() { return this; }), g;
-    function verb(n) { return function (v) { return step([n, v]); }; }
-    function step(op) {
-        if (f) throw new TypeError("Generator is already executing.");
-        while (_) try {
-            if (f = 1, y && (t = op[0] & 2 ? y["return"] : op[0] ? y["throw"] || ((t = y["return"]) && t.call(y), 0) : y.next) && !(t = t.call(y, op[1])).done) return t;
-            if (y = 0, t) op = [op[0] & 2, t.value];
-            switch (op[0]) {
-                case 0: case 1: t = op; break;
-                case 4: _.label++; return { value: op[1], done: false };
-                case 5: _.label++; y = op[1]; op = [0]; continue;
-                case 7: op = _.ops.pop(); _.trys.pop(); continue;
-                default:
-                    if (!(t = _.trys, t = t.length > 0 && t[t.length - 1]) && (op[0] === 6 || op[0] === 2)) { _ = 0; continue; }
-                    if (op[0] === 3 && (!t || (op[1] > t[0] && op[1] < t[3]))) { _.label = op[1]; break; }
-                    if (op[0] === 6 && _.label < t[1]) { _.label = t[1]; t = op; break; }
-                    if (t && _.label < t[2]) { _.label = t[2]; _.ops.push(op); break; }
-                    if (t[2]) _.ops.pop();
-                    _.trys.pop(); continue;
-            }
-            op = body.call(thisArg, _);
-        } catch (e) { op = [6, e]; y = 0; } finally { f = t = 0; }
-        if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
-    }
-};
-
-
-
-
-
-
-
-
-
-// TODO: Re-factor to:
-// - don't use createTerrainCollisionBoxes as it's stupid.
-// - use block-based ray-casting and not mesh-based ray-casting.
-// - not be responsible for playing audio.
-// - have separated input & physics logic.
-// TODO: Support blocks that shouldn't have collision. E.g. flowers.
-var Player = /** @class */ (function () {
-    function Player(camera, input, position, rotation) {
-        this.camera = camera;
-        this.input = input;
-        this.position = position;
-        this.rotation = rotation;
-        this.walkingSpeed = 0.025;
-        this.flyingSpeed = 0.065;
-        this.isOnGround = false;
-        this.velocity = new three__WEBPACK_IMPORTED_MODULE_7__.Vector3();
-        this.flying = false;
-        this.noclip = false;
-        this.start = false;
-        this.raycaster = new three__WEBPACK_IMPORTED_MODULE_7__.Raycaster();
-        this.collisionBox = new three__WEBPACK_IMPORTED_MODULE_7__.Box3(new three__WEBPACK_IMPORTED_MODULE_7__.Vector3(-0.35, 0, -0.35), new three__WEBPACK_IMPORTED_MODULE_7__.Vector3(0.35, 1.8, 0.35));
-        this.terrainCollisionBoxes = [];
-        this.placeBlockSounds = [];
-        this.digBlockSounds = [];
-        this.selectedBlockId = _block_blocks__WEBPACK_IMPORTED_MODULE_5__.Blocks.getBlockId(_block_blocks__WEBPACK_IMPORTED_MODULE_5__.Blocks.CAULDRON);
-        this.worldCursor = new _world_cursor__WEBPACK_IMPORTED_MODULE_6__.WorldCursor();
-        this.audio = new three__WEBPACK_IMPORTED_MODULE_7__.Audio(_game__WEBPACK_IMPORTED_MODULE_1__.Game.main.audioListener);
-        this.updateMovement(0, 0);
-        this.updateCamera(0);
-    }
-    Player.prototype.getChunkPosition = function () {
-        return [
-            Math.floor(this.position.x / 16),
-            Math.floor(this.position.y / 16),
-            Math.floor(this.position.z / 16),
-        ];
-    };
-    Player.prototype.init = function () {
-        return __awaiter(this, void 0, void 0, function () {
-            var audioLoader, _a, _b;
-            var _this = this;
-            return __generator(this, function (_c) {
-                switch (_c.label) {
-                    case 0:
-                        audioLoader = new three__WEBPACK_IMPORTED_MODULE_7__.AudioLoader();
-                        _a = this;
-                        return [4 /*yield*/, (0,p_map__WEBPACK_IMPORTED_MODULE_0__["default"])([
-                                'audio/dig0.mp3',
-                                'audio/dig1.mp3',
-                                'audio/dig2.mp3',
-                            ], function (src) { return __awaiter(_this, void 0, void 0, function () { return __generator(this, function (_a) {
-                                return [2 /*return*/, audioLoader.loadAsync(src)];
-                            }); }); })];
-                    case 1:
-                        _a.digBlockSounds = _c.sent();
-                        _b = this;
-                        return [4 /*yield*/, (0,p_map__WEBPACK_IMPORTED_MODULE_0__["default"])([
-                                'audio/place0.mp3',
-                            ], function (src) { return __awaiter(_this, void 0, void 0, function () { return __generator(this, function (_a) {
-                                return [2 /*return*/, audioLoader.loadAsync(src)];
-                            }); }); })];
-                    case 2:
-                        _b.placeBlockSounds = _c.sent();
-                        this.audio.setVolume(0.2);
-                        this.worldCursor.register(_game__WEBPACK_IMPORTED_MODULE_1__.Game.main.scene);
-                        return [2 /*return*/];
-                }
-            });
-        });
-    };
-    Player.prototype.update = function (deltaTime) {
-        this.raycaster.setFromCamera({ x: 0, y: 0 }, this.camera);
-        var intersections = this.raycaster.intersectObjects(_game__WEBPACK_IMPORTED_MODULE_1__.Game.main.level.getChunkMeshes());
-        var intersection = intersections.reduce(function (nearestIntersection, intersection) { return nearestIntersection && nearestIntersection.distance < intersection.distance ? nearestIntersection : intersection; }, undefined);
-        if (intersection !== undefined && intersection.face) {
-            var normalOffset = intersection.face.normal.normalize().multiplyScalar(0.1);
-            var hitBlockPos = {
-                x: Math.floor(intersection.point.x - normalOffset.x),
-                y: Math.floor(intersection.point.y - normalOffset.y),
-                z: Math.floor(intersection.point.z - normalOffset.z),
-            };
-            if (this.input.isKeyDowned(_input_input__WEBPACK_IMPORTED_MODULE_2__.LeftMouseButton)) {
-                if (this.audio.isPlaying)
-                    this.audio.stop();
-                this.audio.setBuffer((0,_util_random_element__WEBPACK_IMPORTED_MODULE_4__.randomElement)(this.digBlockSounds));
-                this.audio.play();
-                var world = _game__WEBPACK_IMPORTED_MODULE_1__.Game.main.level.getWorld();
-                var blockToBreak = world.getBlock(hitBlockPos);
-                world.setBlock(hitBlockPos, _block_blocks__WEBPACK_IMPORTED_MODULE_5__.Blocks.AIR);
-                blockToBreak === null || blockToBreak === void 0 ? void 0 : blockToBreak.onBreak(world, hitBlockPos);
-            }
-            {
-                var world = _game__WEBPACK_IMPORTED_MODULE_1__.Game.main.level.getWorld();
-                this.worldCursor.set(world, hitBlockPos);
-                var hitBlock = world.getBlock(hitBlockPos);
-                // if (hitBlock) {
-                //     const modelIndex = hitBlock.getBlockModel(world.getBlockState(hitBlockPos)!);
-                //     const model = hitBlock.blockModels[modelIndex];
-                //     const [element] = model.elements;
-                //     if (element !== undefined) {
-                //         const distance = 0.001;
-                //         const [x, y, z] = element.from;
-                //         const [width, height, depth] = [
-                //             (element.to[0] - x) / 15 + distance * 2,
-                //             (element.to[1] - y) / 15 + distance * 2,
-                //             (element.to[2] - z) / 15 + distance * 2,
-                //         ];
-                //         this.worldCursorGeometry = new BoxGeometry(width, height, depth);
-                //         this.worldCursorGeometry.translate(
-                //             (hitBlockPos.x + width / 2) + x / 15 - distance,
-                //             (hitBlockPos.y + height / 2) + y / 15 - distance,
-                //             (hitBlockPos.z + depth / 2) + z / 15 - distance,
-                //         );
-                //         this.worldCursorMaterial = createWorldCursorMaterial(this.worldCursorGeometry);
-                //         this.worldCursor.material = this.worldCursorMaterial;
-                //         this.worldCursor.geometry = this.worldCursorGeometry;
-                //     }
-                // }
-                if (this.input.isKeyDowned(_input_input__WEBPACK_IMPORTED_MODULE_2__.RightMouseButton)) {
-                    var interactionResult = hitBlock === null || hitBlock === void 0 ? void 0 : hitBlock.onInteract(world, hitBlockPos);
-                    if (interactionResult === false) {
-                        if (this.audio.isPlaying)
-                            this.audio.stop();
-                        this.audio.setBuffer((0,_util_random_element__WEBPACK_IMPORTED_MODULE_4__.randomElement)(this.placeBlockSounds));
-                        this.audio.play();
-                        var samplePoint = intersection.point.clone().add(normalOffset);
-                        var _a = [
-                            Math.floor(samplePoint.x),
-                            Math.floor(samplePoint.y),
-                            Math.floor(samplePoint.z),
-                        ], hitX = _a[0], hitY = _a[1], hitZ = _a[2];
-                        var blockPos = new three__WEBPACK_IMPORTED_MODULE_7__.Vector3(hitX, hitY, hitZ);
-                        var blockToPlace = _block_blocks__WEBPACK_IMPORTED_MODULE_5__.Blocks.getBlockById(this.selectedBlockId);
-                        _game__WEBPACK_IMPORTED_MODULE_1__.Game.main.level.setBlockAt(blockPos, blockToPlace);
-                        blockToPlace.onPlace(world, blockPos);
-                    }
-                }
-            }
-        }
-        if (this.input.isKeyPressed(' ')) {
-            this.start = true;
-        }
-        if (!this.start)
-            return;
-        // Inventory
-        if (this.input.isKeyDowned('Q') && this.selectedBlockId > 1) {
-            this.selectedBlockId--;
-        }
-        if (this.input.isKeyDowned('E') && this.selectedBlockId + 1 < _game__WEBPACK_IMPORTED_MODULE_1__.Game.main.blocks.getNumberOfBlocks()) {
-            this.selectedBlockId++;
-        }
-        // Movement
-        var movementSpeed = this.flying ? this.flyingSpeed : this.walkingSpeed;
-        {
-            var inputVector = new three__WEBPACK_IMPORTED_MODULE_7__.Vector3();
-            if (this.input.isKeyPressed('W')) {
-                inputVector.setX(-1);
-            }
-            if (this.input.isKeyPressed('S')) {
-                inputVector.setX(1);
-            }
-            if (this.input.isKeyPressed('D')) {
-                inputVector.setZ(1);
-            }
-            if (this.input.isKeyPressed('A')) {
-                inputVector.setZ(-1);
-            }
-            if (inputVector.length() > 1) {
-                inputVector = inputVector.normalize();
-            }
-            if (this.input.isKeyPressed(' ') && (this.isOnGround || this.flying)) {
-                inputVector.setY(0.012);
-            }
-            if (this.input.isKeyPressed('Shift') && this.flying) {
-                inputVector.setY(-0.015);
-            }
-            // Cheating
-            if (this.input.isKeyDowned('F')) {
-                this.flying = !this.flying;
-            }
-            if (this.input.isKeyDowned('N')) {
-                this.noclip = !this.noclip;
-            }
-            var x = Math.cos(this.rotation.y);
-            var z = Math.sin(this.rotation.y);
-            var forward = new three__WEBPACK_IMPORTED_MODULE_7__.Vector2(x, z).normalize();
-            var right = new three__WEBPACK_IMPORTED_MODULE_7__.Vector2(-z, x).normalize();
-            this.velocity.multiply(new three__WEBPACK_IMPORTED_MODULE_7__.Vector3(0.9, 1, 0.9));
-            this.velocity.add(new three__WEBPACK_IMPORTED_MODULE_7__.Vector3((forward.y * inputVector.x + right.y * inputVector.z) * movementSpeed, inputVector.y, (forward.x * inputVector.x + right.x * inputVector.z) * movementSpeed));
-            if (!this.flying) {
-                this.velocity.setY(this.velocity.y - 0.00005 * deltaTime);
-            }
-            else {
-                this.velocity.multiply(new three__WEBPACK_IMPORTED_MODULE_7__.Vector3(1, 0.9, 1));
-            }
-        }
-        if (!this.noclip) {
-            var potentialPosition = this.position.clone().add(this.velocity.clone().multiplyScalar(deltaTime).multiply(new three__WEBPACK_IMPORTED_MODULE_7__.Vector3(movementSpeed, 1, movementSpeed)));
-            var _b = potentialPosition.toArray(), potentialX = _b[0], potentialY = _b[1], potentialZ = _b[2];
-            var collisionX = this.createTerrainCollisionBoxes([potentialX, this.position.y, this.position.z]);
-            if (collisionX)
-                this.velocity.setX(0);
-            var collisionY = this.createTerrainCollisionBoxes([this.position.x, potentialY, this.position.z]);
-            if (collisionY) {
-                if (this.velocity.y < 0) {
-                    this.isOnGround = true;
-                }
-                else {
-                    this.isOnGround = false;
-                }
-                this.velocity.setY(0);
-            }
-            else {
-                this.isOnGround = false;
-            }
-            var collisionZ = this.createTerrainCollisionBoxes([this.position.x, this.position.y, potentialZ]);
-            if (collisionZ)
-                this.velocity.setZ(0);
-        }
-        this.updateMovement(deltaTime, movementSpeed);
-        this.updateCamera(deltaTime);
-    };
-    Player.prototype.createTerrainCollisionBoxes = function (_a) {
-        var x = _a[0], y = _a[1], z = _a[2];
-        this.collisionBox.set(new three__WEBPACK_IMPORTED_MODULE_7__.Vector3(x - 0.35, y, z - 0.35), new three__WEBPACK_IMPORTED_MODULE_7__.Vector3(x + 0.35, y + 1.8, z + 0.35));
-        var world = _game__WEBPACK_IMPORTED_MODULE_1__.Game.main.level.getWorld();
-        var _b = [Math.floor(x + 0.5), Math.floor(y + 0.5), Math.floor(z + 0.5)], blockX = _b[0], blockY = _b[1], blockZ = _b[2];
-        for (var ix = -2; ix < 2; ix += 1) {
-            for (var iy = -2; iy < 3; iy += 1) {
-                for (var iz = -2; iz < 2; iz += 1) {
-                    var boxIndex = (0,_util_index_to_vector3__WEBPACK_IMPORTED_MODULE_3__.xyzTupelToIndex)(ix + 2, iy + 2, iz + 2, 5, 5);
-                    if (!this.terrainCollisionBoxes[boxIndex]) {
-                        this.terrainCollisionBoxes[boxIndex] = new three__WEBPACK_IMPORTED_MODULE_7__.Box3();
-                    }
-                    var blockPos = new three__WEBPACK_IMPORTED_MODULE_7__.Vector3(blockX + ix, blockY + iy, blockZ + iz);
-                    var block = _game__WEBPACK_IMPORTED_MODULE_1__.Game.main.level.getBlockAt(blockPos);
-                    var solidBlock = block !== undefined && block.isCollidable(world, blockPos);
-                    this.terrainCollisionBoxes[boxIndex].set(new three__WEBPACK_IMPORTED_MODULE_7__.Vector3(blockX + ix, blockY + iy, blockZ + iz), new three__WEBPACK_IMPORTED_MODULE_7__.Vector3(blockX + ix + 1, blockY + iy + 1, blockZ + iz + 1));
-                    if (!solidBlock) {
-                        continue;
-                    }
-                    var collision = this.terrainCollisionBoxes[boxIndex].intersectsBox(this.collisionBox);
-                    if (collision) {
-                        return true;
-                    }
-                }
-            }
-        }
-        return false;
-    };
-    Player.prototype.updateMovement = function (deltaTime, movementSpeed) {
-        this.position.add(this.velocity.clone().multiplyScalar(deltaTime).multiply(new three__WEBPACK_IMPORTED_MODULE_7__.Vector3(movementSpeed, 1, movementSpeed)));
-    };
-    Player.prototype.updateCamera = function (deltaTime) {
-        this.camera.position.set(this.position.x, this.position.y + 1.8, this.position.z);
-        this.rotation.x = three__WEBPACK_IMPORTED_MODULE_7__.MathUtils.clamp(this.rotation.x + (0,three_src_math_MathUtils__WEBPACK_IMPORTED_MODULE_8__.degToRad)(deltaTime * this.input.getMouseDelta()[1] * -0.01), -0.4999 * Math.PI, 0.4999 * Math.PI);
-        this.rotation.y += (0,three_src_math_MathUtils__WEBPACK_IMPORTED_MODULE_8__.degToRad)(deltaTime * this.input.getMouseDelta()[0] * -0.01);
-        var phi = this.rotation.x - 0.5 * Math.PI;
-        var theta = this.rotation.y;
-        var target = new three__WEBPACK_IMPORTED_MODULE_7__.Vector3().setFromSphericalCoords(1, phi, theta).add(this.camera.position);
-        this.camera.lookAt(target);
-    };
-    return Player;
-}());
-
-
-
-/***/ }),
-
-/***/ "./src/player/world-cursor-material.ts":
-/*!*********************************************!*\
-  !*** ./src/player/world-cursor-material.ts ***!
-  \*********************************************/
-/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
-
-"use strict";
-__webpack_require__.r(__webpack_exports__);
-/* harmony export */ __webpack_require__.d(__webpack_exports__, {
-/* harmony export */   "createWorldCursorMaterial": () => (/* binding */ createWorldCursorMaterial)
-/* harmony export */ });
-/* harmony import */ var three__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! three */ "./node_modules/three/build/three.module.js");
-
-var vertexShader = "\n    varying vec2 vUv;\n    void main()\t{\n        vUv = uv;\n        gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0);\n    }\n";
-var fragmentShader = "\n    //#extension GL_OES_standard_derivatives : enable\n\n    varying vec2 vUv;\n    uniform float thickness;\n\n    float edgeFactor(vec2 p) {\n        vec2 grid = abs(fract(p - 0.5) - 0.5) / fwidth(p) / thickness;\n        return min(grid.x, grid.y);\n    }\n\n    void main() {\n        float a = edgeFactor(vUv);\n        vec3 c = mix(vec3(1), vec3(0), a);\n        gl_FragColor = vec4(c, 1.0);\n    }\n";
-function createWorldCursorMaterial() {
-    return new three__WEBPACK_IMPORTED_MODULE_0__.ShaderMaterial({
-        uniforms: {
-            thickness: { value: 4 },
-        },
-        blending: three__WEBPACK_IMPORTED_MODULE_0__.AdditiveBlending,
-        vertexShader: vertexShader,
-        fragmentShader: fragmentShader,
-    });
+function newtonRaphsonIterate (aX, aGuessT, mX1, mX2) {
+ for (var i = 0; i < NEWTON_ITERATIONS; ++i) {
+   var currentSlope = getSlope(aGuessT, mX1, mX2);
+   if (currentSlope === 0.0) {
+     return aGuessT;
+   }
+   var currentX = calcBezier(aGuessT, mX1, mX2) - aX;
+   aGuessT -= currentX / currentSlope;
+ }
+ return aGuessT;
 }
 
+function LinearEasing (x) {
+  return x;
+}
 
-/***/ }),
+module.exports = function bezier (mX1, mY1, mX2, mY2) {
+  if (!(0 <= mX1 && mX1 <= 1 && 0 <= mX2 && mX2 <= 1)) {
+    throw new Error('bezier x values must be in [0, 1] range');
+  }
 
-/***/ "./src/player/world-cursor.ts":
-/*!************************************!*\
-  !*** ./src/player/world-cursor.ts ***!
-  \************************************/
-/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+  if (mX1 === mY1 && mX2 === mY2) {
+    return LinearEasing;
+  }
 
-"use strict";
-__webpack_require__.r(__webpack_exports__);
-/* harmony export */ __webpack_require__.d(__webpack_exports__, {
-/* harmony export */   "WorldCursor": () => (/* binding */ WorldCursor)
-/* harmony export */ });
-/* harmony import */ var three__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! three */ "./node_modules/three/build/three.module.js");
-/* harmony import */ var _world_cursor_material__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./world-cursor-material */ "./src/player/world-cursor-material.ts");
+  // Precompute samples table
+  var sampleValues = float32ArraySupported ? new Float32Array(kSplineTableSize) : new Array(kSplineTableSize);
+  for (var i = 0; i < kSplineTableSize; ++i) {
+    sampleValues[i] = calcBezier(i * kSampleStepSize, mX1, mX2);
+  }
 
+  function getTForX (aX) {
+    var intervalStart = 0.0;
+    var currentSample = 1;
+    var lastSample = kSplineTableSize - 1;
 
-var WorldCursor = /** @class */ (function () {
-    function WorldCursor() {
-        this.overlap = 0.001;
-        this.material = (0,_world_cursor_material__WEBPACK_IMPORTED_MODULE_0__.createWorldCursorMaterial)();
-        this.parent = new three__WEBPACK_IMPORTED_MODULE_1__.Object3D();
+    for (; currentSample !== lastSample && sampleValues[currentSample] <= aX; ++currentSample) {
+      intervalStart += kSampleStepSize;
     }
-    WorldCursor.prototype.register = function (scene) {
-        scene.add(this.parent);
-    };
-    WorldCursor.prototype.set = function (world, pos) {
-        var _a;
-        this.hide();
-        var block = world.getBlock(pos);
-        var state = world.getBlockState(pos);
-        if (!block) {
-            return;
-        }
-        var modelIndex = state ? block.getBlockModel(state) : 0;
-        var model = block.blockModels[modelIndex];
-        var meshes = this.buildMeshes(model, pos);
-        (_a = this.parent).add.apply(_a, meshes);
-    };
-    WorldCursor.prototype.hide = function () {
-        this.parent.clear();
-    };
-    WorldCursor.prototype.buildMeshes = function (model, pos) {
-        var _this = this;
-        return model.elements.map(function (element) {
-            var _a = _this.normalizeToFrom(element.from, element.to), from = _a[0], to = _a[1];
-            var _b = [
-                (to[0] - from[0]) / 15 + _this.overlap * 2,
-                (to[1] - from[1]) / 15 + _this.overlap * 2,
-                (to[2] - from[2]) / 15 + _this.overlap * 2,
-            ], width = _b[0], height = _b[1], depth = _b[2];
-            var newGeometry = new three__WEBPACK_IMPORTED_MODULE_1__.BoxGeometry(width, height, depth);
-            newGeometry.translate((pos.x + width / 2) + from[0] / 15 - _this.overlap, (pos.y + height / 2) + from[1] / 15 - _this.overlap, (pos.z + depth / 2) + from[2] / 15 - _this.overlap);
-            return new three__WEBPACK_IMPORTED_MODULE_1__.Mesh(newGeometry, _this.material);
-        });
-    };
-    WorldCursor.prototype.normalizeToFrom = function (from, to) {
-        return [
-            [Math.min(from[0], to[0]), Math.min(from[1], to[1]), Math.min(from[2], to[2])],
-            [Math.max(from[0], to[0]), Math.max(from[1], to[1]), Math.max(from[2], to[2])],
-        ];
-    };
-    return WorldCursor;
-}());
+    --currentSample;
 
+    // Interpolate to provide an initial guess for t
+    var dist = (aX - sampleValues[currentSample]) / (sampleValues[currentSample + 1] - sampleValues[currentSample]);
+    var guessForT = intervalStart + dist * kSampleStepSize;
 
+    var initialSlope = getSlope(guessForT, mX1, mX2);
+    if (initialSlope >= NEWTON_MIN_SLOPE) {
+      return newtonRaphsonIterate(aX, guessForT, mX1, mX2);
+    } else if (initialSlope === 0.0) {
+      return guessForT;
+    } else {
+      return binarySubdivide(aX, intervalStart, intervalStart + kSampleStepSize, mX1, mX2);
+    }
+  }
 
-/***/ }),
-
-/***/ "./src/util/index-to-vector2.ts":
-/*!**************************************!*\
-  !*** ./src/util/index-to-vector2.ts ***!
-  \**************************************/
-/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
-
-"use strict";
-__webpack_require__.r(__webpack_exports__);
-/* harmony export */ __webpack_require__.d(__webpack_exports__, {
-/* harmony export */   "indexToXZ": () => (/* binding */ indexToXZ),
-/* harmony export */   "xzTupelToIndex": () => (/* binding */ xzTupelToIndex)
-/* harmony export */ });
-/* harmony import */ var three__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! three */ "./node_modules/three/build/three.module.js");
-
-function indexToXZ(index, size) {
-    var x = index % size;
-    var y = Math.floor(index / size);
-    return new three__WEBPACK_IMPORTED_MODULE_0__.Vector2(x, y);
-}
-function xzTupelToIndex(x, y, size) {
-    return x + y * size;
-}
+  return function BezierEasing (x) {
+    // Because JavaScript number are imprecise, we should guarantee the extremes are right.
+    if (x === 0) {
+      return 0;
+    }
+    if (x === 1) {
+      return 1;
+    }
+    return calcBezier(getTForX(x), mY1, mY2);
+  };
+};
 
 
 /***/ }),
@@ -2209,2123 +149,507 @@ function xyzTupelToIndex(x, y, z, xSize, zSize) {
 
 /***/ }),
 
-/***/ "./src/util/map-2d.ts":
-/*!****************************!*\
-  !*** ./src/util/map-2d.ts ***!
-  \****************************/
-/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+/***/ "./node_modules/simplex-noise/dist/esm/simplex-noise.js":
+/*!**************************************************************!*\
+  !*** ./node_modules/simplex-noise/dist/esm/simplex-noise.js ***!
+  \**************************************************************/
+/***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __webpack_require__) => {
 
 "use strict";
 __webpack_require__.r(__webpack_exports__);
 /* harmony export */ __webpack_require__.d(__webpack_exports__, {
-/* harmony export */   "ArrayMap2D": () => (/* binding */ ArrayMap2D),
-/* harmony export */   "PaletteMap2D": () => (/* binding */ PaletteMap2D),
-/* harmony export */   "deserializeMap2D": () => (/* binding */ deserializeMap2D)
+/* harmony export */   "SimplexNoise": () => (/* binding */ SimplexNoise),
+/* harmony export */   "default": () => (__WEBPACK_DEFAULT_EXPORT__),
+/* harmony export */   "buildPermutationTable": () => (/* binding */ buildPermutationTable)
 /* harmony export */ });
-/* harmony import */ var _index_to_vector2__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./index-to-vector2 */ "./src/util/index-to-vector2.ts");
+/*
+ * A fast javascript implementation of simplex noise by Jonas Wagner
 
-var ArrayMap2D = /** @class */ (function () {
-    function ArrayMap2D(data, sideLength) {
-        this.data = data;
-        this.sideLength = sideLength;
-    }
-    ArrayMap2D.prototype.get = function (x, y) {
-        return this.data[(0,_index_to_vector2__WEBPACK_IMPORTED_MODULE_0__.xzTupelToIndex)(x, y, this.sideLength)];
-    };
-    ArrayMap2D.prototype.getV = function (_a) {
-        var x = _a.x, y = _a.y;
-        return this.data[(0,_index_to_vector2__WEBPACK_IMPORTED_MODULE_0__.xzTupelToIndex)(x, y, this.sideLength)];
-    };
-    ArrayMap2D.prototype.serialize = function () {
-        return {
-            type: 'arraymap2d',
-            spec: {
-                data: this.data,
-                sideLength: this.sideLength,
-            },
-        };
-    };
-    return ArrayMap2D;
-}());
+Based on a speed-improved simplex noise algorithm for 2D, 3D and 4D in Java.
+Which is based on example code by Stefan Gustavson (stegu@itn.liu.se).
+With Optimisations by Peter Eastman (peastman@drizzle.stanford.edu).
+Better rank ordering method by Stefan Gustavson in 2012.
 
-var PaletteMap2D = /** @class */ (function () {
-    function PaletteMap2D(palette, lookup, sideLength) {
-        this.palette = palette;
-        this.lookup = lookup;
-        this.sideLength = sideLength;
-    }
-    PaletteMap2D.prototype.get = function (x, y) {
-        return this.palette[this.lookup[(0,_index_to_vector2__WEBPACK_IMPORTED_MODULE_0__.xzTupelToIndex)(x, y, this.sideLength)]];
-    };
-    PaletteMap2D.prototype.getV = function (_a) {
-        var x = _a.x, y = _a.y;
-        return this.get(x, y);
-    };
-    PaletteMap2D.fromArray = function (data, sideLength) {
-        var palette = [];
-        var lookup = data.map(function (value) {
-            var existingPaletteEntryIndex = palette.findIndex(function (item) { return value === item; });
-            if (existingPaletteEntryIndex >= 0) {
-                return existingPaletteEntryIndex;
-            }
-            return palette.push(value) - 1;
-        });
-        return new PaletteMap2D(palette, lookup, sideLength);
-    };
-    PaletteMap2D.prototype.serialize = function () {
-        return {
-            type: 'palettemap2d',
-            spec: {
-                palette: this.palette,
-                lookup: this.lookup,
-                sideLength: this.sideLength,
-            },
-        };
-    };
-    return PaletteMap2D;
-}());
+ Copyright (c) 2021 Jonas Wagner
 
-function deserializeMap2D(_a) {
-    var type = _a.type, spec = _a.spec;
-    switch (type) {
-        case 'arraymap2d':
-            return new ArrayMap2D(spec.data, spec.sideLength);
-        case 'palettemap2d':
-            return new PaletteMap2D(spec.palette, spec.lookup, spec.sideLength);
-        default:
-            throw new Error('Unknown map2d type ' + type);
-    }
-}
+ Permission is hereby granted, free of charge, to any person obtaining a copy
+ of this software and associated documentation files (the "Software"), to deal
+ in the Software without restriction, including without limitation the rights
+ to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ copies of the Software, and to permit persons to whom the Software is
+ furnished to do so, subject to the following conditions:
 
+ The above copyright notice and this permission notice shall be included in all
+ copies or substantial portions of the Software.
 
-/***/ }),
-
-/***/ "./src/util/mod.ts":
-/*!*************************!*\
-  !*** ./src/util/mod.ts ***!
-  \*************************/
-/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
-
-"use strict";
-__webpack_require__.r(__webpack_exports__);
-/* harmony export */ __webpack_require__.d(__webpack_exports__, {
-/* harmony export */   "mod": () => (/* binding */ mod)
-/* harmony export */ });
-function mod(n, d) {
-    return (n % d + d) % d;
-}
-
-
-/***/ }),
-
-/***/ "./src/util/random-element.ts":
-/*!************************************!*\
-  !*** ./src/util/random-element.ts ***!
-  \************************************/
-/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
-
-"use strict";
-__webpack_require__.r(__webpack_exports__);
-/* harmony export */ __webpack_require__.d(__webpack_exports__, {
-/* harmony export */   "randomElement": () => (/* binding */ randomElement)
-/* harmony export */ });
-function randomElement(arr) {
-    return arr[Math.floor(Math.random() * arr.length)];
-}
-
-
-/***/ }),
-
-/***/ "./src/util/remove-duplicates.ts":
-/*!***************************************!*\
-  !*** ./src/util/remove-duplicates.ts ***!
-  \***************************************/
-/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
-
-"use strict";
-__webpack_require__.r(__webpack_exports__);
-/* harmony export */ __webpack_require__.d(__webpack_exports__, {
-/* harmony export */   "removeDuplicates": () => (/* binding */ removeDuplicates)
-/* harmony export */ });
-function removeDuplicates(array, compare) {
-    if (compare === void 0) { compare = function (a, b) { return a === b; }; }
-    var cleanedArray = [];
-    var _loop_1 = function (item) {
-        if (!cleanedArray.some(function (cleanedItem) { return compare(item, cleanedItem); })) {
-            cleanedArray.push(item);
-        }
-    };
-    for (var _i = 0, array_1 = array; _i < array_1.length; _i++) {
-        var item = array_1[_i];
-        _loop_1(item);
-    }
-    return cleanedArray;
-}
-
-
-/***/ }),
-
-/***/ "./src/worker/worker-pool.ts":
-/*!***********************************!*\
-  !*** ./src/worker/worker-pool.ts ***!
-  \***********************************/
-/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
-
-"use strict";
-__webpack_require__.r(__webpack_exports__);
-/* harmony export */ __webpack_require__.d(__webpack_exports__, {
-/* harmony export */   "WorkerPool": () => (/* binding */ WorkerPool)
-/* harmony export */ });
-/* harmony import */ var _util_random_element__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../util/random-element */ "./src/util/random-element.ts");
-var __awaiter = (undefined && undefined.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
-var __generator = (undefined && undefined.__generator) || function (thisArg, body) {
-    var _ = { label: 0, sent: function() { if (t[0] & 1) throw t[1]; return t[1]; }, trys: [], ops: [] }, f, y, t, g;
-    return g = { next: verb(0), "throw": verb(1), "return": verb(2) }, typeof Symbol === "function" && (g[Symbol.iterator] = function() { return this; }), g;
-    function verb(n) { return function (v) { return step([n, v]); }; }
-    function step(op) {
-        if (f) throw new TypeError("Generator is already executing.");
-        while (_) try {
-            if (f = 1, y && (t = op[0] & 2 ? y["return"] : op[0] ? y["throw"] || ((t = y["return"]) && t.call(y), 0) : y.next) && !(t = t.call(y, op[1])).done) return t;
-            if (y = 0, t) op = [op[0] & 2, t.value];
-            switch (op[0]) {
-                case 0: case 1: t = op; break;
-                case 4: _.label++; return { value: op[1], done: false };
-                case 5: _.label++; y = op[1]; op = [0]; continue;
-                case 7: op = _.ops.pop(); _.trys.pop(); continue;
-                default:
-                    if (!(t = _.trys, t = t.length > 0 && t[t.length - 1]) && (op[0] === 6 || op[0] === 2)) { _ = 0; continue; }
-                    if (op[0] === 3 && (!t || (op[1] > t[0] && op[1] < t[3]))) { _.label = op[1]; break; }
-                    if (op[0] === 6 && _.label < t[1]) { _.label = t[1]; t = op; break; }
-                    if (t && _.label < t[2]) { _.label = t[2]; _.ops.push(op); break; }
-                    if (t[2]) _.ops.pop();
-                    _.trys.pop(); continue;
-            }
-            op = body.call(thisArg, _);
-        } catch (e) { op = [6, e]; y = 0; } finally { f = t = 0; }
-        if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
-    }
-};
-
-var WorkerPool = /** @class */ (function () {
-    function WorkerPool() {
-        this.workers = [];
-    }
-    WorkerPool.prototype.addWorkers = function (numberOfWorkers) {
-        return __awaiter(this, void 0, void 0, function () {
-            var i, worker;
-            return __generator(this, function (_a) {
-                switch (_a.label) {
-                    case 0:
-                        i = 0;
-                        _a.label = 1;
-                    case 1:
-                        if (!(i < numberOfWorkers)) return [3 /*break*/, 4];
-                        return [4 /*yield*/, this.instantiateWorker()];
-                    case 2:
-                        worker = _a.sent();
-                        this.workers.push(worker);
-                        _a.label = 3;
-                    case 3:
-                        i++;
-                        return [3 /*break*/, 1];
-                    case 4: return [2 /*return*/];
-                }
-            });
-        });
-    };
-    WorkerPool.prototype.getWorker = function () {
-        return (0,_util_random_element__WEBPACK_IMPORTED_MODULE_0__.randomElement)(this.workers);
-    };
-    return WorkerPool;
-}());
-
-
-
-/***/ }),
-
-/***/ "./src/world/chunk-column-manager.ts":
-/*!*******************************************!*\
-  !*** ./src/world/chunk-column-manager.ts ***!
-  \*******************************************/
-/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
-
-"use strict";
-__webpack_require__.r(__webpack_exports__);
-/* harmony export */ __webpack_require__.d(__webpack_exports__, {
-/* harmony export */   "ChunkColumnManager": () => (/* binding */ ChunkColumnManager)
-/* harmony export */ });
-/* harmony import */ var _chunk_column__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./chunk-column */ "./src/world/chunk-column.ts");
-/* harmony import */ var p_all__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! p-all */ "./node_modules/p-all/index.js");
-var __awaiter = (undefined && undefined.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
-var __generator = (undefined && undefined.__generator) || function (thisArg, body) {
-    var _ = { label: 0, sent: function() { if (t[0] & 1) throw t[1]; return t[1]; }, trys: [], ops: [] }, f, y, t, g;
-    return g = { next: verb(0), "throw": verb(1), "return": verb(2) }, typeof Symbol === "function" && (g[Symbol.iterator] = function() { return this; }), g;
-    function verb(n) { return function (v) { return step([n, v]); }; }
-    function step(op) {
-        if (f) throw new TypeError("Generator is already executing.");
-        while (_) try {
-            if (f = 1, y && (t = op[0] & 2 ? y["return"] : op[0] ? y["throw"] || ((t = y["return"]) && t.call(y), 0) : y.next) && !(t = t.call(y, op[1])).done) return t;
-            if (y = 0, t) op = [op[0] & 2, t.value];
-            switch (op[0]) {
-                case 0: case 1: t = op; break;
-                case 4: _.label++; return { value: op[1], done: false };
-                case 5: _.label++; y = op[1]; op = [0]; continue;
-                case 7: op = _.ops.pop(); _.trys.pop(); continue;
-                default:
-                    if (!(t = _.trys, t = t.length > 0 && t[t.length - 1]) && (op[0] === 6 || op[0] === 2)) { _ = 0; continue; }
-                    if (op[0] === 3 && (!t || (op[1] > t[0] && op[1] < t[3]))) { _.label = op[1]; break; }
-                    if (op[0] === 6 && _.label < t[1]) { _.label = t[1]; t = op; break; }
-                    if (t && _.label < t[2]) { _.label = t[2]; _.ops.push(op); break; }
-                    if (t[2]) _.ops.pop();
-                    _.trys.pop(); continue;
-            }
-            op = body.call(thisArg, _);
-        } catch (e) { op = [6, e]; y = 0; } finally { f = t = 0; }
-        if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
-    }
-};
-var __spreadArray = (undefined && undefined.__spreadArray) || function (to, from, pack) {
-    if (pack || arguments.length === 2) for (var i = 0, l = from.length, ar; i < l; i++) {
-        if (ar || !(i in from)) {
-            if (!ar) ar = Array.prototype.slice.call(from, 0, i);
-            ar[i] = from[i];
+ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ SOFTWARE.
+ */
+const F2 = 0.5 * (Math.sqrt(3.0) - 1.0);
+const G2 = (3.0 - Math.sqrt(3.0)) / 6.0;
+const F3 = 1.0 / 3.0;
+const G3 = 1.0 / 6.0;
+const F4 = (Math.sqrt(5.0) - 1.0) / 4.0;
+const G4 = (5.0 - Math.sqrt(5.0)) / 20.0;
+const grad3 = new Float32Array([1, 1, 0,
+    -1, 1, 0,
+    1, -1, 0,
+    -1, -1, 0,
+    1, 0, 1,
+    -1, 0, 1,
+    1, 0, -1,
+    -1, 0, -1,
+    0, 1, 1,
+    0, -1, 1,
+    0, 1, -1,
+    0, -1, -1]);
+const grad4 = new Float32Array([0, 1, 1, 1, 0, 1, 1, -1, 0, 1, -1, 1, 0, 1, -1, -1,
+    0, -1, 1, 1, 0, -1, 1, -1, 0, -1, -1, 1, 0, -1, -1, -1,
+    1, 0, 1, 1, 1, 0, 1, -1, 1, 0, -1, 1, 1, 0, -1, -1,
+    -1, 0, 1, 1, -1, 0, 1, -1, -1, 0, -1, 1, -1, 0, -1, -1,
+    1, 1, 0, 1, 1, 1, 0, -1, 1, -1, 0, 1, 1, -1, 0, -1,
+    -1, 1, 0, 1, -1, 1, 0, -1, -1, -1, 0, 1, -1, -1, 0, -1,
+    1, 1, 1, 0, 1, 1, -1, 0, 1, -1, 1, 0, 1, -1, -1, 0,
+    -1, 1, 1, 0, -1, 1, -1, 0, -1, -1, 1, 0, -1, -1, -1, 0]);
+/** Deterministic simplex noise generator suitable for 2D, 3D and 4D spaces. */
+class SimplexNoise {
+    /**
+     * Creates a new `SimplexNoise` instance.
+     * This involves some setup. You can save a few cpu cycles by reusing the same instance.
+     * @param randomOrSeed A random number generator or a seed (string|number).
+     * Defaults to Math.random (random irreproducible initialization).
+     */
+    constructor(randomOrSeed = Math.random) {
+        const random = typeof randomOrSeed == 'function' ? randomOrSeed : alea(randomOrSeed);
+        this.p = buildPermutationTable(random);
+        this.perm = new Uint8Array(512);
+        this.permMod12 = new Uint8Array(512);
+        for (let i = 0; i < 512; i++) {
+            this.perm[i] = this.p[i & 255];
+            this.permMod12[i] = this.perm[i] % 12;
         }
     }
-    return to.concat(ar || Array.prototype.slice.call(from));
-};
-
-
-var ChunkColumnManager = /** @class */ (function () {
-    function ChunkColumnManager(scene, renderDistance, simulationDistance, chunkUpdateConcurrency) {
-        this.scene = scene;
-        this.renderDistance = renderDistance;
-        this.simulationDistance = simulationDistance;
-        this.chunkUpdateConcurrency = chunkUpdateConcurrency;
-        this.chunkColumns = {};
-        this.chunkColumnPositions = [];
-        this.requestedUpdateChunkColumns = [];
-        this.numberOfCurrentlyRunningRequestedChunkUpdates = 0;
-    }
-    ChunkColumnManager.prototype.setCenter = function (centerX, centerZ) {
-        var _this = this;
-        var candidateRange = Math.max(this.renderDistance, this.simulationDistance) + 2;
-        var candidates = [];
-        for (var x = -candidateRange; x <= candidateRange; x += 1) {
-            for (var z = -candidateRange; z <= candidateRange; z += 1) {
-                candidates.push({
-                    x: x + centerX,
-                    z: z + centerZ,
-                    priority: this.calculateChunkColumnPriority(x, z),
-                });
-            }
-        }
-        // Load new columns
-        (0,p_all__WEBPACK_IMPORTED_MODULE_1__["default"])(candidates.map(function (candidate) { return function () { return __awaiter(_this, void 0, void 0, function () {
-            var chunkColumn;
-            return __generator(this, function (_a) {
-                switch (_a.label) {
-                    case 0:
-                        chunkColumn = this.getChunkColumn(candidate.x, candidate.z);
-                        if (!!chunkColumn) return [3 /*break*/, 2];
-                        chunkColumn = new _chunk_column__WEBPACK_IMPORTED_MODULE_0__.ChunkColumn(this, [candidate.x, candidate.z], 8);
-                        chunkColumn.register(this.scene);
-                        this.setChunkColumn(candidate.x, candidate.z, chunkColumn);
-                        return [4 /*yield*/, chunkColumn.generatePrototype()];
-                    case 1:
-                        _a.sent();
-                        _a.label = 2;
-                    case 2: return [4 /*yield*/, chunkColumn.setPriority(candidate.priority)];
-                    case 3:
-                        _a.sent();
-                        return [2 /*return*/];
-                }
-            });
-        }); }; }), { concurrency: this.chunkUpdateConcurrency });
-        // Unload old columns
-        for (var _i = 0, _a = this.chunkColumnPositions; _i < _a.length; _i++) {
-            var _b = _a[_i], x = _b[0], z = _b[1];
-            var remove = Math.abs(x - centerX) > this.renderDistance + 1 || Math.abs(z - centerZ) > this.renderDistance + 1;
-            var chunkColumn = this.getChunkColumn(x, z);
-            if (remove && chunkColumn) {
-                chunkColumn.unregister(this.scene);
-                this.setChunkColumn(x, z, undefined);
-            }
-        }
-    };
-    ChunkColumnManager.prototype.update = function (deltaTime) {
-        this.handleRequestedChunkUpdates();
-    };
-    ChunkColumnManager.prototype.handleRequestedChunkUpdates = function () {
-        return __awaiter(this, void 0, void 0, function () {
-            var chunkColumnToUpdate;
-            return __generator(this, function (_a) {
-                switch (_a.label) {
-                    case 0:
-                        if (this.numberOfCurrentlyRunningRequestedChunkUpdates > 100) {
-                            return [2 /*return*/];
-                        }
-                        chunkColumnToUpdate = this.requestedUpdateChunkColumns.pop();
-                        if (!chunkColumnToUpdate) {
-                            return [2 /*return*/];
-                        }
-                        this.numberOfCurrentlyRunningRequestedChunkUpdates += 1;
-                        return [4 /*yield*/, chunkColumnToUpdate.requestedUpdate()];
-                    case 1:
-                        _a.sent();
-                        this.numberOfCurrentlyRunningRequestedChunkUpdates -= 1;
-                        return [2 /*return*/];
-                }
-            });
-        });
-    };
-    ChunkColumnManager.prototype.lateUpdate = function (deltaTime) {
-        var _this = this;
-        this.chunkColumnPositions.forEach(function (_a) {
-            var x = _a[0], z = _a[1];
-            var chunkColumn = _this.getChunkColumn(x, z);
-            if (chunkColumn) {
-                chunkColumn.lateUpdate(deltaTime);
-            }
-        });
-    };
-    ChunkColumnManager.prototype.tick = function (deltaTime) {
-        var _this = this;
-        this.chunkColumnPositions.forEach(function (_a) {
-            var x = _a[0], z = _a[1];
-            var chunkColumn = _this.getChunkColumn(x, z);
-            if (chunkColumn) {
-                chunkColumn.onTick(deltaTime);
-            }
-        });
-    };
-    ChunkColumnManager.prototype.getChunkByBlockPos = function (pos) {
-        var x = Math.floor(pos.x / 16);
-        var z = Math.floor(pos.z / 16);
-        var column = this.getChunkColumn(x, z);
-        if (!column) {
-            return undefined;
-        }
-        var y = Math.floor(pos.y / 16);
-        return column.chunks[y];
-    };
-    ChunkColumnManager.prototype.__tempGetChunkMeshes = function () {
-        var _this = this;
-        return this.chunkColumnPositions.flatMap(function (cp) { var _a, _b; return (_b = (_a = _this.chunkColumns[cp[0]][cp[1]]) === null || _a === void 0 ? void 0 : _a.getChunkMeshes()) !== null && _b !== void 0 ? _b : []; });
-    };
-    ChunkColumnManager.prototype.requestChunkUpdate = function (chunkColumnToAdd) {
-        this.requestedUpdateChunkColumns = __spreadArray(__spreadArray([], this.requestedUpdateChunkColumns.filter(function (chunkColumn) { return chunkColumn != chunkColumnToAdd; }), true), [
-            chunkColumnToAdd,
-        ], false);
-    };
-    ChunkColumnManager.prototype.calculateChunkColumnPriority = function (x, z) {
-        var absX = Math.abs(x);
-        var absZ = Math.abs(z);
-        if (absX < this.simulationDistance && absZ < this.simulationDistance) {
-            return _chunk_column__WEBPACK_IMPORTED_MODULE_0__.ChunkColumnPriority.High;
-        }
-        if (absX < this.renderDistance && absZ < this.renderDistance) {
-            return _chunk_column__WEBPACK_IMPORTED_MODULE_0__.ChunkColumnPriority.Middle;
-        }
-        if (absX < this.renderDistance + 1 && absZ < this.renderDistance + 1) {
-            return _chunk_column__WEBPACK_IMPORTED_MODULE_0__.ChunkColumnPriority.Low;
-        }
-        return _chunk_column__WEBPACK_IMPORTED_MODULE_0__.ChunkColumnPriority.Lowest;
-    };
-    ChunkColumnManager.prototype.setChunkColumn = function (x, z, chunkColumn) {
-        if (!this.chunkColumns[x]) {
-            this.chunkColumns[x] = {};
-        }
-        if (chunkColumn !== undefined) {
-            this.chunkColumnPositions.push([x, z]);
-        }
+    /**
+     * Samples the noise field in 2 dimensions
+     * @param x
+     * @param y
+     * @returns a number in the interval [-1, 1]
+     */
+    noise2D(x, y) {
+        const permMod12 = this.permMod12;
+        const perm = this.perm;
+        let n0 = 0; // Noise contributions from the three corners
+        let n1 = 0;
+        let n2 = 0;
+        // Skew the input space to determine which simplex cell we're in
+        const s = (x + y) * F2; // Hairy factor for 2D
+        const i = Math.floor(x + s);
+        const j = Math.floor(y + s);
+        const t = (i + j) * G2;
+        const X0 = i - t; // Unskew the cell origin back to (x,y) space
+        const Y0 = j - t;
+        const x0 = x - X0; // The x,y distances from the cell origin
+        const y0 = y - Y0;
+        // For the 2D case, the simplex shape is an equilateral triangle.
+        // Determine which simplex we are in.
+        let i1, j1; // Offsets for second (middle) corner of simplex in (i,j) coords
+        if (x0 > y0) {
+            i1 = 1;
+            j1 = 0;
+        } // lower triangle, XY order: (0,0)->(1,0)->(1,1)
         else {
-            this.chunkColumnPositions = this.chunkColumnPositions.filter(function (_a) {
-                var pX = _a[0], pZ = _a[1];
-                return pX !== x || pZ !== z;
-            });
+            i1 = 0;
+            j1 = 1;
+        } // upper triangle, YX order: (0,0)->(0,1)->(1,1)
+        // A step of (1,0) in (i,j) means a step of (1-c,-c) in (x,y), and
+        // a step of (0,1) in (i,j) means a step of (-c,1-c) in (x,y), where
+        // c = (3-sqrt(3))/6
+        const x1 = x0 - i1 + G2; // Offsets for middle corner in (x,y) unskewed coords
+        const y1 = y0 - j1 + G2;
+        const x2 = x0 - 1.0 + 2.0 * G2; // Offsets for last corner in (x,y) unskewed coords
+        const y2 = y0 - 1.0 + 2.0 * G2;
+        // Work out the hashed gradient indices of the three simplex corners
+        const ii = i & 255;
+        const jj = j & 255;
+        // Calculate the contribution from the three corners
+        let t0 = 0.5 - x0 * x0 - y0 * y0;
+        if (t0 >= 0) {
+            const gi0 = permMod12[ii + perm[jj]] * 3;
+            t0 *= t0;
+            n0 = t0 * t0 * (grad3[gi0] * x0 + grad3[gi0 + 1] * y0); // (x,y) of grad3 used for 2D gradient
         }
-        this.chunkColumns[x][z] = chunkColumn;
-    };
-    ChunkColumnManager.prototype.getChunkColumn = function (x, z) {
-        if (!this.chunkColumns[x]) {
-            return;
+        let t1 = 0.5 - x1 * x1 - y1 * y1;
+        if (t1 >= 0) {
+            const gi1 = permMod12[ii + i1 + perm[jj + j1]] * 3;
+            t1 *= t1;
+            n1 = t1 * t1 * (grad3[gi1] * x1 + grad3[gi1 + 1] * y1);
         }
-        return this.chunkColumns[x][z];
-    };
-    return ChunkColumnManager;
-}());
-
-
-
-/***/ }),
-
-/***/ "./src/world/chunk-column.ts":
-/*!***********************************!*\
-  !*** ./src/world/chunk-column.ts ***!
-  \***********************************/
-/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
-
-"use strict";
-__webpack_require__.r(__webpack_exports__);
-/* harmony export */ __webpack_require__.d(__webpack_exports__, {
-/* harmony export */   "ChunkColumnPriority": () => (/* binding */ ChunkColumnPriority),
-/* harmony export */   "ChunkColumn": () => (/* binding */ ChunkColumn)
-/* harmony export */ });
-/* harmony import */ var three__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! three */ "./node_modules/three/build/three.module.js");
-/* harmony import */ var _game__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../game */ "./src/game.ts");
-/* harmony import */ var _chunk__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./chunk */ "./src/world/chunk.ts");
-/* harmony import */ var p_each_series__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! p-each-series */ "./node_modules/p-each-series/index.js");
-var __awaiter = (undefined && undefined.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
-var __generator = (undefined && undefined.__generator) || function (thisArg, body) {
-    var _ = { label: 0, sent: function() { if (t[0] & 1) throw t[1]; return t[1]; }, trys: [], ops: [] }, f, y, t, g;
-    return g = { next: verb(0), "throw": verb(1), "return": verb(2) }, typeof Symbol === "function" && (g[Symbol.iterator] = function() { return this; }), g;
-    function verb(n) { return function (v) { return step([n, v]); }; }
-    function step(op) {
-        if (f) throw new TypeError("Generator is already executing.");
-        while (_) try {
-            if (f = 1, y && (t = op[0] & 2 ? y["return"] : op[0] ? y["throw"] || ((t = y["return"]) && t.call(y), 0) : y.next) && !(t = t.call(y, op[1])).done) return t;
-            if (y = 0, t) op = [op[0] & 2, t.value];
-            switch (op[0]) {
-                case 0: case 1: t = op; break;
-                case 4: _.label++; return { value: op[1], done: false };
-                case 5: _.label++; y = op[1]; op = [0]; continue;
-                case 7: op = _.ops.pop(); _.trys.pop(); continue;
-                default:
-                    if (!(t = _.trys, t = t.length > 0 && t[t.length - 1]) && (op[0] === 6 || op[0] === 2)) { _ = 0; continue; }
-                    if (op[0] === 3 && (!t || (op[1] > t[0] && op[1] < t[3]))) { _.label = op[1]; break; }
-                    if (op[0] === 6 && _.label < t[1]) { _.label = t[1]; t = op; break; }
-                    if (t && _.label < t[2]) { _.label = t[2]; _.ops.push(op); break; }
-                    if (t[2]) _.ops.pop();
-                    _.trys.pop(); continue;
-            }
-            op = body.call(thisArg, _);
-        } catch (e) { op = [6, e]; y = 0; } finally { f = t = 0; }
-        if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
+        let t2 = 0.5 - x2 * x2 - y2 * y2;
+        if (t2 >= 0) {
+            const gi2 = permMod12[ii + 1 + perm[jj + 1]] * 3;
+            t2 *= t2;
+            n2 = t2 * t2 * (grad3[gi2] * x2 + grad3[gi2 + 1] * y2);
+        }
+        // Add contributions from each corner to get the final noise value.
+        // The result is scaled to return values in the interval [-1,1].
+        return 70.0 * (n0 + n1 + n2);
     }
-};
-
-
-
-
-var ChunkColumnPriority;
-(function (ChunkColumnPriority) {
-    // Render & Tick
-    ChunkColumnPriority[ChunkColumnPriority["High"] = 3] = "High";
-    // Render
-    ChunkColumnPriority[ChunkColumnPriority["Middle"] = 2] = "Middle";
-    // Generate
-    ChunkColumnPriority[ChunkColumnPriority["Low"] = 1] = "Low";
-    // Prepare
-    ChunkColumnPriority[ChunkColumnPriority["Lowest"] = 0] = "Lowest";
-})(ChunkColumnPriority || (ChunkColumnPriority = {}));
-var ChunkColumn = /** @class */ (function () {
-    function ChunkColumn(manager, position, height) {
-        this.manager = manager;
-        this.position = position;
-        this.chunks = [];
-        this.chunksBuilt = false;
-        this.chunksGenerated = false;
-        this.priority = ChunkColumnPriority.Lowest;
-        for (var i = 0; i < height; i++) {
-            this.chunks.push(new _chunk__WEBPACK_IMPORTED_MODULE_1__.Chunk(this, new three__WEBPACK_IMPORTED_MODULE_3__.Vector3(position[0], i, position[1])));
+    /**
+     * Samples the noise field in 3 dimensions
+     * @param x
+     * @param y
+     * @param z
+     * @returns a number in the interval [-1, 1]
+     */
+    noise3D(x, y, z) {
+        const permMod12 = this.permMod12;
+        const perm = this.perm;
+        let n0, n1, n2, n3; // Noise contributions from the four corners
+        // Skew the input space to determine which simplex cell we're in
+        const s = (x + y + z) * F3; // Very nice and simple skew factor for 3D
+        const i = Math.floor(x + s);
+        const j = Math.floor(y + s);
+        const k = Math.floor(z + s);
+        const t = (i + j + k) * G3;
+        const X0 = i - t; // Unskew the cell origin back to (x,y,z) space
+        const Y0 = j - t;
+        const Z0 = k - t;
+        const x0 = x - X0; // The x,y,z distances from the cell origin
+        const y0 = y - Y0;
+        const z0 = z - Z0;
+        // For the 3D case, the simplex shape is a slightly irregular tetrahedron.
+        // Determine which simplex we are in.
+        let i1, j1, k1; // Offsets for second corner of simplex in (i,j,k) coords
+        let i2, j2, k2; // Offsets for third corner of simplex in (i,j,k) coords
+        if (x0 >= y0) {
+            if (y0 >= z0) {
+                i1 = 1;
+                j1 = 0;
+                k1 = 0;
+                i2 = 1;
+                j2 = 1;
+                k2 = 0;
+            } // X Y Z order
+            else if (x0 >= z0) {
+                i1 = 1;
+                j1 = 0;
+                k1 = 0;
+                i2 = 1;
+                j2 = 0;
+                k2 = 1;
+            } // X Z Y order
+            else {
+                i1 = 0;
+                j1 = 0;
+                k1 = 1;
+                i2 = 1;
+                j2 = 0;
+                k2 = 1;
+            } // Z X Y order
         }
-    }
-    ChunkColumn.prototype.register = function (scene) {
-        this.chunks.forEach(function (chunk) { return chunk.register(scene); });
-    };
-    ChunkColumn.prototype.unregister = function (scene) {
-        this.chunks.forEach(function (chunk) { return chunk.unregister(scene); });
-    };
-    ChunkColumn.prototype.generatePrototype = function () {
-        return __awaiter(this, void 0, void 0, function () {
-            var _a;
-            return __generator(this, function (_b) {
-                switch (_b.label) {
-                    case 0:
-                        if (this.heightMap) {
-                            return [2 /*return*/];
-                        }
-                        _a = this;
-                        return [4 /*yield*/, _game__WEBPACK_IMPORTED_MODULE_0__.Game.main.chunkGeneratorPool.generateHeightMap(this.position)];
-                    case 1:
-                        _a.heightMap = _b.sent();
-                        return [2 /*return*/];
-                }
-            });
-        });
-    };
-    ChunkColumn.prototype.setPriority = function (priority) {
-        return __awaiter(this, void 0, void 0, function () {
-            var oldPriority;
-            return __generator(this, function (_a) {
-                switch (_a.label) {
-                    case 0:
-                        if (this.priority === priority) {
-                            return [2 /*return*/];
-                        }
-                        oldPriority = this.priority;
-                        this.priority = priority;
-                        if (!(priority >= ChunkColumnPriority.Low && priority > oldPriority)) return [3 /*break*/, 3];
-                        if (!!this.chunksGenerated) return [3 /*break*/, 2];
-                        return [4 /*yield*/, (0,p_each_series__WEBPACK_IMPORTED_MODULE_2__["default"])(this.chunks, function (chunk) { return chunk.generateTerrain(true); })];
-                    case 1:
-                        _a.sent();
-                        this.chunksGenerated = true;
-                        _a.label = 2;
-                    case 2:
-                        this.manager.requestChunkUpdate(this);
-                        _a.label = 3;
-                    case 3: return [2 /*return*/];
-                }
-            });
-        });
-    };
-    ChunkColumn.prototype.requestedUpdate = function () {
-        return __awaiter(this, void 0, void 0, function () {
-            return __generator(this, function (_a) {
-                switch (_a.label) {
-                    case 0:
-                        if (!(this.chunksGenerated
-                            && !this.chunksBuilt
-                            && this.areNeighborsGenerated())) return [3 /*break*/, 2];
-                        return [4 /*yield*/, Promise.all(this.chunks.map(function (chunk) { return chunk.buildMesh(); }))];
-                    case 1:
-                        _a.sent();
-                        this.chunksBuilt = true;
-                        this.requestNeighborColumnsToUpdate();
-                        _a.label = 2;
-                    case 2: return [2 /*return*/];
-                }
-            });
-        });
-    };
-    ChunkColumn.prototype.areNeighborsGenerated = function () {
-        var _this = this;
-        return [[-1, 0], [1, 0], [0, -1], [0, 1]].reduce(function (result, pos) {
-            var _a, _b;
-            if (!result) {
-                return false;
-            }
-            return (_b = (_a = _this.manager.getChunkColumn(_this.position[0] + pos[0], _this.position[1] + pos[1])) === null || _a === void 0 ? void 0 : _a.chunksGenerated) !== null && _b !== void 0 ? _b : false;
-        }, true);
-    };
-    ChunkColumn.prototype.requestNeighborColumnsToUpdate = function () {
-        var _this = this;
-        [[-1, 0], [1, 0], [0, -1], [0, 1]].forEach(function (pos) {
-            var neighbor = _this.manager.getChunkColumn(_this.position[0] + pos[0], _this.position[1] + pos[1]);
-            if (!neighbor) {
-                return;
-            }
-            _this.manager.requestChunkUpdate(neighbor);
-        });
-    };
-    ChunkColumn.prototype.onTick = function (deltaTime) {
-        var _this = this;
-        this.chunks.forEach(function (chunk) {
-            chunk.onTick(deltaTime);
-            if (_this.priority === ChunkColumnPriority.High) {
-                chunk.tickBlocks();
-            }
-        });
-    };
-    ChunkColumn.prototype.lateUpdate = function (deltaTime) {
-        if (this.priority <= ChunkColumnPriority.Low) {
-            return;
+        else { // x0<y0
+            if (y0 < z0) {
+                i1 = 0;
+                j1 = 0;
+                k1 = 1;
+                i2 = 0;
+                j2 = 1;
+                k2 = 1;
+            } // Z Y X order
+            else if (x0 < z0) {
+                i1 = 0;
+                j1 = 1;
+                k1 = 0;
+                i2 = 0;
+                j2 = 1;
+                k2 = 1;
+            } // Y Z X order
+            else {
+                i1 = 0;
+                j1 = 1;
+                k1 = 0;
+                i2 = 1;
+                j2 = 1;
+                k2 = 0;
+            } // Y X Z order
         }
-        this.chunks.forEach(function (chunk) { return chunk.lateUpdate(deltaTime); });
-    };
-    ChunkColumn.prototype.setBlockAt = function (_a, block) {
-        var x = _a[0], y = _a[1], z = _a[2];
-        var chunkLocalY = Math.floor(y / _chunk__WEBPACK_IMPORTED_MODULE_1__.CHUNK_HEIGHT);
-        if (chunkLocalY < 0 || chunkLocalY >= this.chunks.length) {
-            return;
-        }
-        return this.chunks[chunkLocalY].setBlock([x, y - chunkLocalY * _chunk__WEBPACK_IMPORTED_MODULE_1__.CHUNK_HEIGHT, z], block);
-    };
-    ChunkColumn.prototype.getBlockAt = function (_a) {
-        var x = _a[0], y = _a[1], z = _a[2];
-        var chunkLocalY = Math.floor(y / _chunk__WEBPACK_IMPORTED_MODULE_1__.CHUNK_HEIGHT);
-        if (!this.chunks[chunkLocalY]) {
-            return undefined;
-        }
-        return this.chunks[chunkLocalY].getBlock([x, y - chunkLocalY * _chunk__WEBPACK_IMPORTED_MODULE_1__.CHUNK_HEIGHT, z]);
-    };
-    ChunkColumn.prototype.getChunkMeshes = function () {
-        return this.chunks.flatMap(function (chunk) { return [chunk.solidMesh, chunk.transparentMesh]; }).filter(function (chunk) { return chunk !== undefined; });
-    };
-    ChunkColumn.prototype.getChunk = function (absolutePos) {
-        if (this.position[0] === absolutePos[0] && this.position[1] === absolutePos[2]) {
-            return this.chunks[absolutePos[1]];
-        }
-        var neighborColumn = this.manager.getChunkColumn(absolutePos[0], absolutePos[2]);
-        if (!neighborColumn) {
-            return undefined;
-        }
-        return neighborColumn.chunks[absolutePos[1]];
-    };
-    return ChunkColumn;
-}());
-
-
-
-/***/ }),
-
-/***/ "./src/world/chunk.ts":
-/*!****************************!*\
-  !*** ./src/world/chunk.ts ***!
-  \****************************/
-/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
-
-"use strict";
-__webpack_require__.r(__webpack_exports__);
-/* harmony export */ __webpack_require__.d(__webpack_exports__, {
-/* harmony export */   "CHUNK_WIDTH": () => (/* binding */ CHUNK_WIDTH),
-/* harmony export */   "CHUNK_HEIGHT": () => (/* binding */ CHUNK_HEIGHT),
-/* harmony export */   "Chunk": () => (/* binding */ Chunk)
-/* harmony export */ });
-/* harmony import */ var three__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! three */ "./node_modules/three/build/three.module.js");
-/* harmony import */ var _game__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../game */ "./src/game.ts");
-/* harmony import */ var _util_index_to_vector3__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../util/index-to-vector3 */ "./src/util/index-to-vector3.ts");
-/* harmony import */ var _block_blocks__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../block/blocks */ "./src/block/blocks.ts");
-var __awaiter = (undefined && undefined.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
-var __generator = (undefined && undefined.__generator) || function (thisArg, body) {
-    var _ = { label: 0, sent: function() { if (t[0] & 1) throw t[1]; return t[1]; }, trys: [], ops: [] }, f, y, t, g;
-    return g = { next: verb(0), "throw": verb(1), "return": verb(2) }, typeof Symbol === "function" && (g[Symbol.iterator] = function() { return this; }), g;
-    function verb(n) { return function (v) { return step([n, v]); }; }
-    function step(op) {
-        if (f) throw new TypeError("Generator is already executing.");
-        while (_) try {
-            if (f = 1, y && (t = op[0] & 2 ? y["return"] : op[0] ? y["throw"] || ((t = y["return"]) && t.call(y), 0) : y.next) && !(t = t.call(y, op[1])).done) return t;
-            if (y = 0, t) op = [op[0] & 2, t.value];
-            switch (op[0]) {
-                case 0: case 1: t = op; break;
-                case 4: _.label++; return { value: op[1], done: false };
-                case 5: _.label++; y = op[1]; op = [0]; continue;
-                case 7: op = _.ops.pop(); _.trys.pop(); continue;
-                default:
-                    if (!(t = _.trys, t = t.length > 0 && t[t.length - 1]) && (op[0] === 6 || op[0] === 2)) { _ = 0; continue; }
-                    if (op[0] === 3 && (!t || (op[1] > t[0] && op[1] < t[3]))) { _.label = op[1]; break; }
-                    if (op[0] === 6 && _.label < t[1]) { _.label = t[1]; t = op; break; }
-                    if (t && _.label < t[2]) { _.label = t[2]; _.ops.push(op); break; }
-                    if (t[2]) _.ops.pop();
-                    _.trys.pop(); continue;
-            }
-            op = body.call(thisArg, _);
-        } catch (e) { op = [6, e]; y = 0; } finally { f = t = 0; }
-        if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
-    }
-};
-
-
-
-
-var CHUNK_WIDTH = 16;
-var CHUNK_HEIGHT = 16;
-var Chunk = /** @class */ (function () {
-    function Chunk(chunkColumn, position) {
-        this.chunkColumn = chunkColumn;
-        this.position = position;
-        this.isBlockDataDirty = false;
-        this.shouldRebuild = false;
-        this.blockData = new Uint8Array(CHUNK_WIDTH * CHUNK_WIDTH * CHUNK_HEIGHT);
-        this.blockStates = new Map();
-        this.timeSinceFirstRender = -1;
-        var _a = _game__WEBPACK_IMPORTED_MODULE_0__.Game.main.blocks.getBlockMaterials(), solid = _a.solid, transparent = _a.transparent, water = _a.water;
-        this.solidMesh = new three__WEBPACK_IMPORTED_MODULE_3__.Mesh(undefined, solid);
-        this.transparentMesh = new three__WEBPACK_IMPORTED_MODULE_3__.Mesh(undefined, transparent);
-        this.waterMesh = new three__WEBPACK_IMPORTED_MODULE_3__.Mesh(undefined, water);
-    }
-    Chunk.prototype.register = function (scene) {
-        var worldPosition = this.position.clone().multiply(new three__WEBPACK_IMPORTED_MODULE_3__.Vector3(CHUNK_WIDTH, CHUNK_HEIGHT, CHUNK_WIDTH));
-        this.solidMesh.position.set(worldPosition.x, worldPosition.y, worldPosition.z);
-        this.waterMesh.position.set(worldPosition.x, worldPosition.y, worldPosition.z);
-        this.transparentMesh.position.set(worldPosition.x, worldPosition.y, worldPosition.z);
-        scene.add(this.solidMesh);
-        scene.add(this.waterMesh);
-        scene.add(this.transparentMesh);
-    };
-    Chunk.prototype.unregister = function (scene) {
-        scene.remove(this.solidMesh);
-        scene.remove(this.waterMesh);
-        scene.remove(this.transparentMesh);
-    };
-    Chunk.prototype.onTick = function (deltaTime) { };
-    Chunk.prototype.tickBlocks = function () {
-        for (var i = 0; i < 10; i++) {
-            this.tickRandomBlock();
-        }
-    };
-    Chunk.prototype.tickRandomBlock = function () {
-        var blockPos = new three__WEBPACK_IMPORTED_MODULE_3__.Vector3(Math.floor(Math.random() * CHUNK_WIDTH), Math.floor(Math.random() * CHUNK_WIDTH), Math.floor(Math.random() * CHUNK_WIDTH));
-        var blockId = this.blockData[(0,_util_index_to_vector3__WEBPACK_IMPORTED_MODULE_1__.xzyToIndex)(blockPos, CHUNK_WIDTH, CHUNK_WIDTH)];
-        var block = _block_blocks__WEBPACK_IMPORTED_MODULE_2__.Blocks.getBlockById(blockId);
-        if (!block) {
-            return;
-        }
-        block.onRandomTick(_game__WEBPACK_IMPORTED_MODULE_0__.Game.main.level, {
-            x: blockPos.x + this.position.x * CHUNK_WIDTH,
-            y: blockPos.y + this.position.y * CHUNK_HEIGHT,
-            z: blockPos.z + this.position.z * CHUNK_WIDTH,
-        });
-    };
-    Chunk.prototype.lateUpdate = function (deltaTime) {
-        if (this.isBlockDataDirty || this.shouldRebuild) {
-            this.isBlockDataDirty = false;
-            this.shouldRebuild = false;
-            this.buildMesh();
-        }
-        if (this.timeSinceFirstRender >= 0 && !Array.isArray(this.solidMesh.material) && this.solidMesh.material.transparent) {
-            this.timeSinceFirstRender += deltaTime;
-            this.solidMesh.material.opacity = this.timeSinceFirstRender / 1000;
-            this.solidMesh.material.transparent = this.timeSinceFirstRender < 1000;
-        }
-    };
-    Chunk.prototype.generateTerrain = function (skipMeshBuild) {
-        if (skipMeshBuild === void 0) { skipMeshBuild = false; }
-        return __awaiter(this, void 0, void 0, function () {
-            var heightMap, _a;
-            return __generator(this, function (_b) {
-                switch (_b.label) {
-                    case 0:
-                        heightMap = this.chunkColumn.heightMap;
-                        if (!heightMap) {
-                            return [2 /*return*/];
-                        }
-                        _a = this;
-                        return [4 /*yield*/, _game__WEBPACK_IMPORTED_MODULE_0__.Game.main.chunkGeneratorPool.buildBaseTerrain(this.position, heightMap)];
-                    case 1:
-                        _a.blockData = _b.sent();
-                        this.isBlockDataDirty = !skipMeshBuild;
-                        return [2 /*return*/];
-                }
-            });
-        });
-    };
-    Chunk.prototype.buildMesh = function () {
-        return __awaiter(this, void 0, void 0, function () {
-            var blockModelIndices, geometry;
-            var _this = this;
-            return __generator(this, function (_a) {
-                switch (_a.label) {
-                    case 0:
-                        blockModelIndices = {};
-                        this.blockStates.forEach(function (state, index) {
-                            var block = _block_blocks__WEBPACK_IMPORTED_MODULE_2__.Blocks.getBlockById(_this.blockData[index]);
-                            blockModelIndices[index] = block.getBlockModel(state);
-                        });
-                        return [4 /*yield*/, _game__WEBPACK_IMPORTED_MODULE_0__.Game.main.chunkGeometryBuilderPool.buildGeometry({
-                                blockModelIndices: blockModelIndices,
-                                blocks: this.blockData,
-                                neighborBlocks: this.getNeighborChunks().map(function (chunk) { var _a; return (_a = chunk === null || chunk === void 0 ? void 0 : chunk.blockData) !== null && _a !== void 0 ? _a : new Uint8Array(); }),
-                            })];
-                    case 1:
-                        geometry = _a.sent();
-                        this.solidMesh.geometry = geometry.solid;
-                        this.waterMesh.geometry = geometry.water;
-                        this.transparentMesh.geometry = geometry.transparent;
-                        if (this.timeSinceFirstRender < 0) {
-                            this.timeSinceFirstRender = 0;
-                        }
-                        return [2 /*return*/];
-                }
-            });
-        });
-    };
-    Chunk.prototype.getNeighborChunks = function () {
-        return [
-            this.chunkColumn.getChunk([this.position.x, this.position.y + 1, this.position.z]),
-            this.chunkColumn.getChunk([this.position.x, this.position.y - 1, this.position.z]),
-            this.chunkColumn.getChunk([this.position.x - 1, this.position.y, this.position.z]),
-            this.chunkColumn.getChunk([this.position.x + 1, this.position.y, this.position.z]),
-            this.chunkColumn.getChunk([this.position.x, this.position.y, this.position.z - 1]),
-            this.chunkColumn.getChunk([this.position.x, this.position.y, this.position.z + 1]),
-        ];
-    };
-    Chunk.prototype.setBlock = function (_a, block) {
-        var x = _a[0], y = _a[1], z = _a[2];
-        this.blockData[(0,_util_index_to_vector3__WEBPACK_IMPORTED_MODULE_1__.xyzTupelToIndex)(x, y, z, CHUNK_WIDTH, CHUNK_WIDTH)] = _block_blocks__WEBPACK_IMPORTED_MODULE_2__.Blocks.getBlockId(block);
-        this.isBlockDataDirty = true;
-        // TODO: Only update the relevant chunk
-        if (x <= 0 || y <= 0 || z <= 0 || x >= CHUNK_WIDTH - 1 || y >= CHUNK_HEIGHT - 1 || z >= CHUNK_WIDTH - 1) {
-            this.getNeighborChunks().forEach(function (chunk) { return chunk ? chunk.shouldRebuild = true : null; });
-        }
-    };
-    Chunk.prototype.getBlock = function (_a) {
-        var x = _a[0], y = _a[1], z = _a[2];
-        if (!this.blockData) {
-            return undefined;
-        }
-        var index = (0,_util_index_to_vector3__WEBPACK_IMPORTED_MODULE_1__.xyzTupelToIndex)(x, y, z, CHUNK_WIDTH, CHUNK_WIDTH);
-        if (index < 0 || index >= this.blockData.length) {
-            return undefined;
-        }
-        return _block_blocks__WEBPACK_IMPORTED_MODULE_2__.Blocks.getBlockById(this.blockData[index]);
-    };
-    Chunk.prototype.setBlockState = function (_a, state) {
-        var x = _a[0], y = _a[1], z = _a[2];
-        this.blockStates.set((0,_util_index_to_vector3__WEBPACK_IMPORTED_MODULE_1__.xyzTupelToIndex)(x, y, z, CHUNK_WIDTH, CHUNK_WIDTH), state);
-        this.shouldRebuild = true;
-    };
-    Chunk.prototype.getBlockState = function (_a) {
-        var x = _a[0], y = _a[1], z = _a[2];
-        return this.blockStates.get((0,_util_index_to_vector3__WEBPACK_IMPORTED_MODULE_1__.xyzTupelToIndex)(x, y, z, CHUNK_WIDTH, CHUNK_WIDTH));
-    };
-    return Chunk;
-}());
-
-
-
-/***/ }),
-
-/***/ "./src/world/chunk/chunk-constants.ts":
-/*!********************************************!*\
-  !*** ./src/world/chunk/chunk-constants.ts ***!
-  \********************************************/
-/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
-
-"use strict";
-__webpack_require__.r(__webpack_exports__);
-/* harmony export */ __webpack_require__.d(__webpack_exports__, {
-/* harmony export */   "CHUNK_WIDTH": () => (/* binding */ CHUNK_WIDTH),
-/* harmony export */   "CHUNK_HEIGHT": () => (/* binding */ CHUNK_HEIGHT)
-/* harmony export */ });
-var CHUNK_WIDTH = 16;
-var CHUNK_HEIGHT = 16;
-
-
-/***/ }),
-
-/***/ "./src/world/chunk/chunk-generator-pool.ts":
-/*!*************************************************!*\
-  !*** ./src/world/chunk/chunk-generator-pool.ts ***!
-  \*************************************************/
-/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
-
-"use strict";
-__webpack_require__.r(__webpack_exports__);
-/* harmony export */ __webpack_require__.d(__webpack_exports__, {
-/* harmony export */   "ChunkGeneratorPool": () => (/* binding */ ChunkGeneratorPool)
-/* harmony export */ });
-/* harmony import */ var comlink__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! comlink */ "./node_modules/comlink/dist/esm/comlink.mjs");
-/* harmony import */ var _chunk_generator_worker_ts__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./chunk-generator.worker.ts */ "./src/world/chunk/chunk-generator.worker.ts");
-/* harmony import */ var _util_map_2d__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../../util/map-2d */ "./src/util/map-2d.ts");
-/* harmony import */ var _chunk_constants__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./chunk-constants */ "./src/world/chunk/chunk-constants.ts");
-/* harmony import */ var _util_random_element__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../../util/random-element */ "./src/util/random-element.ts");
-var __awaiter = (undefined && undefined.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
-var __generator = (undefined && undefined.__generator) || function (thisArg, body) {
-    var _ = { label: 0, sent: function() { if (t[0] & 1) throw t[1]; return t[1]; }, trys: [], ops: [] }, f, y, t, g;
-    return g = { next: verb(0), "throw": verb(1), "return": verb(2) }, typeof Symbol === "function" && (g[Symbol.iterator] = function() { return this; }), g;
-    function verb(n) { return function (v) { return step([n, v]); }; }
-    function step(op) {
-        if (f) throw new TypeError("Generator is already executing.");
-        while (_) try {
-            if (f = 1, y && (t = op[0] & 2 ? y["return"] : op[0] ? y["throw"] || ((t = y["return"]) && t.call(y), 0) : y.next) && !(t = t.call(y, op[1])).done) return t;
-            if (y = 0, t) op = [op[0] & 2, t.value];
-            switch (op[0]) {
-                case 0: case 1: t = op; break;
-                case 4: _.label++; return { value: op[1], done: false };
-                case 5: _.label++; y = op[1]; op = [0]; continue;
-                case 7: op = _.ops.pop(); _.trys.pop(); continue;
-                default:
-                    if (!(t = _.trys, t = t.length > 0 && t[t.length - 1]) && (op[0] === 6 || op[0] === 2)) { _ = 0; continue; }
-                    if (op[0] === 3 && (!t || (op[1] > t[0] && op[1] < t[3]))) { _.label = op[1]; break; }
-                    if (op[0] === 6 && _.label < t[1]) { _.label = t[1]; t = op; break; }
-                    if (t && _.label < t[2]) { _.label = t[2]; _.ops.push(op); break; }
-                    if (t[2]) _.ops.pop();
-                    _.trys.pop(); continue;
-            }
-            op = body.call(thisArg, _);
-        } catch (e) { op = [6, e]; y = 0; } finally { f = t = 0; }
-        if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
-    }
-};
-
-
-
-
-
-var ChunkGeneratorPool = /** @class */ (function () {
-    function ChunkGeneratorPool() {
-        this.workers = [];
-    }
-    ChunkGeneratorPool.prototype.addWorkers = function (numberOfWorkers) {
-        return __awaiter(this, void 0, void 0, function () {
-            var ChunkGeneratorClass, i, instance;
-            return __generator(this, function (_a) {
-                switch (_a.label) {
-                    case 0:
-                        ChunkGeneratorClass = (0,comlink__WEBPACK_IMPORTED_MODULE_4__.wrap)(new _chunk_generator_worker_ts__WEBPACK_IMPORTED_MODULE_0__["default"]());
-                        i = 0;
-                        _a.label = 1;
-                    case 1:
-                        if (!(i < numberOfWorkers)) return [3 /*break*/, 4];
-                        return [4 /*yield*/, new ChunkGeneratorClass(4545)];
-                    case 2:
-                        instance = _a.sent();
-                        this.workers.push(instance);
-                        _a.label = 3;
-                    case 3:
-                        i++;
-                        return [3 /*break*/, 1];
-                    case 4: return [2 /*return*/];
-                }
-            });
-        });
-    };
-    ChunkGeneratorPool.prototype.buildBaseTerrain = function (chunkPosition, heightMap) {
-        return __awaiter(this, void 0, void 0, function () {
-            return __generator(this, function (_a) {
-                return [2 /*return*/, this.getWorker().buildTerrain([chunkPosition.x, chunkPosition.y, chunkPosition.z], heightMap.serialize())];
-            });
-        });
-    };
-    ChunkGeneratorPool.prototype.generateBiomeMap = function (chunkPosition) {
-        return __awaiter(this, void 0, void 0, function () {
-            var biomes;
-            return __generator(this, function (_a) {
-                switch (_a.label) {
-                    case 0: return [4 /*yield*/, this.getWorker().generateBiomeMap(chunkPosition)];
-                    case 1:
-                        biomes = _a.sent();
-                        return [2 /*return*/, _util_map_2d__WEBPACK_IMPORTED_MODULE_1__.PaletteMap2D.fromArray(biomes, _chunk_constants__WEBPACK_IMPORTED_MODULE_2__.CHUNK_WIDTH)];
-                }
-            });
-        });
-    };
-    ChunkGeneratorPool.prototype.generateHeightMap = function (chunkPosition) {
-        return __awaiter(this, void 0, void 0, function () {
-            var heights;
-            return __generator(this, function (_a) {
-                switch (_a.label) {
-                    case 0: return [4 /*yield*/, this.getWorker().generateHeightMap(chunkPosition)];
-                    case 1:
-                        heights = _a.sent();
-                        return [2 /*return*/, new _util_map_2d__WEBPACK_IMPORTED_MODULE_1__.ArrayMap2D(heights, _chunk_constants__WEBPACK_IMPORTED_MODULE_2__.CHUNK_WIDTH)];
-                }
-            });
-        });
-    };
-    ChunkGeneratorPool.prototype.getWorker = function () {
-        return (0,_util_random_element__WEBPACK_IMPORTED_MODULE_3__.randomElement)(this.workers);
-    };
-    return ChunkGeneratorPool;
-}());
-
-
-
-/***/ }),
-
-/***/ "./src/world/chunk/chunk-geometry-builder-pool.ts":
-/*!********************************************************!*\
-  !*** ./src/world/chunk/chunk-geometry-builder-pool.ts ***!
-  \********************************************************/
-/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
-
-"use strict";
-__webpack_require__.r(__webpack_exports__);
-/* harmony export */ __webpack_require__.d(__webpack_exports__, {
-/* harmony export */   "ChunkGeometryBuilderPool": () => (/* binding */ ChunkGeometryBuilderPool)
-/* harmony export */ });
-/* harmony import */ var comlink__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! comlink */ "./node_modules/comlink/dist/esm/comlink.mjs");
-/* harmony import */ var _worker_worker_pool__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../../worker/worker-pool */ "./src/worker/worker-pool.ts");
-/* harmony import */ var _chunk_geometry_builder_worker_ts__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./chunk-geometry-builder.worker.ts */ "./src/world/chunk/chunk-geometry-builder.worker.ts");
-/* harmony import */ var three__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! three */ "./node_modules/three/build/three.module.js");
-var __extends = (undefined && undefined.__extends) || (function () {
-    var extendStatics = function (d, b) {
-        extendStatics = Object.setPrototypeOf ||
-            ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
-            function (d, b) { for (var p in b) if (Object.prototype.hasOwnProperty.call(b, p)) d[p] = b[p]; };
-        return extendStatics(d, b);
-    };
-    return function (d, b) {
-        if (typeof b !== "function" && b !== null)
-            throw new TypeError("Class extends value " + String(b) + " is not a constructor or null");
-        extendStatics(d, b);
-        function __() { this.constructor = d; }
-        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
-    };
-})();
-var __awaiter = (undefined && undefined.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
-var __generator = (undefined && undefined.__generator) || function (thisArg, body) {
-    var _ = { label: 0, sent: function() { if (t[0] & 1) throw t[1]; return t[1]; }, trys: [], ops: [] }, f, y, t, g;
-    return g = { next: verb(0), "throw": verb(1), "return": verb(2) }, typeof Symbol === "function" && (g[Symbol.iterator] = function() { return this; }), g;
-    function verb(n) { return function (v) { return step([n, v]); }; }
-    function step(op) {
-        if (f) throw new TypeError("Generator is already executing.");
-        while (_) try {
-            if (f = 1, y && (t = op[0] & 2 ? y["return"] : op[0] ? y["throw"] || ((t = y["return"]) && t.call(y), 0) : y.next) && !(t = t.call(y, op[1])).done) return t;
-            if (y = 0, t) op = [op[0] & 2, t.value];
-            switch (op[0]) {
-                case 0: case 1: t = op; break;
-                case 4: _.label++; return { value: op[1], done: false };
-                case 5: _.label++; y = op[1]; op = [0]; continue;
-                case 7: op = _.ops.pop(); _.trys.pop(); continue;
-                default:
-                    if (!(t = _.trys, t = t.length > 0 && t[t.length - 1]) && (op[0] === 6 || op[0] === 2)) { _ = 0; continue; }
-                    if (op[0] === 3 && (!t || (op[1] > t[0] && op[1] < t[3]))) { _.label = op[1]; break; }
-                    if (op[0] === 6 && _.label < t[1]) { _.label = t[1]; t = op; break; }
-                    if (t && _.label < t[2]) { _.label = t[2]; _.ops.push(op); break; }
-                    if (t[2]) _.ops.pop();
-                    _.trys.pop(); continue;
-            }
-            op = body.call(thisArg, _);
-        } catch (e) { op = [6, e]; y = 0; } finally { f = t = 0; }
-        if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
-    }
-};
-
-
-
-
-var ChunkGeometryBuilderPool = /** @class */ (function (_super) {
-    __extends(ChunkGeometryBuilderPool, _super);
-    function ChunkGeometryBuilderPool() {
-        return _super.call(this) || this;
-    }
-    ChunkGeometryBuilderPool.prototype.init = function (blocks) {
-        this.blockModels = blocks.serializeBlockModels();
-    };
-    ChunkGeometryBuilderPool.prototype.buildGeometry = function (blockData) {
-        return __awaiter(this, void 0, void 0, function () {
-            var _a, solid, water, transparent;
-            return __generator(this, function (_b) {
-                switch (_b.label) {
-                    case 0: return [4 /*yield*/, this.getWorker().buildGeometry(blockData)];
-                    case 1:
-                        _a = _b.sent(), solid = _a.solid, water = _a.water, transparent = _a.transparent;
-                        return [2 /*return*/, {
-                                solid: this.getGeometryFromChunkMeshData(solid),
-                                water: this.getGeometryFromChunkMeshData(water),
-                                transparent: this.getGeometryFromChunkMeshData(transparent),
-                            }];
-                }
-            });
-        });
-    };
-    ChunkGeometryBuilderPool.prototype.getGeometryFromChunkMeshData = function (chunkMeshData) {
-        var geometry = new three__WEBPACK_IMPORTED_MODULE_2__.BufferGeometry();
-        geometry.setAttribute('position', new three__WEBPACK_IMPORTED_MODULE_2__.BufferAttribute(chunkMeshData.vertices, 3));
-        geometry.setAttribute('normal', new three__WEBPACK_IMPORTED_MODULE_2__.BufferAttribute(chunkMeshData.normals, 3));
-        geometry.setAttribute('uv', new three__WEBPACK_IMPORTED_MODULE_2__.BufferAttribute(chunkMeshData.uv, 2));
-        geometry.setIndex(chunkMeshData.triangles);
-        return geometry;
-    };
-    ChunkGeometryBuilderPool.prototype.instantiateWorker = function () {
-        return __awaiter(this, void 0, void 0, function () {
-            return __generator(this, function (_a) {
-                if (!this.blockModels) {
-                    throw new Error('Can\'t instantiate chunk geometry builder worker!');
-                }
-                return [2 /*return*/, new ((0,comlink__WEBPACK_IMPORTED_MODULE_3__.wrap)(new _chunk_geometry_builder_worker_ts__WEBPACK_IMPORTED_MODULE_1__["default"]()))(this.blockModels)];
-            });
-        });
-    };
-    return ChunkGeometryBuilderPool;
-}(_worker_worker_pool__WEBPACK_IMPORTED_MODULE_0__.WorkerPool));
-
-
-
-/***/ }),
-
-/***/ "./src/world/world.ts":
-/*!****************************!*\
-  !*** ./src/world/world.ts ***!
-  \****************************/
-/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
-
-"use strict";
-__webpack_require__.r(__webpack_exports__);
-/* harmony export */ __webpack_require__.d(__webpack_exports__, {
-/* harmony export */   "World": () => (/* binding */ World)
-/* harmony export */ });
-/* harmony import */ var _util_mod__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../util/mod */ "./src/util/mod.ts");
-/* harmony import */ var _chunk_column_manager__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./chunk-column-manager */ "./src/world/chunk-column-manager.ts");
-var __awaiter = (undefined && undefined.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
-var __generator = (undefined && undefined.__generator) || function (thisArg, body) {
-    var _ = { label: 0, sent: function() { if (t[0] & 1) throw t[1]; return t[1]; }, trys: [], ops: [] }, f, y, t, g;
-    return g = { next: verb(0), "throw": verb(1), "return": verb(2) }, typeof Symbol === "function" && (g[Symbol.iterator] = function() { return this; }), g;
-    function verb(n) { return function (v) { return step([n, v]); }; }
-    function step(op) {
-        if (f) throw new TypeError("Generator is already executing.");
-        while (_) try {
-            if (f = 1, y && (t = op[0] & 2 ? y["return"] : op[0] ? y["throw"] || ((t = y["return"]) && t.call(y), 0) : y.next) && !(t = t.call(y, op[1])).done) return t;
-            if (y = 0, t) op = [op[0] & 2, t.value];
-            switch (op[0]) {
-                case 0: case 1: t = op; break;
-                case 4: _.label++; return { value: op[1], done: false };
-                case 5: _.label++; y = op[1]; op = [0]; continue;
-                case 7: op = _.ops.pop(); _.trys.pop(); continue;
-                default:
-                    if (!(t = _.trys, t = t.length > 0 && t[t.length - 1]) && (op[0] === 6 || op[0] === 2)) { _ = 0; continue; }
-                    if (op[0] === 3 && (!t || (op[1] > t[0] && op[1] < t[3]))) { _.label = op[1]; break; }
-                    if (op[0] === 6 && _.label < t[1]) { _.label = t[1]; t = op; break; }
-                    if (t && _.label < t[2]) { _.label = t[2]; _.ops.push(op); break; }
-                    if (t[2]) _.ops.pop();
-                    _.trys.pop(); continue;
-            }
-            op = body.call(thisArg, _);
-        } catch (e) { op = [6, e]; y = 0; } finally { f = t = 0; }
-        if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
-    }
-};
-
-
-var World = /** @class */ (function () {
-    function World(scene) {
-        this.scene = scene;
-        this.chunkColumnManager = new _chunk_column_manager__WEBPACK_IMPORTED_MODULE_1__.ChunkColumnManager(scene, 7, 3, 4);
-    }
-    World.prototype.init = function () {
-        return __awaiter(this, void 0, void 0, function () {
-            return __generator(this, function (_a) {
-                this.chunkColumnManager.setCenter(0, 0);
-                return [2 /*return*/];
-            });
-        });
-    };
-    World.prototype.tick = function (deltaTime) {
-        this.chunkColumnManager.tick(deltaTime);
-    };
-    World.prototype.update = function (deltaTime) {
-        this.chunkColumnManager.update(deltaTime);
-    };
-    World.prototype.lateUpdate = function (deltaTime) {
-        this.chunkColumnManager.lateUpdate(deltaTime);
-    };
-    World.prototype.setPlayerChunk = function (x, z) {
-        this.chunkColumnManager.setCenter(x, z);
-    };
-    World.prototype.setBlock = function (pos, block) {
-        var chunk = this.chunkColumnManager.getChunkByBlockPos(pos);
-        if (!chunk) {
-            return undefined;
-        }
-        block.onSetBlock(this, pos);
-        chunk.setBlock([
-            (0,_util_mod__WEBPACK_IMPORTED_MODULE_0__.mod)(pos.x, 16),
-            (0,_util_mod__WEBPACK_IMPORTED_MODULE_0__.mod)(pos.y, 16),
-            (0,_util_mod__WEBPACK_IMPORTED_MODULE_0__.mod)(pos.z, 16),
-        ], block);
-    };
-    World.prototype.getBlock = function (pos) {
-        var chunk = this.chunkColumnManager.getChunkByBlockPos(pos);
-        if (!chunk) {
-            return undefined;
-        }
-        return chunk.getBlock([
-            (0,_util_mod__WEBPACK_IMPORTED_MODULE_0__.mod)(pos.x, 16),
-            (0,_util_mod__WEBPACK_IMPORTED_MODULE_0__.mod)(pos.y, 16),
-            (0,_util_mod__WEBPACK_IMPORTED_MODULE_0__.mod)(pos.z, 16),
-        ]);
-    };
-    // public getBlockState<T extends BlockStateValues>(pos: BlockPos): BlockState<T> | undefined {
-    //     const state = this.blockStates[`${pos.x};${pos.y};${pos.z}`];
-    //     if (!state) {
-    //         return undefined;
-    //     }
-    //     return this.blockStates[`${pos.x};${pos.y};${pos.z}`] as BlockState<T>;
-    // }
-    World.prototype.getBlockState = function (pos) {
-        var chunk = this.chunkColumnManager.getChunkByBlockPos(pos);
-        if (!chunk) {
-            return undefined;
-        }
-        return chunk.getBlockState([
-            (0,_util_mod__WEBPACK_IMPORTED_MODULE_0__.mod)(pos.x, 16),
-            (0,_util_mod__WEBPACK_IMPORTED_MODULE_0__.mod)(pos.y, 16),
-            (0,_util_mod__WEBPACK_IMPORTED_MODULE_0__.mod)(pos.z, 16),
-        ]);
-    };
-    World.prototype.setBlockState = function (pos, blockState) {
-        var chunk = this.chunkColumnManager.getChunkByBlockPos(pos);
-        if (!chunk) {
-            return undefined;
-        }
-        chunk.setBlockState([(0,_util_mod__WEBPACK_IMPORTED_MODULE_0__.mod)(pos.x, 16), (0,_util_mod__WEBPACK_IMPORTED_MODULE_0__.mod)(pos.y, 16), (0,_util_mod__WEBPACK_IMPORTED_MODULE_0__.mod)(pos.z, 16)], blockState);
-    };
-    World.prototype.__tempGetChunkMeshes = function () {
-        return this.chunkColumnManager.__tempGetChunkMeshes();
-    };
-    return World;
-}());
-
-
-
-/***/ }),
-
-/***/ "./src/world/chunk-data-generator.worker.ts":
-/*!**************************************************!*\
-  !*** ./src/world/chunk-data-generator.worker.ts ***!
-  \**************************************************/
-/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
-
-"use strict";
-__webpack_require__.r(__webpack_exports__);
-/* harmony export */ __webpack_require__.d(__webpack_exports__, {
-/* harmony export */   "default": () => (/* binding */ Worker_fn)
-/* harmony export */ });
-function Worker_fn() {
-  return new Worker(__webpack_require__.p + "chunk-data-generator.worker.24f6697f3b942eadd797.worker.js");
-}
-
-
-/***/ }),
-
-/***/ "./src/world/chunk/chunk-generator.worker.ts":
-/*!***************************************************!*\
-  !*** ./src/world/chunk/chunk-generator.worker.ts ***!
-  \***************************************************/
-/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
-
-"use strict";
-__webpack_require__.r(__webpack_exports__);
-/* harmony export */ __webpack_require__.d(__webpack_exports__, {
-/* harmony export */   "default": () => (/* binding */ Worker_fn)
-/* harmony export */ });
-function Worker_fn() {
-  return new Worker(__webpack_require__.p + "chunk-generator.worker.c32d952204e7977b6c9e.worker.js");
-}
-
-
-/***/ }),
-
-/***/ "./src/world/chunk/chunk-geometry-builder.worker.ts":
-/*!**********************************************************!*\
-  !*** ./src/world/chunk/chunk-geometry-builder.worker.ts ***!
-  \**********************************************************/
-/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
-
-"use strict";
-__webpack_require__.r(__webpack_exports__);
-/* harmony export */ __webpack_require__.d(__webpack_exports__, {
-/* harmony export */   "default": () => (/* binding */ Worker_fn)
-/* harmony export */ });
-function Worker_fn() {
-  return new Worker(__webpack_require__.p + "chunk-geometry-builder.worker.bf2577443edc8de32748.worker.js");
-}
-
-
-/***/ }),
-
-/***/ "?e4dd":
-/*!********************!*\
-  !*** os (ignored) ***!
-  \********************/
-/***/ (() => {
-
-/* (ignored) */
-
-/***/ }),
-
-/***/ "./node_modules/aggregate-error/index.js":
-/*!***********************************************!*\
-  !*** ./node_modules/aggregate-error/index.js ***!
-  \***********************************************/
-/***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __webpack_require__) => {
-
-"use strict";
-__webpack_require__.r(__webpack_exports__);
-/* harmony export */ __webpack_require__.d(__webpack_exports__, {
-/* harmony export */   "default": () => (/* binding */ AggregateError)
-/* harmony export */ });
-/* harmony import */ var indent_string__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! indent-string */ "./node_modules/indent-string/index.js");
-/* harmony import */ var clean_stack__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! clean-stack */ "./node_modules/clean-stack/index.js");
-
-
-
-const cleanInternalStack = stack => stack.replace(/\s+at .*aggregate-error\/index.js:\d+:\d+\)?/g, '');
-
-class AggregateError extends Error {
-	#errors;
-
-	name = 'AggregateError';
-
-	constructor(errors) {
-		if (!Array.isArray(errors)) {
-			throw new TypeError(`Expected input to be an Array, got ${typeof errors}`);
-		}
-
-		errors = errors.map(error => {
-			if (error instanceof Error) {
-				return error;
-			}
-
-			if (error !== null && typeof error === 'object') {
-				// Handle plain error objects with message property and/or possibly other metadata
-				return Object.assign(new Error(error.message), error);
-			}
-
-			return new Error(error);
-		});
-
-		let message = errors
-			.map(error => {
-				// The `stack` property is not standardized, so we can't assume it exists
-				return typeof error.stack === 'string' ? cleanInternalStack((0,clean_stack__WEBPACK_IMPORTED_MODULE_1__["default"])(error.stack)) : String(error);
-			})
-			.join('\n');
-		message = '\n' + (0,indent_string__WEBPACK_IMPORTED_MODULE_0__["default"])(message, 4);
-		super(message);
-
-		this.#errors = errors;
-	}
-
-	get errors() {
-		return this.#errors.slice();
-	}
-}
-
-
-/***/ }),
-
-/***/ "./node_modules/clean-stack/index.js":
-/*!*******************************************!*\
-  !*** ./node_modules/clean-stack/index.js ***!
-  \*******************************************/
-/***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __webpack_require__) => {
-
-"use strict";
-__webpack_require__.r(__webpack_exports__);
-/* harmony export */ __webpack_require__.d(__webpack_exports__, {
-/* harmony export */   "default": () => (/* binding */ cleanStack)
-/* harmony export */ });
-/* harmony import */ var os__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! os */ "?e4dd");
-/* harmony import */ var escape_string_regexp__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! escape-string-regexp */ "./node_modules/clean-stack/node_modules/escape-string-regexp/index.js");
-
-
-
-const extractPathRegex = /\s+at.*[(\s](.*)\)?/;
-const pathRegex = /^(?:(?:(?:node|node:[\w/]+|(?:(?:node:)?internal\/[\w/]*|.*node_modules\/(?:babel-polyfill|pirates)\/.*)?\w+)(?:\.js)?:\d+:\d+)|native)/;
-const homeDir = typeof os__WEBPACK_IMPORTED_MODULE_0__.homedir === 'undefined' ? '' : os__WEBPACK_IMPORTED_MODULE_0__.homedir().replace(/\\/g, '/');
-
-function cleanStack(stack, {pretty = false, basePath} = {}) {
-	const basePathRegex = basePath && new RegExp(`(at | \\()${(0,escape_string_regexp__WEBPACK_IMPORTED_MODULE_1__["default"])(basePath.replace(/\\/g, '/'))}`, 'g');
-
-	if (typeof stack !== 'string') {
-		return undefined;
-	}
-
-	return stack.replace(/\\/g, '/')
-		.split('\n')
-		.filter(line => {
-			const pathMatches = line.match(extractPathRegex);
-			if (pathMatches === null || !pathMatches[1]) {
-				return true;
-			}
-
-			const match = pathMatches[1];
-
-			// Electron
-			if (
-				match.includes('.app/Contents/Resources/electron.asar') ||
-				match.includes('.app/Contents/Resources/default_app.asar')
-			) {
-				return false;
-			}
-
-			return !pathRegex.test(match);
-		})
-		.filter(line => line.trim() !== '')
-		.map(line => {
-			if (basePathRegex) {
-				line = line.replace(basePathRegex, '$1');
-			}
-
-			if (pretty) {
-				line = line.replace(extractPathRegex, (m, p1) => m.replace(p1, p1.replace(homeDir, '~')));
-			}
-
-			return line;
-		})
-		.join('\n');
-}
-
-
-/***/ }),
-
-/***/ "./node_modules/clean-stack/node_modules/escape-string-regexp/index.js":
-/*!*****************************************************************************!*\
-  !*** ./node_modules/clean-stack/node_modules/escape-string-regexp/index.js ***!
-  \*****************************************************************************/
-/***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __webpack_require__) => {
-
-"use strict";
-__webpack_require__.r(__webpack_exports__);
-/* harmony export */ __webpack_require__.d(__webpack_exports__, {
-/* harmony export */   "default": () => (/* binding */ escapeStringRegexp)
-/* harmony export */ });
-function escapeStringRegexp(string) {
-	if (typeof string !== 'string') {
-		throw new TypeError('Expected a string');
-	}
-
-	// Escape characters with special meaning either inside or outside character sets.
-	// Use a simple backslash escape when it’s always valid, and a `\xnn` escape when the simpler form would be disallowed by Unicode patterns’ stricter grammar.
-	return string
-		.replace(/[|\\{}()[\]^$+*?.]/g, '\\$&')
-		.replace(/-/g, '\\x2d');
-}
-
-
-/***/ }),
-
-/***/ "./node_modules/comlink/dist/esm/comlink.mjs":
-/*!***************************************************!*\
-  !*** ./node_modules/comlink/dist/esm/comlink.mjs ***!
-  \***************************************************/
-/***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __webpack_require__) => {
-
-"use strict";
-__webpack_require__.r(__webpack_exports__);
-/* harmony export */ __webpack_require__.d(__webpack_exports__, {
-/* harmony export */   "createEndpoint": () => (/* binding */ createEndpoint),
-/* harmony export */   "expose": () => (/* binding */ expose),
-/* harmony export */   "proxy": () => (/* binding */ proxy),
-/* harmony export */   "proxyMarker": () => (/* binding */ proxyMarker),
-/* harmony export */   "releaseProxy": () => (/* binding */ releaseProxy),
-/* harmony export */   "transfer": () => (/* binding */ transfer),
-/* harmony export */   "transferHandlers": () => (/* binding */ transferHandlers),
-/* harmony export */   "windowEndpoint": () => (/* binding */ windowEndpoint),
-/* harmony export */   "wrap": () => (/* binding */ wrap)
-/* harmony export */ });
-/**
- * Copyright 2019 Google Inc. All Rights Reserved.
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *     http://www.apache.org/licenses/LICENSE-2.0
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-const proxyMarker = Symbol("Comlink.proxy");
-const createEndpoint = Symbol("Comlink.endpoint");
-const releaseProxy = Symbol("Comlink.releaseProxy");
-const throwMarker = Symbol("Comlink.thrown");
-const isObject = (val) => (typeof val === "object" && val !== null) || typeof val === "function";
-/**
- * Internal transfer handle to handle objects marked to proxy.
- */
-const proxyTransferHandler = {
-    canHandle: (val) => isObject(val) && val[proxyMarker],
-    serialize(obj) {
-        const { port1, port2 } = new MessageChannel();
-        expose(obj, port1);
-        return [port2, [port2]];
-    },
-    deserialize(port) {
-        port.start();
-        return wrap(port);
-    },
-};
-/**
- * Internal transfer handler to handle thrown exceptions.
- */
-const throwTransferHandler = {
-    canHandle: (value) => isObject(value) && throwMarker in value,
-    serialize({ value }) {
-        let serialized;
-        if (value instanceof Error) {
-            serialized = {
-                isError: true,
-                value: {
-                    message: value.message,
-                    name: value.name,
-                    stack: value.stack,
-                },
-            };
-        }
+        // A step of (1,0,0) in (i,j,k) means a step of (1-c,-c,-c) in (x,y,z),
+        // a step of (0,1,0) in (i,j,k) means a step of (-c,1-c,-c) in (x,y,z), and
+        // a step of (0,0,1) in (i,j,k) means a step of (-c,-c,1-c) in (x,y,z), where
+        // c = 1/6.
+        const x1 = x0 - i1 + G3; // Offsets for second corner in (x,y,z) coords
+        const y1 = y0 - j1 + G3;
+        const z1 = z0 - k1 + G3;
+        const x2 = x0 - i2 + 2.0 * G3; // Offsets for third corner in (x,y,z) coords
+        const y2 = y0 - j2 + 2.0 * G3;
+        const z2 = z0 - k2 + 2.0 * G3;
+        const x3 = x0 - 1.0 + 3.0 * G3; // Offsets for last corner in (x,y,z) coords
+        const y3 = y0 - 1.0 + 3.0 * G3;
+        const z3 = z0 - 1.0 + 3.0 * G3;
+        // Work out the hashed gradient indices of the four simplex corners
+        const ii = i & 255;
+        const jj = j & 255;
+        const kk = k & 255;
+        // Calculate the contribution from the four corners
+        let t0 = 0.6 - x0 * x0 - y0 * y0 - z0 * z0;
+        if (t0 < 0)
+            n0 = 0.0;
         else {
-            serialized = { isError: false, value };
+            const gi0 = permMod12[ii + perm[jj + perm[kk]]] * 3;
+            t0 *= t0;
+            n0 = t0 * t0 * (grad3[gi0] * x0 + grad3[gi0 + 1] * y0 + grad3[gi0 + 2] * z0);
         }
-        return [serialized, []];
-    },
-    deserialize(serialized) {
-        if (serialized.isError) {
-            throw Object.assign(new Error(serialized.value.message), serialized.value);
+        let t1 = 0.6 - x1 * x1 - y1 * y1 - z1 * z1;
+        if (t1 < 0)
+            n1 = 0.0;
+        else {
+            const gi1 = permMod12[ii + i1 + perm[jj + j1 + perm[kk + k1]]] * 3;
+            t1 *= t1;
+            n1 = t1 * t1 * (grad3[gi1] * x1 + grad3[gi1 + 1] * y1 + grad3[gi1 + 2] * z1);
         }
-        throw serialized.value;
-    },
-};
+        let t2 = 0.6 - x2 * x2 - y2 * y2 - z2 * z2;
+        if (t2 < 0)
+            n2 = 0.0;
+        else {
+            const gi2 = permMod12[ii + i2 + perm[jj + j2 + perm[kk + k2]]] * 3;
+            t2 *= t2;
+            n2 = t2 * t2 * (grad3[gi2] * x2 + grad3[gi2 + 1] * y2 + grad3[gi2 + 2] * z2);
+        }
+        let t3 = 0.6 - x3 * x3 - y3 * y3 - z3 * z3;
+        if (t3 < 0)
+            n3 = 0.0;
+        else {
+            const gi3 = permMod12[ii + 1 + perm[jj + 1 + perm[kk + 1]]] * 3;
+            t3 *= t3;
+            n3 = t3 * t3 * (grad3[gi3] * x3 + grad3[gi3 + 1] * y3 + grad3[gi3 + 2] * z3);
+        }
+        // Add contributions from each corner to get the final noise value.
+        // The result is scaled to stay just inside [-1,1]
+        return 32.0 * (n0 + n1 + n2 + n3);
+    }
+    /**
+     * Samples the noise field in 4 dimensions
+     * @param x
+     * @param y
+     * @param z
+     * @returns a number in the interval [-1, 1]
+     */
+    noise4D(x, y, z, w) {
+        const perm = this.perm;
+        let n0, n1, n2, n3, n4; // Noise contributions from the five corners
+        // Skew the (x,y,z,w) space to determine which cell of 24 simplices we're in
+        const s = (x + y + z + w) * F4; // Factor for 4D skewing
+        const i = Math.floor(x + s);
+        const j = Math.floor(y + s);
+        const k = Math.floor(z + s);
+        const l = Math.floor(w + s);
+        const t = (i + j + k + l) * G4; // Factor for 4D unskewing
+        const X0 = i - t; // Unskew the cell origin back to (x,y,z,w) space
+        const Y0 = j - t;
+        const Z0 = k - t;
+        const W0 = l - t;
+        const x0 = x - X0; // The x,y,z,w distances from the cell origin
+        const y0 = y - Y0;
+        const z0 = z - Z0;
+        const w0 = w - W0;
+        // For the 4D case, the simplex is a 4D shape I won't even try to describe.
+        // To find out which of the 24 possible simplices we're in, we need to
+        // determine the magnitude ordering of x0, y0, z0 and w0.
+        // Six pair-wise comparisons are performed between each possible pair
+        // of the four coordinates, and the results are used to rank the numbers.
+        let rankx = 0;
+        let ranky = 0;
+        let rankz = 0;
+        let rankw = 0;
+        if (x0 > y0)
+            rankx++;
+        else
+            ranky++;
+        if (x0 > z0)
+            rankx++;
+        else
+            rankz++;
+        if (x0 > w0)
+            rankx++;
+        else
+            rankw++;
+        if (y0 > z0)
+            ranky++;
+        else
+            rankz++;
+        if (y0 > w0)
+            ranky++;
+        else
+            rankw++;
+        if (z0 > w0)
+            rankz++;
+        else
+            rankw++;
+        // simplex[c] is a 4-vector with the numbers 0, 1, 2 and 3 in some order.
+        // Many values of c will never occur, since e.g. x>y>z>w makes x<z, y<w and x<w
+        // impossible. Only the 24 indices which have non-zero entries make any sense.
+        // We use a thresholding to set the coordinates in turn from the largest magnitude.
+        // Rank 3 denotes the largest coordinate.
+        // Rank 2 denotes the second largest coordinate.
+        // Rank 1 denotes the second smallest coordinate.
+        // The integer offsets for the second simplex corner
+        const i1 = rankx >= 3 ? 1 : 0;
+        const j1 = ranky >= 3 ? 1 : 0;
+        const k1 = rankz >= 3 ? 1 : 0;
+        const l1 = rankw >= 3 ? 1 : 0;
+        // The integer offsets for the third simplex corner
+        const i2 = rankx >= 2 ? 1 : 0;
+        const j2 = ranky >= 2 ? 1 : 0;
+        const k2 = rankz >= 2 ? 1 : 0;
+        const l2 = rankw >= 2 ? 1 : 0;
+        // The integer offsets for the fourth simplex corner
+        const i3 = rankx >= 1 ? 1 : 0;
+        const j3 = ranky >= 1 ? 1 : 0;
+        const k3 = rankz >= 1 ? 1 : 0;
+        const l3 = rankw >= 1 ? 1 : 0;
+        // The fifth corner has all coordinate offsets = 1, so no need to compute that.
+        const x1 = x0 - i1 + G4; // Offsets for second corner in (x,y,z,w) coords
+        const y1 = y0 - j1 + G4;
+        const z1 = z0 - k1 + G4;
+        const w1 = w0 - l1 + G4;
+        const x2 = x0 - i2 + 2.0 * G4; // Offsets for third corner in (x,y,z,w) coords
+        const y2 = y0 - j2 + 2.0 * G4;
+        const z2 = z0 - k2 + 2.0 * G4;
+        const w2 = w0 - l2 + 2.0 * G4;
+        const x3 = x0 - i3 + 3.0 * G4; // Offsets for fourth corner in (x,y,z,w) coords
+        const y3 = y0 - j3 + 3.0 * G4;
+        const z3 = z0 - k3 + 3.0 * G4;
+        const w3 = w0 - l3 + 3.0 * G4;
+        const x4 = x0 - 1.0 + 4.0 * G4; // Offsets for last corner in (x,y,z,w) coords
+        const y4 = y0 - 1.0 + 4.0 * G4;
+        const z4 = z0 - 1.0 + 4.0 * G4;
+        const w4 = w0 - 1.0 + 4.0 * G4;
+        // Work out the hashed gradient indices of the five simplex corners
+        const ii = i & 255;
+        const jj = j & 255;
+        const kk = k & 255;
+        const ll = l & 255;
+        // Calculate the contribution from the five corners
+        let t0 = 0.6 - x0 * x0 - y0 * y0 - z0 * z0 - w0 * w0;
+        if (t0 < 0)
+            n0 = 0.0;
+        else {
+            const gi0 = (perm[ii + perm[jj + perm[kk + perm[ll]]]] % 32) * 4;
+            t0 *= t0;
+            n0 = t0 * t0 * (grad4[gi0] * x0 + grad4[gi0 + 1] * y0 + grad4[gi0 + 2] * z0 + grad4[gi0 + 3] * w0);
+        }
+        let t1 = 0.6 - x1 * x1 - y1 * y1 - z1 * z1 - w1 * w1;
+        if (t1 < 0)
+            n1 = 0.0;
+        else {
+            const gi1 = (perm[ii + i1 + perm[jj + j1 + perm[kk + k1 + perm[ll + l1]]]] % 32) * 4;
+            t1 *= t1;
+            n1 = t1 * t1 * (grad4[gi1] * x1 + grad4[gi1 + 1] * y1 + grad4[gi1 + 2] * z1 + grad4[gi1 + 3] * w1);
+        }
+        let t2 = 0.6 - x2 * x2 - y2 * y2 - z2 * z2 - w2 * w2;
+        if (t2 < 0)
+            n2 = 0.0;
+        else {
+            const gi2 = (perm[ii + i2 + perm[jj + j2 + perm[kk + k2 + perm[ll + l2]]]] % 32) * 4;
+            t2 *= t2;
+            n2 = t2 * t2 * (grad4[gi2] * x2 + grad4[gi2 + 1] * y2 + grad4[gi2 + 2] * z2 + grad4[gi2 + 3] * w2);
+        }
+        let t3 = 0.6 - x3 * x3 - y3 * y3 - z3 * z3 - w3 * w3;
+        if (t3 < 0)
+            n3 = 0.0;
+        else {
+            const gi3 = (perm[ii + i3 + perm[jj + j3 + perm[kk + k3 + perm[ll + l3]]]] % 32) * 4;
+            t3 *= t3;
+            n3 = t3 * t3 * (grad4[gi3] * x3 + grad4[gi3 + 1] * y3 + grad4[gi3 + 2] * z3 + grad4[gi3 + 3] * w3);
+        }
+        let t4 = 0.6 - x4 * x4 - y4 * y4 - z4 * z4 - w4 * w4;
+        if (t4 < 0)
+            n4 = 0.0;
+        else {
+            const gi4 = (perm[ii + 1 + perm[jj + 1 + perm[kk + 1 + perm[ll + 1]]]] % 32) * 4;
+            t4 *= t4;
+            n4 = t4 * t4 * (grad4[gi4] * x4 + grad4[gi4 + 1] * y4 + grad4[gi4 + 2] * z4 + grad4[gi4 + 3] * w4);
+        }
+        // Sum up and scale the result to cover the range [-1,1]
+        return 27.0 * (n0 + n1 + n2 + n3 + n4);
+    }
+}
+/* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (SimplexNoise);
 /**
- * Allows customizing the serialization of certain values.
+ * Builds a random permutation table.
+ * This is exported only for (internal) testing purposes.
+ * Do not rely on this export.
+ * @private
  */
-const transferHandlers = new Map([
-    ["proxy", proxyTransferHandler],
-    ["throw", throwTransferHandler],
-]);
-function expose(obj, ep = self) {
-    ep.addEventListener("message", function callback(ev) {
-        if (!ev || !ev.data) {
-            return;
-        }
-        const { id, type, path } = Object.assign({ path: [] }, ev.data);
-        const argumentList = (ev.data.argumentList || []).map(fromWireValue);
-        let returnValue;
-        try {
-            const parent = path.slice(0, -1).reduce((obj, prop) => obj[prop], obj);
-            const rawValue = path.reduce((obj, prop) => obj[prop], obj);
-            switch (type) {
-                case "GET" /* GET */:
-                    {
-                        returnValue = rawValue;
-                    }
-                    break;
-                case "SET" /* SET */:
-                    {
-                        parent[path.slice(-1)[0]] = fromWireValue(ev.data.value);
-                        returnValue = true;
-                    }
-                    break;
-                case "APPLY" /* APPLY */:
-                    {
-                        returnValue = rawValue.apply(parent, argumentList);
-                    }
-                    break;
-                case "CONSTRUCT" /* CONSTRUCT */:
-                    {
-                        const value = new rawValue(...argumentList);
-                        returnValue = proxy(value);
-                    }
-                    break;
-                case "ENDPOINT" /* ENDPOINT */:
-                    {
-                        const { port1, port2 } = new MessageChannel();
-                        expose(obj, port2);
-                        returnValue = transfer(port1, [port1]);
-                    }
-                    break;
-                case "RELEASE" /* RELEASE */:
-                    {
-                        returnValue = undefined;
-                    }
-                    break;
-                default:
-                    return;
-            }
-        }
-        catch (value) {
-            returnValue = { value, [throwMarker]: 0 };
-        }
-        Promise.resolve(returnValue)
-            .catch((value) => {
-            return { value, [throwMarker]: 0 };
-        })
-            .then((returnValue) => {
-            const [wireValue, transferables] = toWireValue(returnValue);
-            ep.postMessage(Object.assign(Object.assign({}, wireValue), { id }), transferables);
-            if (type === "RELEASE" /* RELEASE */) {
-                // detach and deactive after sending release response above.
-                ep.removeEventListener("message", callback);
-                closeEndPoint(ep);
-            }
-        });
-    });
-    if (ep.start) {
-        ep.start();
+function buildPermutationTable(random) {
+    const p = new Uint8Array(256);
+    for (let i = 0; i < 256; i++) {
+        p[i] = i;
     }
-}
-function isMessagePort(endpoint) {
-    return endpoint.constructor.name === "MessagePort";
-}
-function closeEndPoint(endpoint) {
-    if (isMessagePort(endpoint))
-        endpoint.close();
-}
-function wrap(ep, target) {
-    return createProxy(ep, [], target);
-}
-function throwIfProxyReleased(isReleased) {
-    if (isReleased) {
-        throw new Error("Proxy has been released and is not useable");
+    for (let i = 0; i < 255; i++) {
+        const r = i + ~~(random() * (256 - i));
+        const aux = p[i];
+        p[i] = p[r];
+        p[r] = aux;
     }
+    return p;
 }
-function createProxy(ep, path = [], target = function () { }) {
-    let isProxyReleased = false;
-    const proxy = new Proxy(target, {
-        get(_target, prop) {
-            throwIfProxyReleased(isProxyReleased);
-            if (prop === releaseProxy) {
-                return () => {
-                    return requestResponseMessage(ep, {
-                        type: "RELEASE" /* RELEASE */,
-                        path: path.map((p) => p.toString()),
-                    }).then(() => {
-                        closeEndPoint(ep);
-                        isProxyReleased = true;
-                    });
-                };
-            }
-            if (prop === "then") {
-                if (path.length === 0) {
-                    return { then: () => proxy };
-                }
-                const r = requestResponseMessage(ep, {
-                    type: "GET" /* GET */,
-                    path: path.map((p) => p.toString()),
-                }).then(fromWireValue);
-                return r.then.bind(r);
-            }
-            return createProxy(ep, [...path, prop]);
-        },
-        set(_target, prop, rawValue) {
-            throwIfProxyReleased(isProxyReleased);
-            // FIXME: ES6 Proxy Handler `set` methods are supposed to return a
-            // boolean. To show good will, we return true asynchronously ¯\_(ツ)_/¯
-            const [value, transferables] = toWireValue(rawValue);
-            return requestResponseMessage(ep, {
-                type: "SET" /* SET */,
-                path: [...path, prop].map((p) => p.toString()),
-                value,
-            }, transferables).then(fromWireValue);
-        },
-        apply(_target, _thisArg, rawArgumentList) {
-            throwIfProxyReleased(isProxyReleased);
-            const last = path[path.length - 1];
-            if (last === createEndpoint) {
-                return requestResponseMessage(ep, {
-                    type: "ENDPOINT" /* ENDPOINT */,
-                }).then(fromWireValue);
-            }
-            // We just pretend that `bind()` didn’t happen.
-            if (last === "bind") {
-                return createProxy(ep, path.slice(0, -1));
-            }
-            const [argumentList, transferables] = processArguments(rawArgumentList);
-            return requestResponseMessage(ep, {
-                type: "APPLY" /* APPLY */,
-                path: path.map((p) => p.toString()),
-                argumentList,
-            }, transferables).then(fromWireValue);
-        },
-        construct(_target, rawArgumentList) {
-            throwIfProxyReleased(isProxyReleased);
-            const [argumentList, transferables] = processArguments(rawArgumentList);
-            return requestResponseMessage(ep, {
-                type: "CONSTRUCT" /* CONSTRUCT */,
-                path: path.map((p) => p.toString()),
-                argumentList,
-            }, transferables).then(fromWireValue);
-        },
-    });
-    return proxy;
-}
-function myFlat(arr) {
-    return Array.prototype.concat.apply([], arr);
-}
-function processArguments(argumentList) {
-    const processed = argumentList.map(toWireValue);
-    return [processed.map((v) => v[0]), myFlat(processed.map((v) => v[1]))];
-}
-const transferCache = new WeakMap();
-function transfer(obj, transfers) {
-    transferCache.set(obj, transfers);
-    return obj;
-}
-function proxy(obj) {
-    return Object.assign(obj, { [proxyMarker]: true });
-}
-function windowEndpoint(w, context = self, targetOrigin = "*") {
-    return {
-        postMessage: (msg, transferables) => w.postMessage(msg, targetOrigin, transferables),
-        addEventListener: context.addEventListener.bind(context),
-        removeEventListener: context.removeEventListener.bind(context),
+/*
+The ALEA PRNG and masher code used by simplex-noise.js
+is based on code by Johannes Baagøe, modified by Jonas Wagner.
+See alea.md for the full license.
+*/
+function alea(seed) {
+    let s0 = 0;
+    let s1 = 0;
+    let s2 = 0;
+    let c = 1;
+    const mash = masher();
+    s0 = mash(' ');
+    s1 = mash(' ');
+    s2 = mash(' ');
+    s0 -= mash(seed);
+    if (s0 < 0) {
+        s0 += 1;
+    }
+    s1 -= mash(seed);
+    if (s1 < 0) {
+        s1 += 1;
+    }
+    s2 -= mash(seed);
+    if (s2 < 0) {
+        s2 += 1;
+    }
+    return function () {
+        const t = 2091639 * s0 + c * 2.3283064365386963e-10; // 2^-32
+        s0 = s1;
+        s1 = s2;
+        return s2 = t - (c = t | 0);
     };
 }
-function toWireValue(value) {
-    for (const [name, handler] of transferHandlers) {
-        if (handler.canHandle(value)) {
-            const [serializedValue, transferables] = handler.serialize(value);
-            return [
-                {
-                    type: "HANDLER" /* HANDLER */,
-                    name,
-                    value: serializedValue,
-                },
-                transferables,
-            ];
+function masher() {
+    let n = 0xefc8249d;
+    return function (data) {
+        data = data.toString();
+        for (let i = 0; i < data.length; i++) {
+            n += data.charCodeAt(i);
+            let h = 0.02519603282416938 * n;
+            n = h >>> 0;
+            h -= n;
+            h *= n;
+            n = h >>> 0;
+            h -= n;
+            n += h * 0x100000000; // 2^32
         }
-    }
-    return [
-        {
-            type: "RAW" /* RAW */,
-            value,
-        },
-        transferCache.get(value) || [],
-    ];
+        return (n >>> 0) * 2.3283064365386963e-10; // 2^-32
+    };
 }
-function fromWireValue(value) {
-    switch (value.type) {
-        case "HANDLER" /* HANDLER */:
-            return transferHandlers.get(value.name).deserialize(value.value);
-        case "RAW" /* RAW */:
-            return value.value;
-    }
-}
-function requestResponseMessage(ep, msg, transfers) {
-    return new Promise((resolve) => {
-        const id = generateUUID();
-        ep.addEventListener("message", function l(ev) {
-            if (!ev.data || !ev.data.id || ev.data.id !== id) {
-                return;
-            }
-            ep.removeEventListener("message", l);
-            resolve(ev.data);
-        });
-        if (ep.start) {
-            ep.start();
-        }
-        ep.postMessage(Object.assign({ id }, msg), transfers);
-    });
-}
-function generateUUID() {
-    return new Array(4)
-        .fill(0)
-        .map(() => Math.floor(Math.random() * Number.MAX_SAFE_INTEGER).toString(16))
-        .join("-");
-}
-
-
-//# sourceMappingURL=comlink.mjs.map
-
-
-/***/ }),
-
-/***/ "./node_modules/indent-string/index.js":
-/*!*********************************************!*\
-  !*** ./node_modules/indent-string/index.js ***!
-  \*********************************************/
-/***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __webpack_require__) => {
-
-"use strict";
-__webpack_require__.r(__webpack_exports__);
-/* harmony export */ __webpack_require__.d(__webpack_exports__, {
-/* harmony export */   "default": () => (/* binding */ indentString)
-/* harmony export */ });
-function indentString(string, count = 1, options = {}) {
-	const {
-		indent = ' ',
-		includeEmptyLines = false
-	} = options;
-
-	if (typeof string !== 'string') {
-		throw new TypeError(
-			`Expected \`input\` to be a \`string\`, got \`${typeof string}\``
-		);
-	}
-
-	if (typeof count !== 'number') {
-		throw new TypeError(
-			`Expected \`count\` to be a \`number\`, got \`${typeof count}\``
-		);
-	}
-
-	if (count < 0) {
-		throw new RangeError(
-			`Expected \`count\` to be at least 0, got \`${count}\``
-		);
-	}
-
-	if (typeof indent !== 'string') {
-		throw new TypeError(
-			`Expected \`options.indent\` to be a \`string\`, got \`${typeof indent}\``
-		);
-	}
-
-	if (count === 0) {
-		return string;
-	}
-
-	const regex = includeEmptyLines ? /^/gm : /^(?!\s*$)/gm;
-
-	return string.replace(regex, indent.repeat(count));
-}
-
-
-/***/ }),
-
-/***/ "./node_modules/p-all/index.js":
-/*!*************************************!*\
-  !*** ./node_modules/p-all/index.js ***!
-  \*************************************/
-/***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __webpack_require__) => {
-
-"use strict";
-__webpack_require__.r(__webpack_exports__);
-/* harmony export */ __webpack_require__.d(__webpack_exports__, {
-/* harmony export */   "default": () => (/* binding */ pAll)
-/* harmony export */ });
-/* harmony import */ var p_map__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! p-map */ "./node_modules/p-map/index.js");
-
-
-async function pAll(iterable, options) {
-	return (0,p_map__WEBPACK_IMPORTED_MODULE_0__["default"])(iterable, element => element(), options);
-}
-
-
-/***/ }),
-
-/***/ "./node_modules/p-each-series/index.js":
-/*!*********************************************!*\
-  !*** ./node_modules/p-each-series/index.js ***!
-  \*********************************************/
-/***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __webpack_require__) => {
-
-"use strict";
-__webpack_require__.r(__webpack_exports__);
-/* harmony export */ __webpack_require__.d(__webpack_exports__, {
-/* harmony export */   "default": () => (__WEBPACK_DEFAULT_EXPORT__)
-/* harmony export */ });
-const pEachSeries = async (iterable, iterator) => {
-	let index = 0;
-
-	for (const value of iterable) {
-		// eslint-disable-next-line no-await-in-loop
-		const returnValue = await iterator(await value, index++);
-
-		if (returnValue === pEachSeries.stop) {
-			break;
-		}
-	}
-
-	return iterable;
-};
-
-pEachSeries.stop = Symbol('pEachSeries.stop');
-
-/* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (pEachSeries);
-
-
-/***/ }),
-
-/***/ "./node_modules/p-map/index.js":
-/*!*************************************!*\
-  !*** ./node_modules/p-map/index.js ***!
-  \*************************************/
-/***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __webpack_require__) => {
-
-"use strict";
-__webpack_require__.r(__webpack_exports__);
-/* harmony export */ __webpack_require__.d(__webpack_exports__, {
-/* harmony export */   "default": () => (/* binding */ pMap),
-/* harmony export */   "pMapSkip": () => (/* binding */ pMapSkip)
-/* harmony export */ });
-/* harmony import */ var aggregate_error__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! aggregate-error */ "./node_modules/aggregate-error/index.js");
-
-
-async function pMap(
-	iterable,
-	mapper,
-	{
-		concurrency = Number.POSITIVE_INFINITY,
-		stopOnError = true
-	} = {}
-) {
-	return new Promise((resolve, reject_) => { // eslint-disable-line promise/param-names
-		if (iterable[Symbol.iterator] === undefined && iterable[Symbol.asyncIterator] === undefined) {
-			throw new TypeError(`Expected \`input\` to be either an \`Iterable\` or \`AsyncIterable\`, got (${typeof iterable})`);
-		}
-
-		if (typeof mapper !== 'function') {
-			throw new TypeError('Mapper function is required');
-		}
-
-		if (!((Number.isSafeInteger(concurrency) || concurrency === Number.POSITIVE_INFINITY) && concurrency >= 1)) {
-			throw new TypeError(`Expected \`concurrency\` to be an integer from 1 and up or \`Infinity\`, got \`${concurrency}\` (${typeof concurrency})`);
-		}
-
-		const result = [];
-		const errors = [];
-		const skippedIndexesMap = new Map();
-		let isRejected = false;
-		let isResolved = false;
-		let isIterableDone = false;
-		let resolvingCount = 0;
-		let currentIndex = 0;
-		const iterator = iterable[Symbol.iterator] === undefined ? iterable[Symbol.asyncIterator]() : iterable[Symbol.iterator]();
-
-		const reject = reason => {
-			isRejected = true;
-			isResolved = true;
-			reject_(reason);
-		};
-
-		const next = async () => {
-			if (isResolved) {
-				return;
-			}
-
-			const nextItem = await iterator.next();
-
-			const index = currentIndex;
-			currentIndex++;
-
-			// Note: `iterator.next()` can be called many times in parallel.
-			// This can cause multiple calls to this `next()` function to
-			// receive a `nextItem` with `done === true`.
-			// The shutdown logic that rejects/resolves must be protected
-			// so it runs only one time as the `skippedIndex` logic is
-			// non-idempotent.
-			if (nextItem.done) {
-				isIterableDone = true;
-
-				if (resolvingCount === 0 && !isResolved) {
-					if (!stopOnError && errors.length > 0) {
-						reject(new aggregate_error__WEBPACK_IMPORTED_MODULE_0__["default"](errors));
-						return;
-					}
-
-					isResolved = true;
-
-					if (!skippedIndexesMap.size) {
-						resolve(result);
-						return;
-					}
-
-					const pureResult = [];
-
-					// Support multiple `pMapSkip`'s.
-					for (const [index, value] of result.entries()) {
-						if (skippedIndexesMap.get(index) === pMapSkip) {
-							continue;
-						}
-
-						pureResult.push(value);
-					}
-
-					resolve(pureResult);
-				}
-
-				return;
-			}
-
-			resolvingCount++;
-
-			// Intentionally detached
-			(async () => {
-				try {
-					const element = await nextItem.value;
-
-					if (isResolved) {
-						return;
-					}
-
-					const value = await mapper(element, index);
-
-					// Use Map to stage the index of the element.
-					if (value === pMapSkip) {
-						skippedIndexesMap.set(index, value);
-					}
-
-					result[index] = value;
-
-					resolvingCount--;
-					await next();
-				} catch (error) {
-					if (stopOnError) {
-						reject(error);
-					} else {
-						errors.push(error);
-						resolvingCount--;
-
-						// In that case we can't really continue regardless of `stopOnError` state
-						// since an iterable is likely to continue throwing after it throws once.
-						// If we continue calling `next()` indefinitely we will likely end up
-						// in an infinite loop of failed iteration.
-						try {
-							await next();
-						} catch (error) {
-							reject(error);
-						}
-					}
-				}
-			})();
-		};
-
-		// Create the concurrent runners in a detached (non-awaited)
-		// promise. We need this so we can await the `next()` calls
-		// to stop creating runners before hitting the concurrency limit
-		// if the iterable has already been marked as done.
-		// NOTE: We *must* do this for async iterators otherwise we'll spin up
-		// infinite `next()` calls by default and never start the event loop.
-		(async () => {
-			for (let index = 0; index < concurrency; index++) {
-				try {
-					// eslint-disable-next-line no-await-in-loop
-					await next();
-				} catch (error) {
-					reject(error);
-					break;
-				}
-
-				if (isIterableDone || isRejected) {
-					break;
-				}
-			}
-		})();
-	});
-}
-
-const pMapSkip = Symbol('skip');
-
+//# sourceMappingURL=simplex-noise.js.map
 
 /***/ }),
 
@@ -55225,277 +51549,6 @@ if ( typeof window !== 'undefined' ) {
 
 
 
-/***/ }),
-
-/***/ "./node_modules/three/src/math/MathUtils.js":
-/*!**************************************************!*\
-  !*** ./node_modules/three/src/math/MathUtils.js ***!
-  \**************************************************/
-/***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __webpack_require__) => {
-
-"use strict";
-__webpack_require__.r(__webpack_exports__);
-/* harmony export */ __webpack_require__.d(__webpack_exports__, {
-/* harmony export */   "DEG2RAD": () => (/* binding */ DEG2RAD),
-/* harmony export */   "RAD2DEG": () => (/* binding */ RAD2DEG),
-/* harmony export */   "generateUUID": () => (/* binding */ generateUUID),
-/* harmony export */   "clamp": () => (/* binding */ clamp),
-/* harmony export */   "euclideanModulo": () => (/* binding */ euclideanModulo),
-/* harmony export */   "mapLinear": () => (/* binding */ mapLinear),
-/* harmony export */   "inverseLerp": () => (/* binding */ inverseLerp),
-/* harmony export */   "lerp": () => (/* binding */ lerp),
-/* harmony export */   "damp": () => (/* binding */ damp),
-/* harmony export */   "pingpong": () => (/* binding */ pingpong),
-/* harmony export */   "smoothstep": () => (/* binding */ smoothstep),
-/* harmony export */   "smootherstep": () => (/* binding */ smootherstep),
-/* harmony export */   "randInt": () => (/* binding */ randInt),
-/* harmony export */   "randFloat": () => (/* binding */ randFloat),
-/* harmony export */   "randFloatSpread": () => (/* binding */ randFloatSpread),
-/* harmony export */   "seededRandom": () => (/* binding */ seededRandom),
-/* harmony export */   "degToRad": () => (/* binding */ degToRad),
-/* harmony export */   "radToDeg": () => (/* binding */ radToDeg),
-/* harmony export */   "isPowerOfTwo": () => (/* binding */ isPowerOfTwo),
-/* harmony export */   "ceilPowerOfTwo": () => (/* binding */ ceilPowerOfTwo),
-/* harmony export */   "floorPowerOfTwo": () => (/* binding */ floorPowerOfTwo),
-/* harmony export */   "setQuaternionFromProperEuler": () => (/* binding */ setQuaternionFromProperEuler)
-/* harmony export */ });
-const _lut = [];
-
-for ( let i = 0; i < 256; i ++ ) {
-
-	_lut[ i ] = ( i < 16 ? '0' : '' ) + ( i ).toString( 16 );
-
-}
-
-let _seed = 1234567;
-
-
-const DEG2RAD = Math.PI / 180;
-const RAD2DEG = 180 / Math.PI;
-
-// http://stackoverflow.com/questions/105034/how-to-create-a-guid-uuid-in-javascript/21963136#21963136
-function generateUUID() {
-
-	const d0 = Math.random() * 0xffffffff | 0;
-	const d1 = Math.random() * 0xffffffff | 0;
-	const d2 = Math.random() * 0xffffffff | 0;
-	const d3 = Math.random() * 0xffffffff | 0;
-	const uuid = _lut[ d0 & 0xff ] + _lut[ d0 >> 8 & 0xff ] + _lut[ d0 >> 16 & 0xff ] + _lut[ d0 >> 24 & 0xff ] + '-' +
-			_lut[ d1 & 0xff ] + _lut[ d1 >> 8 & 0xff ] + '-' + _lut[ d1 >> 16 & 0x0f | 0x40 ] + _lut[ d1 >> 24 & 0xff ] + '-' +
-			_lut[ d2 & 0x3f | 0x80 ] + _lut[ d2 >> 8 & 0xff ] + '-' + _lut[ d2 >> 16 & 0xff ] + _lut[ d2 >> 24 & 0xff ] +
-			_lut[ d3 & 0xff ] + _lut[ d3 >> 8 & 0xff ] + _lut[ d3 >> 16 & 0xff ] + _lut[ d3 >> 24 & 0xff ];
-
-	// .toUpperCase() here flattens concatenated strings to save heap memory space.
-	return uuid.toUpperCase();
-
-}
-
-function clamp( value, min, max ) {
-
-	return Math.max( min, Math.min( max, value ) );
-
-}
-
-// compute euclidian modulo of m % n
-// https://en.wikipedia.org/wiki/Modulo_operation
-function euclideanModulo( n, m ) {
-
-	return ( ( n % m ) + m ) % m;
-
-}
-
-// Linear mapping from range <a1, a2> to range <b1, b2>
-function mapLinear( x, a1, a2, b1, b2 ) {
-
-	return b1 + ( x - a1 ) * ( b2 - b1 ) / ( a2 - a1 );
-
-}
-
-// https://www.gamedev.net/tutorials/programming/general-and-gameplay-programming/inverse-lerp-a-super-useful-yet-often-overlooked-function-r5230/
-function inverseLerp( x, y, value ) {
-
-	if ( x !== y ) {
-
-		return ( value - x ) / ( y - x );
-
-	} else {
-
-		return 0;
-
-	}
-
-}
-
-// https://en.wikipedia.org/wiki/Linear_interpolation
-function lerp( x, y, t ) {
-
-	return ( 1 - t ) * x + t * y;
-
-}
-
-// http://www.rorydriscoll.com/2016/03/07/frame-rate-independent-damping-using-lerp/
-function damp( x, y, lambda, dt ) {
-
-	return lerp( x, y, 1 - Math.exp( - lambda * dt ) );
-
-}
-
-// https://www.desmos.com/calculator/vcsjnyz7x4
-function pingpong( x, length = 1 ) {
-
-	return length - Math.abs( euclideanModulo( x, length * 2 ) - length );
-
-}
-
-// http://en.wikipedia.org/wiki/Smoothstep
-function smoothstep( x, min, max ) {
-
-	if ( x <= min ) return 0;
-	if ( x >= max ) return 1;
-
-	x = ( x - min ) / ( max - min );
-
-	return x * x * ( 3 - 2 * x );
-
-}
-
-function smootherstep( x, min, max ) {
-
-	if ( x <= min ) return 0;
-	if ( x >= max ) return 1;
-
-	x = ( x - min ) / ( max - min );
-
-	return x * x * x * ( x * ( x * 6 - 15 ) + 10 );
-
-}
-
-// Random integer from <low, high> interval
-function randInt( low, high ) {
-
-	return low + Math.floor( Math.random() * ( high - low + 1 ) );
-
-}
-
-// Random float from <low, high> interval
-function randFloat( low, high ) {
-
-	return low + Math.random() * ( high - low );
-
-}
-
-// Random float from <-range/2, range/2> interval
-function randFloatSpread( range ) {
-
-	return range * ( 0.5 - Math.random() );
-
-}
-
-// Deterministic pseudo-random float in the interval [ 0, 1 ]
-function seededRandom( s ) {
-
-	if ( s !== undefined ) _seed = s % 2147483647;
-
-	// Park-Miller algorithm
-
-	_seed = _seed * 16807 % 2147483647;
-
-	return ( _seed - 1 ) / 2147483646;
-
-}
-
-function degToRad( degrees ) {
-
-	return degrees * DEG2RAD;
-
-}
-
-function radToDeg( radians ) {
-
-	return radians * RAD2DEG;
-
-}
-
-function isPowerOfTwo( value ) {
-
-	return ( value & ( value - 1 ) ) === 0 && value !== 0;
-
-}
-
-function ceilPowerOfTwo( value ) {
-
-	return Math.pow( 2, Math.ceil( Math.log( value ) / Math.LN2 ) );
-
-}
-
-function floorPowerOfTwo( value ) {
-
-	return Math.pow( 2, Math.floor( Math.log( value ) / Math.LN2 ) );
-
-}
-
-function setQuaternionFromProperEuler( q, a, b, c, order ) {
-
-	// Intrinsic Proper Euler Angles - see https://en.wikipedia.org/wiki/Euler_angles
-
-	// rotations are applied to the axes in the order specified by 'order'
-	// rotation by angle 'a' is applied first, then by angle 'b', then by angle 'c'
-	// angles are in radians
-
-	const cos = Math.cos;
-	const sin = Math.sin;
-
-	const c2 = cos( b / 2 );
-	const s2 = sin( b / 2 );
-
-	const c13 = cos( ( a + c ) / 2 );
-	const s13 = sin( ( a + c ) / 2 );
-
-	const c1_3 = cos( ( a - c ) / 2 );
-	const s1_3 = sin( ( a - c ) / 2 );
-
-	const c3_1 = cos( ( c - a ) / 2 );
-	const s3_1 = sin( ( c - a ) / 2 );
-
-	switch ( order ) {
-
-		case 'XYX':
-			q.set( c2 * s13, s2 * c1_3, s2 * s1_3, c2 * c13 );
-			break;
-
-		case 'YZY':
-			q.set( s2 * s1_3, c2 * s13, s2 * c1_3, c2 * c13 );
-			break;
-
-		case 'ZXZ':
-			q.set( s2 * c1_3, s2 * s1_3, c2 * s13, c2 * c13 );
-			break;
-
-		case 'XZX':
-			q.set( c2 * s13, s2 * s3_1, s2 * c3_1, c2 * c13 );
-			break;
-
-		case 'YXY':
-			q.set( s2 * c3_1, c2 * s13, s2 * s3_1, c2 * c13 );
-			break;
-
-		case 'ZYZ':
-			q.set( s2 * s3_1, s2 * c3_1, c2 * s13, c2 * c13 );
-			break;
-
-		default:
-			console.warn( 'THREE.MathUtils: .setQuaternionFromProperEuler() encountered an unknown order: ' + order );
-
-	}
-
-}
-
-
-
-
-
-
-
 /***/ })
 
 /******/ 	});
@@ -55518,7 +51571,7 @@ function setQuaternionFromProperEuler( q, a, b, c, order ) {
 /******/ 		};
 /******/ 	
 /******/ 		// Execute the module function
-/******/ 		__webpack_modules__[moduleId].call(module.exports, module, module.exports, __webpack_require__);
+/******/ 		__webpack_modules__[moduleId](module, module.exports, __webpack_require__);
 /******/ 	
 /******/ 		// Return the exports of the module
 /******/ 		return module.exports;
@@ -55565,88 +51618,104 @@ function setQuaternionFromProperEuler( q, a, b, c, order ) {
 /******/ 		};
 /******/ 	})();
 /******/ 	
-/******/ 	/* webpack/runtime/publicPath */
-/******/ 	(() => {
-/******/ 		__webpack_require__.p = "";
-/******/ 	})();
-/******/ 	
 /************************************************************************/
 var __webpack_exports__ = {};
 // This entry need to be wrapped in an IIFE because it need to be in strict mode.
 (() => {
 "use strict";
-/*!*********************!*\
-  !*** ./src/main.ts ***!
-  \*********************/
+/*!************************************************************************************!*\
+  !*** ./node_modules/ts-loader/index.js!./src/world/chunk-data-generator.worker.ts ***!
+  \************************************************************************************/
 __webpack_require__.r(__webpack_exports__);
-/* harmony export */ __webpack_require__.d(__webpack_exports__, {
-/* harmony export */   "bootstrap": () => (/* binding */ bootstrap)
-/* harmony export */ });
-/* harmony import */ var _game__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./game */ "./src/game.ts");
-var __awaiter = (undefined && undefined.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
-var __generator = (undefined && undefined.__generator) || function (thisArg, body) {
-    var _ = { label: 0, sent: function() { if (t[0] & 1) throw t[1]; return t[1]; }, trys: [], ops: [] }, f, y, t, g;
-    return g = { next: verb(0), "throw": verb(1), "return": verb(2) }, typeof Symbol === "function" && (g[Symbol.iterator] = function() { return this; }), g;
-    function verb(n) { return function (v) { return step([n, v]); }; }
-    function step(op) {
-        if (f) throw new TypeError("Generator is already executing.");
-        while (_) try {
-            if (f = 1, y && (t = op[0] & 2 ? y["return"] : op[0] ? y["throw"] || ((t = y["return"]) && t.call(y), 0) : y.next) && !(t = t.call(y, op[1])).done) return t;
-            if (y = 0, t) op = [op[0] & 2, t.value];
-            switch (op[0]) {
-                case 0: case 1: t = op; break;
-                case 4: _.label++; return { value: op[1], done: false };
-                case 5: _.label++; y = op[1]; op = [0]; continue;
-                case 7: op = _.ops.pop(); _.trys.pop(); continue;
-                default:
-                    if (!(t = _.trys, t = t.length > 0 && t[t.length - 1]) && (op[0] === 6 || op[0] === 2)) { _ = 0; continue; }
-                    if (op[0] === 3 && (!t || (op[1] > t[0] && op[1] < t[3]))) { _.label = op[1]; break; }
-                    if (op[0] === 6 && _.label < t[1]) { _.label = t[1]; t = op; break; }
-                    if (t && _.label < t[2]) { _.label = t[2]; _.ops.push(op); break; }
-                    if (t[2]) _.ops.pop();
-                    _.trys.pop(); continue;
-            }
-            op = body.call(thisArg, _);
-        } catch (e) { op = [6, e]; y = 0; } finally { f = t = 0; }
-        if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
-    }
-};
+/* harmony import */ var simplex_noise__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! simplex-noise */ "./node_modules/simplex-noise/dist/esm/simplex-noise.js");
+/* harmony import */ var three__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! three */ "./node_modules/three/build/three.module.js");
+/* harmony import */ var _util_index_to_vector3__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../util/index-to-vector3 */ "./src/util/index-to-vector3.ts");
+/* harmony import */ var bezier_easing__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! bezier-easing */ "./node_modules/bezier-easing/src/index.js");
+/* harmony import */ var bezier_easing__WEBPACK_IMPORTED_MODULE_2___default = /*#__PURE__*/__webpack_require__.n(bezier_easing__WEBPACK_IMPORTED_MODULE_2__);
 
-function bootstrap() {
-    return __awaiter(this, void 0, void 0, function () {
-        var gameDomElement, game;
-        return __generator(this, function (_a) {
-            switch (_a.label) {
-                case 0:
-                    gameDomElement = document.getElementById('game');
-                    if (!gameDomElement) {
-                        throw new Error('Document is missing element with id `game`!');
-                    }
-                    game = new _game__WEBPACK_IMPORTED_MODULE_0__.Game(gameDomElement);
-                    window.game = game;
-                    console.log("Loading...");
-                    return [4 /*yield*/, game.init()];
-                case 1:
-                    _a.sent();
-                    console.log("Loading finished successfully!");
-                    game.startLoop();
-                    return [2 /*return*/];
+
+
+
+var CHUNK_WIDTH = 16;
+var CHUNK_HEIGHT = 16;
+var LandToSeaEasing = bezier_easing__WEBPACK_IMPORTED_MODULE_2___default()(0.02, 0.88, 0.63, 1);
+var CliffnessEasing = bezier_easing__WEBPACK_IMPORTED_MODULE_2___default()(1, -0.34, 0.86, 0.78);
+function generateChunkData(position, simplexNoise) {
+    var noise2 = function (x, z) { return (simplexNoise.noise2D(x, z) + 1) / 2; };
+    var noise3 = function (x, y, z) { return (simplexNoise.noise3D(x, y, z) + 1) / 2; };
+    var blockData = new Uint8Array(CHUNK_WIDTH * CHUNK_HEIGHT * CHUNK_WIDTH);
+    for (var x = 0; x < CHUNK_WIDTH; x++) {
+        for (var z = 0; z < CHUNK_WIDTH; z++) {
+            var worldX = x + position.x * CHUNK_WIDTH;
+            var worldZ = z + position.z * CHUNK_WIDTH;
+            var landmassNoise = noise2(worldX * 0.0005, worldZ * 0.0005) * 0.95 + noise2(worldX * 0.005, worldZ * 0.005) * 0.05;
+            landmassNoise = landmassNoise * 0.9 + noise2(worldX * 0.01, worldZ * 0.01) * 0.1;
+            landmassNoise = landmassNoise * 0.97 + noise2(worldX * 0.05, worldZ * 0.05) * 0.03;
+            var isLandmass = landmassNoise > 0.4;
+            if (!isLandmass) {
+                if (position.y === 0) {
+                    blockData[(0,_util_index_to_vector3__WEBPACK_IMPORTED_MODULE_1__.xyzTupelToIndex)(x, 0, z, CHUNK_WIDTH, CHUNK_WIDTH)] = 4;
+                }
+                continue;
             }
-        });
-    });
+            var beachNoise = noise2(worldX * 0.003, worldZ * 0.003);
+            var isBeach = beachNoise < 0.5;
+            var cliffness = Math.max(CliffnessEasing(beachNoise), 0);
+            var isCliff = cliffness > 0.5;
+            var waterNearness = LandToSeaEasing((landmassNoise - 0.4) / 0.6);
+            var landToSeaBlend = (1 - cliffness) * waterNearness + cliffness * 2;
+            var isNearWater = waterNearness < 0.25;
+            var baseHeight = (4 + noise2(worldX * 0.01, worldZ * 0.01) * 32);
+            var height = (baseHeight + (noise2(worldX * 0.05, worldZ * 0.05) - 0.5) * 8 + (noise2(worldX * 0.005, worldZ * 0.005) - 0.5) * 16) * landToSeaBlend;
+            for (var y = 0; y < CHUNK_HEIGHT; y++) {
+                var worldY = y + position.y * CHUNK_HEIGHT;
+                var index = (0,_util_index_to_vector3__WEBPACK_IMPORTED_MODULE_1__.xyzTupelToIndex)(x, y, z, CHUNK_WIDTH, CHUNK_WIDTH);
+                if (height <= 0) {
+                    blockData[index] = worldY === 0 ? 4 : 0;
+                    continue;
+                }
+                if (isNearWater && isBeach) {
+                    blockData[index] = worldY <= height ? 5 : 0;
+                }
+                else if (waterNearness < 0.3 && isCliff) {
+                    if (worldY === 0) {
+                        blockData[index] = 4;
+                        continue;
+                    }
+                    var cliffFragmentationNoiseAmplitude = 0.07;
+                    var cliffFragmentationNoise = noise3(worldX * cliffFragmentationNoiseAmplitude, worldY * cliffFragmentationNoiseAmplitude, worldZ * cliffFragmentationNoiseAmplitude);
+                    blockData[index] = (worldY <= height) && (cliffFragmentationNoise > 0.25) ? 1 : 0;
+                }
+                else {
+                    blockData[index] = worldY > height ? 0 : (worldY > height - 3 ? (worldY > height - 1 ? 2 : 3) : 1);
+                }
+            }
+        }
+    }
+    return blockData;
 }
-bootstrap();
+var ctx = self;
+function main() {
+    var simplexNoise;
+    onmessage = function (_a) {
+        var data = _a.data;
+        var type = data.type;
+        switch (type) {
+            case 'seed':
+                simplexNoise = new simplex_noise__WEBPACK_IMPORTED_MODULE_0__["default"](data.seed);
+                break;
+            case 'generate': {
+                var result = generateChunkData(new three__WEBPACK_IMPORTED_MODULE_3__.Vector3().fromArray(data.position), simplexNoise);
+                ctx.postMessage({ type: 'generate--complete', position: data.position, result: result });
+                break;
+            }
+        }
+    };
+}
+main();
 
 })();
 
 /******/ })()
 ;
-//# sourceMappingURL=bundle.js.map
+//# sourceMappingURL=chunk-data-generator.worker.24f6697f3b942eadd797.worker.js.map

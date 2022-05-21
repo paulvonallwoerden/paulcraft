@@ -25,8 +25,10 @@ var __assign = (this && this.__assign) || function () {
     return __assign.apply(this, arguments);
 };
 var _a;
+import { randomElement } from "../util/random-element";
 import { Block } from "./block";
 import { BlockFace, BlockFaces } from "./block-face";
+import { BlockState } from "./block-state/block-state";
 var CauldronBlockModelSideFaces = (_a = {},
     _a[BlockFace.TOP] = { texture: 'textures/blocks/cauldron_top.png' },
     _a[BlockFace.BOTTOM] = { texture: 'textures/blocks/cauldron_bottom.png' },
@@ -123,6 +125,9 @@ export function makeCauldronBlockModel(level) {
     return model;
 }
 ;
+var DefaultCauldronBlockStateValues = {
+    level: 0,
+};
 var CauldronBlock = /** @class */ (function (_super) {
     __extends(CauldronBlock, _super);
     function CauldronBlock() {
@@ -133,11 +138,16 @@ var CauldronBlock = /** @class */ (function (_super) {
             makeCauldronBlockModel(3),
         ]) || this;
     }
-    CauldronBlock.prototype.getDefaultState = function () {
-        return { level: 0 };
+    CauldronBlock.prototype.getBlockModel = function (blockState) {
+        return blockState.get('level');
     };
-    CauldronBlock.prototype.getBlockModel = function (level, pos) {
-        return 3;
+    CauldronBlock.prototype.onSetBlock = function (world, pos) {
+        world.setBlockState(pos, new BlockState(DefaultCauldronBlockStateValues));
+    };
+    CauldronBlock.prototype.onRandomTick = function (level, pos) {
+        var newState = new BlockState(__assign({}, DefaultCauldronBlockStateValues));
+        newState.set('level', randomElement([0, 1, 2, 3]));
+        level.getWorld().setBlockState(pos, newState);
     };
     return CauldronBlock;
 }(Block));

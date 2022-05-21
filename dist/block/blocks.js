@@ -51,10 +51,12 @@ import { AirBlock } from "./air-block";
 import { getBlockModelTextures } from "./block-model/block-model";
 import { CauldronBlock } from "./cauldron-block";
 import { DirtBlock } from "./dirt-block";
+import { DoorBlock } from "./door-block";
 import { GrassBlock } from "./grass-block";
 import { SandBlock } from "./sand-block";
 import { StoneBlock } from "./stone-block";
 import { TextureAtlas } from "./texture-atlas";
+import { WaterBlock } from "./water-block";
 var Blocks = /** @class */ (function () {
     function Blocks() {
         this.solidMaterial = new MeshStandardMaterial({ opacity: 1, transparent: false });
@@ -115,6 +117,8 @@ var Blocks = /** @class */ (function () {
     Blocks.DIRT = new DirtBlock();
     Blocks.SAND = new SandBlock();
     Blocks.CAULDRON = new CauldronBlock();
+    Blocks.DOOR = new DoorBlock();
+    Blocks.WATER = new WaterBlock();
     Blocks.blocks = [
         Blocks.AIR,
         Blocks.STONE,
@@ -122,6 +126,8 @@ var Blocks = /** @class */ (function () {
         Blocks.DIRT,
         Blocks.SAND,
         Blocks.CAULDRON,
+        Blocks.DOOR,
+        Blocks.WATER,
     ];
     return Blocks;
 }());

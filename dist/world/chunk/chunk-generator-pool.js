@@ -70,7 +70,7 @@ var ChunkGeneratorPool = /** @class */ (function () {
     ChunkGeneratorPool.prototype.buildBaseTerrain = function (chunkPosition, heightMap) {
         return __awaiter(this, void 0, void 0, function () {
             return __generator(this, function (_a) {
-                return [2 /*return*/, this.getWorker().buildBaseTerrain([chunkPosition.x, chunkPosition.y, chunkPosition.z], heightMap.serialize())];
+                return [2 /*return*/, this.getWorker().buildTerrain([chunkPosition.x, chunkPosition.y, chunkPosition.z], heightMap.serialize())];
             });
         });
     };

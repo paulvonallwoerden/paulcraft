@@ -28,13 +28,14 @@ var WorldNoise = /** @class */ (function () {
     };
     WorldNoise.prototype.sampleErosion = function (x, y) {
         var noiseValue = this.sampleNoise2D(x, y, {
-            octaves: 5,
-            octavePower: 3,
+            octaves: 4,
+            octavePower: 2,
             amplitude: 2,
             frequency: 0.001523,
+            noClamp: true,
         });
-        var vector = this.erosionEasing(noiseValue);
-        return Math.round(vector * 64 + 63) - 1;
+        // const vector = this.erosionEasing(noiseValue);
+        return (noiseValue + 1) / 2; // Math.round(noiseValue * 48 + 64);
     };
     WorldNoise.prototype.sample3DFactor = function (x, y) {
         return this.sampleNoise2D(x, y, {
@@ -45,7 +46,7 @@ var WorldNoise = /** @class */ (function () {
         });
     };
     WorldNoise.prototype.sample3D = function (x, y, z) {
-        var value = this.simplexNoise.noise3D(x * 0.01, y * 0.01, z * 0.01);
+        var value = this.simplexNoise.noise3D(x * 0.02, y * 0.02, z * 0.02);
         return lerp(1, -1, (clamp(value, -1, 1) + 1) / 2);
     };
     WorldNoise.prototype.sampleNoise2D = function (x, y, options) {
@@ -58,6 +59,9 @@ var WorldNoise = /** @class */ (function () {
         for (var i = 0; i < octaves; i++) {
             var octave = Math.pow(i + 1, octavePower);
             value += (this.simplexNoise.noise2D(x * frequency * octave, y * frequency * octave) * amplitude) / octave;
+        }
+        if (options === null || options === void 0 ? void 0 : options.noClamp) {
+            return value;
         }
         return clamp(value, -1, 1);
     };

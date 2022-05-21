@@ -22,8 +22,8 @@ var AirBlock = /** @class */ (function (_super) {
     function AirBlock() {
         return _super.call(this, 'air', [AirBlockModel]) || this;
     }
-    AirBlock.prototype.getBlockModel = function () {
-        return 0;
+    AirBlock.prototype.isCollidable = function () {
+        return false;
     };
     return AirBlock;
 }(Block));

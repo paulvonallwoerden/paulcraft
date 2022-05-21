@@ -94,6 +94,9 @@ var Level = /** @class */ (function () {
     Level.prototype.getBlockAt = function (pos) {
         return this.world.getBlock({ x: pos.x, y: pos.y, z: pos.z });
     };
+    Level.prototype.getWorld = function () {
+        return this.world;
+    };
     Level.prototype.getChunkMeshes = function () {
         return this.world.__tempGetChunkMeshes();
     };

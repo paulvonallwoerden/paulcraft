@@ -34,15 +34,6 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
         if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
     }
 };
-var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
-    if (pack || arguments.length === 2) for (var i = 0, l = from.length, ar; i < l; i++) {
-        if (ar || !(i in from)) {
-            if (!ar) ar = Array.prototype.slice.call(from, 0, i);
-            ar[i] = from[i];
-        }
-    }
-    return to.concat(ar || Array.prototype.slice.call(from));
-};
 import { Mesh, Vector3 } from "three";
 import { Game } from "../game";
 import { xyzTupelToIndex, xzyToIndex } from "../util/index-to-vector3";
@@ -56,6 +47,7 @@ var Chunk = /** @class */ (function () {
         this.isBlockDataDirty = false;
         this.shouldRebuild = false;
         this.blockData = new Uint8Array(CHUNK_WIDTH * CHUNK_WIDTH * CHUNK_HEIGHT);
+        this.blockStates = new Map();
         this.timeSinceFirstRender = -1;
         var _a = Game.main.blocks.getBlockMaterials(), solid = _a.solid, transparent = _a.transparent, water = _a.water;
         this.solidMesh = new Mesh(undefined, solid);
@@ -130,12 +122,21 @@ var Chunk = /** @class */ (function () {
     };
     Chunk.prototype.buildMesh = function () {
         return __awaiter(this, void 0, void 0, function () {
-            var blockData, geometry;
+            var blockModelIndices, geometry;
+            var _this = this;
             return __generator(this, function (_a) {
                 switch (_a.label) {
                     case 0:
-                        blockData = __spreadArray([this], this.getNeighborChunks(), true).map(function (chunk) { var _a; return (_a = chunk === null || chunk === void 0 ? void 0 : chunk.blockData) !== null && _a !== void 0 ? _a : new Uint8Array(); });
-                        return [4 /*yield*/, Game.main.chunkGeometryBuilderPool.buildGeometry(blockData)];
+                        blockModelIndices = {};
+                        this.blockStates.forEach(function (state, index) {
+                            var block = Blocks.getBlockById(_this.blockData[index]);
+                            blockModelIndices[index] = block.getBlockModel(state);
+                        });
+                        return [4 /*yield*/, Game.main.chunkGeometryBuilderPool.buildGeometry({
+                                blockModelIndices: blockModelIndices,
+                                blocks: this.blockData,
+                                neighborBlocks: this.getNeighborChunks().map(function (chunk) { var _a; return (_a = chunk === null || chunk === void 0 ? void 0 : chunk.blockData) !== null && _a !== void 0 ? _a : new Uint8Array(); }),
+                            })];
                     case 1:
                         geometry = _a.sent();
                         this.solidMesh.geometry = geometry.solid;
@@ -178,6 +179,15 @@ var Chunk = /** @class */ (function () {
             return undefined;
         }
         return Blocks.getBlockById(this.blockData[index]);
+    };
+    Chunk.prototype.setBlockState = function (_a, state) {
+        var x = _a[0], y = _a[1], z = _a[2];
+        this.blockStates.set(xyzTupelToIndex(x, y, z, CHUNK_WIDTH, CHUNK_WIDTH), state);
+        this.shouldRebuild = true;
+    };
+    Chunk.prototype.getBlockState = function (_a) {
+        var x = _a[0], y = _a[1], z = _a[2];
+        return this.blockStates.get(xyzTupelToIndex(x, y, z, CHUNK_WIDTH, CHUNK_WIDTH));
     };
     return Chunk;
 }());

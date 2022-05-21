@@ -66,7 +66,8 @@ var World = /** @class */ (function () {
         if (!chunk) {
             return undefined;
         }
-        return chunk.setBlock([
+        block.onSetBlock(this, pos);
+        chunk.setBlock([
             mod(pos.x, 16),
             mod(pos.y, 16),
             mod(pos.z, 16),
@@ -82,6 +83,31 @@ var World = /** @class */ (function () {
             mod(pos.y, 16),
             mod(pos.z, 16),
         ]);
+    };
+    // public getBlockState<T extends BlockStateValues>(pos: BlockPos): BlockState<T> | undefined {
+    //     const state = this.blockStates[`${pos.x};${pos.y};${pos.z}`];
+    //     if (!state) {
+    //         return undefined;
+    //     }
+    //     return this.blockStates[`${pos.x};${pos.y};${pos.z}`] as BlockState<T>;
+    // }
+    World.prototype.getBlockState = function (pos) {
+        var chunk = this.chunkColumnManager.getChunkByBlockPos(pos);
+        if (!chunk) {
+            return undefined;
+        }
+        return chunk.getBlockState([
+            mod(pos.x, 16),
+            mod(pos.y, 16),
+            mod(pos.z, 16),
+        ]);
+    };
+    World.prototype.setBlockState = function (pos, blockState) {
+        var chunk = this.chunkColumnManager.getChunkByBlockPos(pos);
+        if (!chunk) {
+            return undefined;
+        }
+        chunk.setBlockState([mod(pos.x, 16), mod(pos.y, 16), mod(pos.z, 16)], blockState);
     };
     World.prototype.__tempGetChunkMeshes = function () {
         return this.chunkColumnManager.__tempGetChunkMeshes();
