@@ -8,6 +8,8 @@ import { BuildGeometryResult } from './world/chunk-renderer';
 import { ChunkGeneratorPool } from './world/chunk/chunk-generator-pool';
 import { ChunkGeometryBuilderPool } from './world/chunk/chunk-geometry-builder-pool';
 import Stats from 'stats.js';
+import { AudioManager } from './audio/audio-manager';
+import { SoundNames, ListOfSounds } from './audio/sounds';
 
 // TODO: This class has too many responsibilities. Factor it out.
 export class Game {
@@ -23,7 +25,7 @@ export class Game {
     public readonly renderer: WebGLRenderer;
     public readonly camera: Camera;
 
-    public blocks!: Blocks;
+    public blocks: Blocks = new Blocks();
     public level!: Level;
 
     private chunkDataGeneratorWorkerPool: ChunkDataGeneratorWorker[] = [];
@@ -36,10 +38,13 @@ export class Game {
     private readonly seed = 'ijn3fi3fin3fim';
 
     public readonly audioListener: AudioListener = new AudioListener();
+    public readonly audioManager = new AudioManager<SoundNames>(this.audioListener, new AudioLoader(), ListOfSounds);
     private readonly musicAudio: Audio = new Audio(this.audioListener);
 
     public readonly chunkGeneratorPool: ChunkGeneratorPool = new ChunkGeneratorPool();
-    public readonly chunkGeometryBuilderPool: ChunkGeometryBuilderPool = new ChunkGeometryBuilderPool();
+    public readonly chunkGeometryBuilderPool: ChunkGeometryBuilderPool = new ChunkGeometryBuilderPool(
+        this.blocks.serializeBlockModels(),
+    );
 
     private readonly stats: Stats = new Stats();
 
@@ -86,7 +91,6 @@ export class Game {
 
         // Workers
         console.log("Waking up the workers...");
-        await this.chunkGeometryBuilderPool.init(this.blocks);
         await this.chunkGeometryBuilderPool.addWorkers(4);
 
         await this.chunkGeneratorPool.addWorkers(1);
@@ -119,49 +123,14 @@ export class Game {
 
         // Audio
         console.log("Making it sound nice...");
+        await this.audioManager.load();
+
         const musicLoader = new AudioLoader();
         const shimmer = await musicLoader.loadAsync('audio/music/shimmer.mp3')
         this.musicAudio.setLoop(true);
         this.musicAudio.setBuffer(shimmer);
         this.musicAudio.setVolume(0.2);
-        this.musicAudio.play();
-    }
-
-    public generateChunkData(position: Vector3): void {
-        const key = JSON.stringify(position.toArray());
-        this.chunkDataGenerationResults[key] = undefined;
-        this.instructWorker({
-            type: 'generate',
-            position: position.toArray(),
-        });
-    }
-
-    private instructWorker(message: unknown) {
-        const worker = this.chunkDataGeneratorWorkerPool.pop();
-        if (!worker) {
-            throw new Error('No worker to work :-(');
-        }
-
-        worker.postMessage(message);
-        this.chunkDataGeneratorWorkerPool.unshift(worker);
-    }
-
-    public getMaybeChunkData(position: Vector3): Uint8Array | undefined {
-        const key = JSON.stringify(position.toArray());
-        if (this.chunkDataGenerationResults[key] === undefined) {
-            return undefined;
-        }
-
-        return this.chunkDataGenerationResults[key];
-    }
-
-    public getMaybeChunkGeometry(position: Vector3): BuildGeometryResult | undefined {
-        const key = JSON.stringify(position.toArray());
-        if (this.chunkGeometryResults[key] === undefined) {
-            return undefined;
-        }
-
-        return this.chunkGeometryResults[key];
+        // this.musicAudio.play();
     }
 
     public startLoop() {

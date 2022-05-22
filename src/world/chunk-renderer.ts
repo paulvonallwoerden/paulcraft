@@ -77,7 +77,7 @@ export class ChunkRenderer {
             transparent: this.buildGeometryWithOptions(
                 // There currently are no transparent blocks.
                 blockData,
-                (blockId) => blockId === 6,
+                (blockId) => [6, 8].includes(blockId),
             ),
         };
     }

@@ -1,5 +1,5 @@
 import pMap from "p-map";
-import { Audio, AudioLoader, Box3, BoxGeometry, Camera, Intersection, Material, MathUtils, Mesh, MeshStandardMaterial, Raycaster, Vector2, Vector3, Vector3Tuple } from "three";
+import { Audio, AudioLoader, Box3, Camera, Intersection, MathUtils, Raycaster, Vector2, Vector3, Vector3Tuple } from "three";
 import { degToRad } from "three/src/math/MathUtils";
 import { Game } from "../game";
 import { Input, LeftMouseButton, RightMouseButton } from "../input/input";
@@ -7,7 +7,6 @@ import { xyzTupelToIndex } from "../util/index-to-vector3";
 import { randomElement } from "../util/random-element";
 import { Blocks } from "../block/blocks";
 import { BlockPos } from "../block/block-pos";
-import { createWorldCursorMaterial } from "./world-cursor-material";
 import { WorldCursor } from "./world-cursor";
 
 // TODO: Re-factor to:
@@ -107,42 +106,13 @@ export class Player {
                 blockToBreak?.onBreak(world, hitBlockPos);
             }
 
-            {
+            { 
                 const world = Game.main.level.getWorld();
                 this.worldCursor.set(world, hitBlockPos);
 
-                const hitBlock = world.getBlock(hitBlockPos);
-
-                // if (hitBlock) {
-                //     const modelIndex = hitBlock.getBlockModel(world.getBlockState(hitBlockPos)!);
-                //     const model = hitBlock.blockModels[modelIndex];
-                //     const [element] = model.elements;
-                //     if (element !== undefined) {
-                //         const distance = 0.001;
-
-                //         const [x, y, z] = element.from;
-                //         const [width, height, depth] = [
-                //             (element.to[0] - x) / 15 + distance * 2,
-                //             (element.to[1] - y) / 15 + distance * 2,
-                //             (element.to[2] - z) / 15 + distance * 2,
-                //         ];
-
-                //         this.worldCursorGeometry = new BoxGeometry(width, height, depth);
-                //         this.worldCursorGeometry.translate(
-                //             (hitBlockPos.x + width / 2) + x / 15 - distance,
-                //             (hitBlockPos.y + height / 2) + y / 15 - distance,
-                //             (hitBlockPos.z + depth / 2) + z / 15 - distance,
-                //         );
-                //         this.worldCursorMaterial = createWorldCursorMaterial(this.worldCursorGeometry);
-
-                //         this.worldCursor.material = this.worldCursorMaterial;
-                //         this.worldCursor.geometry = this.worldCursorGeometry;
-                //     }
-                // }
-
                 if (this.input.isKeyDowned(RightMouseButton)) {
+                    const hitBlock = world.getBlock(hitBlockPos);
                     const interactionResult = hitBlock?.onInteract(world, hitBlockPos)
-
                     if (interactionResult === false) {
                         if (this.audio.isPlaying) this.audio.stop();
                         this.audio.setBuffer(randomElement(this.placeBlockSounds));
@@ -163,10 +133,11 @@ export class Player {
             }
         }
 
+        // TODO: Remove this temporary fix. It solves the problem of the player falling before the world terrain
+        // is generated.
         if (this.input.isKeyPressed(' ')) {
             this.start = true;
         }
-
         if (!this.start) return;
 
         // Inventory
@@ -180,35 +151,6 @@ export class Player {
         // Movement
         const movementSpeed = this.flying ? this.flyingSpeed : this.walkingSpeed;
         {
-            let inputVector = new Vector3();
-            if (this.input.isKeyPressed('W')) {
-                inputVector.setX(-1);
-            }
-
-            if (this.input.isKeyPressed('S')) {
-                inputVector.setX(1);
-            }
-
-            if (this.input.isKeyPressed('D')) {
-                inputVector.setZ(1);
-            }
-
-            if (this.input.isKeyPressed('A')) {
-                inputVector.setZ(-1);
-            }
-
-            if (inputVector.length() > 1) {
-                inputVector = inputVector.normalize();
-            }
-
-            if (this.input.isKeyPressed(' ') && (this.isOnGround || this.flying)) {
-                inputVector.setY(0.012);
-            }
-
-            if (this.input.isKeyPressed('Shift') && this.flying) {
-                inputVector.setY(-0.015);
-            }
-
             // Cheating
             if (this.input.isKeyDowned('F')) {
                 this.flying = !this.flying;
@@ -224,6 +166,7 @@ export class Player {
             const right = new Vector2(-z, x).normalize();
 
             this.velocity.multiply(new Vector3(0.9, 1, 0.9));
+            const inputVector = this.getInputVector();
             this.velocity.add(new Vector3(
                 (forward.y * inputVector.x + right.y * inputVector.z) * movementSpeed,
                 inputVector.y,
@@ -238,28 +181,68 @@ export class Player {
         }
 
         if (!this.noclip) {
-            const potentialPosition = this.position.clone().add(this.velocity.clone().multiplyScalar(deltaTime).multiply(new Vector3(movementSpeed, 1, movementSpeed)));
-            const [potentialX, potentialY, potentialZ] = potentialPosition.toArray()
-            const collisionX = this.createTerrainCollisionBoxes([potentialX, this.position.y, this.position.z]);
-            if (collisionX) this.velocity.setX(0);
-            const collisionY = this.createTerrainCollisionBoxes([this.position.x, potentialY, this.position.z]);
-            if (collisionY) {
-                if (this.velocity.y < 0) {
-                    this.isOnGround = true;
-                } else {
-                    this.isOnGround = false;
-                }
-
-                this.velocity.setY(0);
-            } else {
-                this.isOnGround = false;
-            }
-            const collisionZ = this.createTerrainCollisionBoxes([this.position.x, this.position.y, potentialZ]);
-            if (collisionZ) this.velocity.setZ(0);
+            this.updateCollision(deltaTime, movementSpeed);
         }
 
         this.updateMovement(deltaTime, movementSpeed);
         this.updateCamera(deltaTime);
+    }
+
+    private getInputVector() {
+        let inputVector = new Vector3();
+        if (this.input.isKeyPressed('W')) {
+            inputVector.setX(-1);
+        }
+
+        if (this.input.isKeyPressed('S')) {
+            inputVector.setX(1);
+        }
+
+        if (this.input.isKeyPressed('D')) {
+            inputVector.setZ(1);
+        }
+
+        if (this.input.isKeyPressed('A')) {
+            inputVector.setZ(-1);
+        }
+
+        if (inputVector.length() > 1) {
+            inputVector = inputVector.normalize();
+        }
+
+        if (this.input.isKeyPressed(' ') && (this.isOnGround || this.flying)) {
+            inputVector.setY(0.012);
+        }
+
+        if (this.input.isKeyPressed('Shift') && this.flying) {
+            inputVector.setY(-0.015);
+        }
+
+        return inputVector;
+    }
+
+    private updateCollision(deltaTime: number, movementSpeed: number) {
+        const deltaPosition = this.velocity.clone().multiplyScalar(deltaTime).multiply(new Vector3(movementSpeed, 1, movementSpeed));
+        const potential = this.position.clone().add(deltaPosition);
+        const collisionX = this.createTerrainCollisionBoxes([potential.x, this.position.y, this.position.z]);
+        if (collisionX) {
+            this.velocity.setX(0);
+        }
+
+        const collisionZ = this.createTerrainCollisionBoxes([this.position.x, this.position.y, potential.z]);
+        if (collisionZ) {
+            this.velocity.setZ(0);
+        }
+
+        const collisionY = this.createTerrainCollisionBoxes([this.position.x, potential.y, this.position.z]);
+        if (!collisionY) {
+            this.isOnGround = false;
+
+            return;
+        }
+
+        this.isOnGround = this.velocity.y < 0;
+        this.velocity.setY(0);
     }
 
     private createTerrainCollisionBoxes([x, y, z]: Vector3Tuple): boolean {

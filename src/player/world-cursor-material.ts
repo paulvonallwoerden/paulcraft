@@ -1,4 +1,4 @@
-import { AdditiveBlending, Blending, BoxGeometry, ShaderMaterial, Vector3 } from "three";
+import { MultiplyBlending, ShaderMaterial } from "three";
 
 const vertexShader = `
     varying vec2 vUv;
@@ -21,8 +21,8 @@ const fragmentShader = `
 
     void main() {
         float a = edgeFactor(vUv);
-        vec3 c = mix(vec3(1), vec3(0), a);
-        gl_FragColor = vec4(c, 1.0);
+        vec3 c = mix(vec3(0), vec3(1), a);
+        gl_FragColor = vec4(c, 0.5);
     }
 `;
 
@@ -31,7 +31,7 @@ export function createWorldCursorMaterial() {
         uniforms: {
             thickness: { value: 4 },
         },
-        blending: AdditiveBlending,
+        blending: MultiplyBlending,
         vertexShader: vertexShader,
         fragmentShader: fragmentShader,
     });

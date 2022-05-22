@@ -1,3 +1,4 @@
+import { Game } from "../game";
 import { World } from "../world/world";
 import { Block } from "./block";
 import { BlockFaces } from "./block-face";
@@ -86,13 +87,13 @@ export class DoorBlock extends Block {
         const top = world.getBlock(topPos);
         if (top instanceof DoorBlock) {
             top.toggleOpen(world, topPos);
-            this.toggleOpen(world, pos);
+            this.toggleOpen(world, pos, true);
         } else {
             const bottomPos = { ...pos, y: pos.y - 1 };
             const bottom = world.getBlock(bottomPos);
             if (bottom instanceof DoorBlock) {
                 bottom.toggleOpen(world, bottomPos);
-                this.toggleOpen(world, pos);
+                this.toggleOpen(world, pos, true);
             }
         }
 
@@ -119,9 +120,13 @@ export class DoorBlock extends Block {
         return !state.get('open');
     }
 
-    protected toggleOpen(world: World, pos: BlockPos) {
+    protected toggleOpen(world: World, pos: BlockPos, playSound = false) {
         const state = world.getBlockState(pos)!;
         state.set('open', !state.get('open'));
         world.setBlockState(pos, state);
+
+        if (playSound) {
+            Game.main.audioManager.playSound('block.door.open');
+        }
     }
 }
