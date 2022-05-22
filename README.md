@@ -4,6 +4,19 @@ A clone of Minecraft that runs in the browser. **[Play it now!](https://paulvona
 
 ## Details
 
+### Controls
+
+* Move: `W, A, S, D`
+* Jump: `Space`
+* Break Block: `Left Mouse Button`
+* Place Block: `Right Mouse Button`
+* Select Block to place:
+  * Next: `E`
+  * Previous: `Q`
+* Enable Fly: `F`
+  * Fly down: `Left-Shift`
+* Disable collision: `N`
+
 ### Features
 
 * Infinite world
