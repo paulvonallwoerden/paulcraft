@@ -118,7 +118,7 @@ export class Game {
 
         // Level
         console.log("Leveling...");
-        this.level = new Level(this.scene);
+        this.level = new Level(this, this.scene);
         await this.level.init();
 
         // Audio

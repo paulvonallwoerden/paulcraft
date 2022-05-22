@@ -14,7 +14,7 @@ export class Level implements ITickable {
     private readonly player: Player;
     private readonly world: World;
 
-    public constructor(private readonly scene: Scene) {
+    public constructor(private readonly game: Game, private readonly scene: Scene) {
         // Lighting
         this.sun = new DirectionalLight(0xffffff, 0.6);
         this.sun.position.set(0, 1, 0);
@@ -30,7 +30,7 @@ export class Level implements ITickable {
             new Vector3(0, 40, 0),
             new Vector2(degToRad(0), degToRad(0)),
         );
-        this.world = new World(this.scene);
+        this.world = new World(this, this.scene);
     }
 
     public async init() {
@@ -75,5 +75,9 @@ export class Level implements ITickable {
 
     public getChunkMeshes(): Mesh[] {
         return this.world.__tempGetChunkMeshes();
+    }
+
+    public getGame() {
+        return this.game;
     }
 }

@@ -54,6 +54,7 @@ yarn serve
 
   * [Place block](https://freesound.org/people/greenvwbeetle/sounds/244653/)
   * [Break block](https://freesound.org/people/MorneDelport/sounds/326407/)
+  * [Open/close door](https://freesound.org/people/InspectorJ/sounds/339677/)
 
 ### Music
 

@@ -1,14 +1,16 @@
-import { Mesh, Scene } from "three";
-import { Block } from "../block/block";
-import { BlockPos } from "../block/block-pos";
-import { BlockState, BlockStateValues } from "../block/block-state/block-state";
-import { mod } from "../util/mod";
-import { ChunkColumnManager } from "./chunk-column-manager";
+import { Mesh, Scene } from 'three';
+import { SoundNames } from '../audio/sounds';
+import { Block } from '../block/block';
+import { BlockPos } from '../block/block-pos';
+import { BlockState, BlockStateValues } from '../block/block-state/block-state';
+import { Level } from '../level';
+import { mod } from '../util/mod';
+import { ChunkColumnManager } from './chunk-column-manager';
 
 export class World {
     private readonly chunkColumnManager: ChunkColumnManager;
 
-    public constructor(readonly scene: Scene) {
+    public constructor(private readonly level: Level, readonly scene: Scene) {
         this.chunkColumnManager = new ChunkColumnManager(scene, 7, 3, 4);
     }
 
@@ -62,15 +64,6 @@ export class World {
         ]);
     }
 
-    // public getBlockState<T extends BlockStateValues>(pos: BlockPos): BlockState<T> | undefined {
-    //     const state = this.blockStates[`${pos.x};${pos.y};${pos.z}`];
-    //     if (!state) {
-    //         return undefined;
-    //     }
-
-    //     return this.blockStates[`${pos.x};${pos.y};${pos.z}`] as BlockState<T>;
-    // }
-
     public getBlockState<T extends BlockStateValues>(pos: BlockPos): BlockState<T> | undefined {
         const chunk = this.chunkColumnManager.getChunkByBlockPos(pos);
         if (!chunk) {
@@ -91,6 +84,10 @@ export class World {
         }
 
         chunk.setBlockState([mod(pos.x, 16), mod(pos.y, 16), mod(pos.z, 16)], blockState);
+    }
+
+    public playSound(name: SoundNames[number]): void {
+        this.level.getGame().audioManager.playSound(name);
     }
 
     public __tempGetChunkMeshes(): Mesh[] {

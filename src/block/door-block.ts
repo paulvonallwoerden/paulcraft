@@ -1,11 +1,10 @@
-import { Game } from "../game";
-import { World } from "../world/world";
-import { Block } from "./block";
-import { BlockFaces } from "./block-face";
-import { BlockModel } from "./block-model/block-model";
-import { BlockPos } from "./block-pos";
-import { BlockState } from "./block-state/block-state";
-import { Blocks } from "./blocks";
+import { World } from '../world/world';
+import { Block } from './block';
+import { BlockFaces } from './block-face';
+import { BlockModel } from './block-model/block-model';
+import { BlockPos } from './block-pos';
+import { BlockState } from './block-state/block-state';
+import { Blocks } from './blocks';
 
 export function makeClosedDoorBlockModel(rotation: number, texture: string): BlockModel {
     return {
@@ -122,11 +121,13 @@ export class DoorBlock extends Block {
 
     protected toggleOpen(world: World, pos: BlockPos, playSound = false) {
         const state = world.getBlockState(pos)!;
-        state.set('open', !state.get('open'));
+        const isOpen = state.get('open');
+        state.set('open', !isOpen);
         world.setBlockState(pos, state);
 
         if (playSound) {
-            Game.main.audioManager.playSound('block.door.open');
+            if (!isOpen) world.playSound('block.door.open');
+            if (isOpen) world.playSound('block.door.close');
         }
     }
 }

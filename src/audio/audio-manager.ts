@@ -1,5 +1,5 @@
-// import pReduce from "p-reduce";
-import { Audio, AudioListener, AudioLoader } from "three";
+import pReduce from 'p-reduce';
+import { Audio, AudioListener, AudioLoader } from 'three';
 
 export class AudioManager<S extends string[]> {
     private sounds?: Record<S[number], AudioBuffer>;
@@ -12,10 +12,10 @@ export class AudioManager<S extends string[]> {
     ) {}
 
     public async load() {
-        // this.sounds = await pReduce(Object.entries<string>(this.soundSrc), async (map, [name, src]) => ({
-        //     ...map,
-        //     [name]: this.audioLoader.loadAsync(src),
-        // }));
+        this.sounds = await pReduce(Object.entries<string>(this.soundSrc), async (map, [name, src]) => ({
+            ...map,
+            [name]: await this.audioLoader.loadAsync(src),
+        }));
     }
 
     public playSound(name: S[number]): void {

@@ -29,6 +29,7 @@
         "p-all": "^4.0.0",
         "p-each-series": "^3.0.0",
         "p-map": "^5.3.0",
+        "p-reduce": "^3.0.0",
         "simplex-noise": "^3.0.1",
         "stats.js": "^0.17.0",
         "three": "^0.137.5",
