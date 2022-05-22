@@ -34,10 +34,11 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
         if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
     }
 };
-import { mod } from "../util/mod";
-import { ChunkColumnManager } from "./chunk-column-manager";
+import { mod } from '../util/mod';
+import { ChunkColumnManager } from './chunk-column-manager';
 var World = /** @class */ (function () {
-    function World(scene) {
+    function World(level, scene) {
+        this.level = level;
         this.scene = scene;
         this.chunkColumnManager = new ChunkColumnManager(scene, 7, 3, 4);
     }
@@ -84,13 +85,6 @@ var World = /** @class */ (function () {
             mod(pos.z, 16),
         ]);
     };
-    // public getBlockState<T extends BlockStateValues>(pos: BlockPos): BlockState<T> | undefined {
-    //     const state = this.blockStates[`${pos.x};${pos.y};${pos.z}`];
-    //     if (!state) {
-    //         return undefined;
-    //     }
-    //     return this.blockStates[`${pos.x};${pos.y};${pos.z}`] as BlockState<T>;
-    // }
     World.prototype.getBlockState = function (pos) {
         var chunk = this.chunkColumnManager.getChunkByBlockPos(pos);
         if (!chunk) {
@@ -108,6 +102,9 @@ var World = /** @class */ (function () {
             return undefined;
         }
         chunk.setBlockState([mod(pos.x, 16), mod(pos.y, 16), mod(pos.z, 16)], blockState);
+    };
+    World.prototype.playSound = function (name) {
+        this.level.getGame().audioManager.playSound(name);
     };
     World.prototype.__tempGetChunkMeshes = function () {
         return this.chunkColumnManager.__tempGetChunkMeshes();

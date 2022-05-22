@@ -107,7 +107,18 @@ var BlockModelRenderer = /** @class */ (function () {
         // Vertices
         var _g = this.normalizeToFrom(element.from, element.to), _h = _g[0], fromX = _h[0], fromY = _h[1], fromZ = _h[2], _j = _g[1], toX = _j[0], toY = _j[1], toZ = _j[2];
         var _k = [toX - fromX, toY - fromY, toZ - fromZ], sizeX = _k[0], sizeY = _k[1], sizeZ = _k[2];
-        var rts = this.makeTrsMatrixFromBlockModelRotation(blockModel.rotation).multiply(new three__WEBPACK_IMPORTED_MODULE_1__.Matrix4().compose(new three__WEBPACK_IMPORTED_MODULE_1__.Vector3(fromX / 15, fromY / 15, fromZ / 15), new three__WEBPACK_IMPORTED_MODULE_1__.Quaternion().identity(), new three__WEBPACK_IMPORTED_MODULE_1__.Vector3(sizeX / 15, sizeY / 15, sizeZ / 15)).multiply(FaceTrsMatrices[blockFace]));
+        var modelMatrix = this.makeTrsMatrixFromBlockModelRotation(blockModel.rotation);
+        var elementMatrix = this.makeTrsMatrixFromBlockModelRotation(element.rotation);
+        var faceMatrix = new three__WEBPACK_IMPORTED_MODULE_1__.Matrix4().compose(new three__WEBPACK_IMPORTED_MODULE_1__.Vector3(fromX / 15, fromY / 15, fromZ / 15), new three__WEBPACK_IMPORTED_MODULE_1__.Quaternion().identity(), new three__WEBPACK_IMPORTED_MODULE_1__.Vector3(sizeX / 15, sizeY / 15, sizeZ / 15));
+        var rts = modelMatrix
+            .multiply(elementMatrix)
+            .multiply(faceMatrix)
+            .multiply(FaceTrsMatrices[blockFace]);
+        // const rts = this.makeTrsMatrixFromBlockModelRotation(blockModel.rotation).multiply(new Matrix4().compose(
+        //     new Vector3(fromX / 15, fromY / 15, fromZ / 15),
+        //     new Quaternion().identity(),
+        //     new Vector3(sizeX / 15, sizeY / 15, sizeZ / 15),
+        // ).multiply(FaceTrsMatrices[blockFace]));
         (_a = mesh.vertices).push.apply(_a, __spreadArray(__spreadArray(__spreadArray(__spreadArray([], new three__WEBPACK_IMPORTED_MODULE_1__.Vector3(0, 0, 0).applyMatrix4(rts).add(position).toArray(), false), new three__WEBPACK_IMPORTED_MODULE_1__.Vector3(1, 0, 0).applyMatrix4(rts).add(position).toArray(), false), new three__WEBPACK_IMPORTED_MODULE_1__.Vector3(0, 1, 0).applyMatrix4(rts).add(position).toArray(), false), new three__WEBPACK_IMPORTED_MODULE_1__.Vector3(1, 1, 0).applyMatrix4(rts).add(position).toArray(), false));
         // Triangles
         var triangleOffset = (mesh.vertices.length / 3) - 4;
@@ -277,7 +288,7 @@ var ChunkRenderer = /** @class */ (function () {
             blockData, function (blockId) { return blockId === 7; }),
             transparent: this.buildGeometryWithOptions(
             // There currently are no transparent blocks.
-            blockData, function (blockId) { return blockId === 6; }),
+            blockData, function (blockId) { return [6, 8].includes(blockId); }),
         };
     };
     ChunkRenderer.prototype.buildGeometryWithOptions = function (blockData, isVisible) {
@@ -51951,4 +51962,4 @@ var ChunkGeometryBuilder = /** @class */ (function () {
 
 /******/ })()
 ;
-//# sourceMappingURL=chunk-geometry-builder.worker.bf2577443edc8de32748.worker.js.map
+//# sourceMappingURL=chunk-geometry-builder.worker.16c7b56a974a7291baf5.worker.js.map

@@ -24,10 +24,10 @@ var __assign = (this && this.__assign) || function () {
     };
     return __assign.apply(this, arguments);
 };
-import { Block } from "./block";
-import { BlockFaces } from "./block-face";
-import { BlockState } from "./block-state/block-state";
-import { Blocks } from "./blocks";
+import { Block } from './block';
+import { BlockFaces } from './block-face';
+import { BlockState } from './block-state/block-state';
+import { Blocks } from './blocks';
 export function makeClosedDoorBlockModel(rotation, texture) {
     return {
         rotation: {
@@ -98,14 +98,14 @@ var DoorBlock = /** @class */ (function (_super) {
         var top = world.getBlock(topPos);
         if (top instanceof DoorBlock) {
             top.toggleOpen(world, topPos);
-            this.toggleOpen(world, pos);
+            this.toggleOpen(world, pos, true);
         }
         else {
             var bottomPos = __assign(__assign({}, pos), { y: pos.y - 1 });
             var bottom = world.getBlock(bottomPos);
             if (bottom instanceof DoorBlock) {
                 bottom.toggleOpen(world, bottomPos);
-                this.toggleOpen(world, pos);
+                this.toggleOpen(world, pos, true);
             }
         }
         return true;
@@ -128,10 +128,18 @@ var DoorBlock = /** @class */ (function (_super) {
         var state = world.getBlockState(pos);
         return !state.get('open');
     };
-    DoorBlock.prototype.toggleOpen = function (world, pos) {
+    DoorBlock.prototype.toggleOpen = function (world, pos, playSound) {
+        if (playSound === void 0) { playSound = false; }
         var state = world.getBlockState(pos);
-        state.set('open', !state.get('open'));
+        var isOpen = state.get('open');
+        state.set('open', !isOpen);
         world.setBlockState(pos, state);
+        if (playSound) {
+            if (!isOpen)
+                world.playSound('block.door.open');
+            if (isOpen)
+                world.playSound('block.door.close');
+        }
     };
     return DoorBlock;
 }(Block));

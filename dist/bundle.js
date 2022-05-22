@@ -16,6 +16,150 @@ b.fillRect(d,m,n,p);b.fillStyle=l;b.globalAlpha=.9;b.fillRect(d,m,n,p);return{do
 
 /***/ }),
 
+/***/ "./src/audio/audio-manager.ts":
+/*!************************************!*\
+  !*** ./src/audio/audio-manager.ts ***!
+  \************************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "AudioManager": () => (/* binding */ AudioManager)
+/* harmony export */ });
+/* harmony import */ var p_reduce__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! p-reduce */ "./node_modules/p-reduce/index.js");
+/* harmony import */ var three__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! three */ "./node_modules/three/build/three.module.js");
+var __assign = (undefined && undefined.__assign) || function () {
+    __assign = Object.assign || function(t) {
+        for (var s, i = 1, n = arguments.length; i < n; i++) {
+            s = arguments[i];
+            for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p))
+                t[p] = s[p];
+        }
+        return t;
+    };
+    return __assign.apply(this, arguments);
+};
+var __awaiter = (undefined && undefined.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+var __generator = (undefined && undefined.__generator) || function (thisArg, body) {
+    var _ = { label: 0, sent: function() { if (t[0] & 1) throw t[1]; return t[1]; }, trys: [], ops: [] }, f, y, t, g;
+    return g = { next: verb(0), "throw": verb(1), "return": verb(2) }, typeof Symbol === "function" && (g[Symbol.iterator] = function() { return this; }), g;
+    function verb(n) { return function (v) { return step([n, v]); }; }
+    function step(op) {
+        if (f) throw new TypeError("Generator is already executing.");
+        while (_) try {
+            if (f = 1, y && (t = op[0] & 2 ? y["return"] : op[0] ? y["throw"] || ((t = y["return"]) && t.call(y), 0) : y.next) && !(t = t.call(y, op[1])).done) return t;
+            if (y = 0, t) op = [op[0] & 2, t.value];
+            switch (op[0]) {
+                case 0: case 1: t = op; break;
+                case 4: _.label++; return { value: op[1], done: false };
+                case 5: _.label++; y = op[1]; op = [0]; continue;
+                case 7: op = _.ops.pop(); _.trys.pop(); continue;
+                default:
+                    if (!(t = _.trys, t = t.length > 0 && t[t.length - 1]) && (op[0] === 6 || op[0] === 2)) { _ = 0; continue; }
+                    if (op[0] === 3 && (!t || (op[1] > t[0] && op[1] < t[3]))) { _.label = op[1]; break; }
+                    if (op[0] === 6 && _.label < t[1]) { _.label = t[1]; t = op; break; }
+                    if (t && _.label < t[2]) { _.label = t[2]; _.ops.push(op); break; }
+                    if (t[2]) _.ops.pop();
+                    _.trys.pop(); continue;
+            }
+            op = body.call(thisArg, _);
+        } catch (e) { op = [6, e]; y = 0; } finally { f = t = 0; }
+        if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
+    }
+};
+
+
+var AudioManager = /** @class */ (function () {
+    function AudioManager(audioListener, audioLoader, soundSrc) {
+        this.audioListener = audioListener;
+        this.audioLoader = audioLoader;
+        this.soundSrc = soundSrc;
+        this.audios = [];
+    }
+    AudioManager.prototype.load = function () {
+        return __awaiter(this, void 0, void 0, function () {
+            var _a;
+            var _this = this;
+            return __generator(this, function (_b) {
+                switch (_b.label) {
+                    case 0:
+                        _a = this;
+                        return [4 /*yield*/, (0,p_reduce__WEBPACK_IMPORTED_MODULE_0__["default"])(Object.entries(this.soundSrc), function (map, _a) {
+                                var name = _a[0], src = _a[1];
+                                return __awaiter(_this, void 0, void 0, function () {
+                                    var _b, _c;
+                                    var _d;
+                                    return __generator(this, function (_e) {
+                                        switch (_e.label) {
+                                            case 0:
+                                                _b = [__assign({}, map)];
+                                                _d = {};
+                                                _c = name;
+                                                return [4 /*yield*/, this.audioLoader.loadAsync(src)];
+                                            case 1: return [2 /*return*/, (__assign.apply(void 0, _b.concat([(_d[_c] = _e.sent(), _d)])))];
+                                        }
+                                    });
+                                });
+                            })];
+                    case 1:
+                        _a.sounds = _b.sent();
+                        return [2 /*return*/];
+                }
+            });
+        });
+    };
+    AudioManager.prototype.playSound = function (name) {
+        if (!this.sounds) {
+            throw new Error('Can\'t play sound as the sounds haven\'t been loaded yet');
+        }
+        this.getAudio().setBuffer(this.sounds[name]).play();
+    };
+    AudioManager.prototype.getAudio = function () {
+        for (var i = 0; i < this.audios.length; i += 1) {
+            var audio = this.audios[i];
+            if (!audio.isPlaying) {
+                return audio;
+            }
+        }
+        var newAudio = new three__WEBPACK_IMPORTED_MODULE_1__.Audio(this.audioListener);
+        this.audios.push(newAudio);
+        return newAudio;
+    };
+    return AudioManager;
+}());
+
+
+
+/***/ }),
+
+/***/ "./src/audio/sounds.ts":
+/*!*****************************!*\
+  !*** ./src/audio/sounds.ts ***!
+  \*****************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "ListOfSounds": () => (/* binding */ ListOfSounds)
+/* harmony export */ });
+var ListOfSounds = {
+    'block.door.open': '/audio/door-open.mp3',
+    'block.door.close': '/audio/door-close.mp3',
+};
+
+
+/***/ }),
+
 /***/ "./src/block/air-block.ts":
 /*!********************************!*\
   !*** ./src/block/air-block.ts ***!
@@ -165,8 +309,8 @@ var Block = /** @class */ (function () {
         this.name = name;
         this.blockModels = blockModels;
     }
-    Block.prototype.getBlockModel = function (blockState) { return 0; };
     Block.prototype.onRandomTick = function (level, pos) { };
+    Block.prototype.getBlockModel = function (blockState) { return 0; };
     Block.prototype.onSetBlock = function (world, pos) { };
     Block.prototype.onPlace = function (world, pos) { return true; };
     Block.prototype.onBreak = function (world, pos) { };
@@ -190,7 +334,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */ __webpack_require__.d(__webpack_exports__, {
 /* harmony export */   "Blocks": () => (/* binding */ Blocks)
 /* harmony export */ });
-/* harmony import */ var three__WEBPACK_IMPORTED_MODULE_11__ = __webpack_require__(/*! three */ "./node_modules/three/build/three.module.js");
+/* harmony import */ var three__WEBPACK_IMPORTED_MODULE_12__ = __webpack_require__(/*! three */ "./node_modules/three/build/three.module.js");
 /* harmony import */ var _util_remove_duplicates__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../util/remove-duplicates */ "./src/util/remove-duplicates.ts");
 /* harmony import */ var _air_block__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./air-block */ "./src/block/air-block.ts");
 /* harmony import */ var _block_model_block_model__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./block-model/block-model */ "./src/block/block-model/block-model.ts");
@@ -200,8 +344,9 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _grass_block__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ./grass-block */ "./src/block/grass-block.ts");
 /* harmony import */ var _sand_block__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ./sand-block */ "./src/block/sand-block.ts");
 /* harmony import */ var _stone_block__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ./stone-block */ "./src/block/stone-block.ts");
-/* harmony import */ var _texture_atlas__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! ./texture-atlas */ "./src/block/texture-atlas.ts");
-/* harmony import */ var _water_block__WEBPACK_IMPORTED_MODULE_10__ = __webpack_require__(/*! ./water-block */ "./src/block/water-block.ts");
+/* harmony import */ var _sugar_cane_block__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! ./sugar-cane-block */ "./src/block/sugar-cane-block.ts");
+/* harmony import */ var _texture_atlas__WEBPACK_IMPORTED_MODULE_10__ = __webpack_require__(/*! ./texture-atlas */ "./src/block/texture-atlas.ts");
+/* harmony import */ var _water_block__WEBPACK_IMPORTED_MODULE_11__ = __webpack_require__(/*! ./water-block */ "./src/block/water-block.ts");
 var __assign = (undefined && undefined.__assign) || function () {
     __assign = Object.assign || function(t) {
         for (var s, i = 1, n = arguments.length; i < n; i++) {
@@ -261,14 +406,15 @@ var __generator = (undefined && undefined.__generator) || function (thisArg, bod
 
 
 
+
 var Blocks = /** @class */ (function () {
     function Blocks() {
-        this.solidMaterial = new three__WEBPACK_IMPORTED_MODULE_11__.MeshStandardMaterial({ opacity: 1, transparent: false });
-        this.waterMaterial = new three__WEBPACK_IMPORTED_MODULE_11__.MeshStandardMaterial({ opacity: 0.8, transparent: true });
-        this.transparentMaterial = new three__WEBPACK_IMPORTED_MODULE_11__.MeshStandardMaterial({ alphaTest: 0.5 });
+        this.solidMaterial = new three__WEBPACK_IMPORTED_MODULE_12__.MeshStandardMaterial({ opacity: 1, transparent: false });
+        this.waterMaterial = new three__WEBPACK_IMPORTED_MODULE_12__.MeshStandardMaterial({ opacity: 0.8, transparent: true });
+        this.transparentMaterial = new three__WEBPACK_IMPORTED_MODULE_12__.MeshStandardMaterial({ alphaTest: 0.5 });
         var blockTextures = Blocks.blocks.flatMap(function (block) { return block.blockModels.flatMap(function (blockModel) { return (0,_block_model_block_model__WEBPACK_IMPORTED_MODULE_2__.getBlockModelTextures)(blockModel); }); });
         this.blockTextureSources = (0,_util_remove_duplicates__WEBPACK_IMPORTED_MODULE_0__.removeDuplicates)(blockTextures);
-        this.textureAtlas = new _texture_atlas__WEBPACK_IMPORTED_MODULE_9__.TextureAtlas(this.blockTextureSources);
+        this.textureAtlas = new _texture_atlas__WEBPACK_IMPORTED_MODULE_10__.TextureAtlas(this.blockTextureSources);
     }
     Blocks.prototype.init = function () {
         return __awaiter(this, void 0, void 0, function () {
@@ -322,7 +468,8 @@ var Blocks = /** @class */ (function () {
     Blocks.SAND = new _sand_block__WEBPACK_IMPORTED_MODULE_7__.SandBlock();
     Blocks.CAULDRON = new _cauldron_block__WEBPACK_IMPORTED_MODULE_3__.CauldronBlock();
     Blocks.DOOR = new _door_block__WEBPACK_IMPORTED_MODULE_5__.DoorBlock();
-    Blocks.WATER = new _water_block__WEBPACK_IMPORTED_MODULE_10__.WaterBlock();
+    Blocks.WATER = new _water_block__WEBPACK_IMPORTED_MODULE_11__.WaterBlock();
+    Blocks.SUGAR_CANE = new _sugar_cane_block__WEBPACK_IMPORTED_MODULE_9__.SugarCaneBlock();
     Blocks.blocks = [
         Blocks.AIR,
         Blocks.STONE,
@@ -332,6 +479,7 @@ var Blocks = /** @class */ (function () {
         Blocks.CAULDRON,
         Blocks.DOOR,
         Blocks.WATER,
+        Blocks.SUGAR_CANE,
     ];
     return Blocks;
 }());
@@ -738,14 +886,14 @@ var DoorBlock = /** @class */ (function (_super) {
         var top = world.getBlock(topPos);
         if (top instanceof DoorBlock) {
             top.toggleOpen(world, topPos);
-            this.toggleOpen(world, pos);
+            this.toggleOpen(world, pos, true);
         }
         else {
             var bottomPos = __assign(__assign({}, pos), { y: pos.y - 1 });
             var bottom = world.getBlock(bottomPos);
             if (bottom instanceof DoorBlock) {
                 bottom.toggleOpen(world, bottomPos);
-                this.toggleOpen(world, pos);
+                this.toggleOpen(world, pos, true);
             }
         }
         return true;
@@ -768,10 +916,18 @@ var DoorBlock = /** @class */ (function (_super) {
         var state = world.getBlockState(pos);
         return !state.get('open');
     };
-    DoorBlock.prototype.toggleOpen = function (world, pos) {
+    DoorBlock.prototype.toggleOpen = function (world, pos, playSound) {
+        if (playSound === void 0) { playSound = false; }
         var state = world.getBlockState(pos);
-        state.set('open', !state.get('open'));
+        var isOpen = state.get('open');
+        state.set('open', !isOpen);
         world.setBlockState(pos, state);
+        if (playSound) {
+            if (!isOpen)
+                world.playSound('block.door.open');
+            if (isOpen)
+                world.playSound('block.door.close');
+        }
     };
     return DoorBlock;
 }(_block__WEBPACK_IMPORTED_MODULE_0__.Block));
@@ -1018,6 +1174,82 @@ var StoneBlock = /** @class */ (function (_super) {
 
 /***/ }),
 
+/***/ "./src/block/sugar-cane-block.ts":
+/*!***************************************!*\
+  !*** ./src/block/sugar-cane-block.ts ***!
+  \***************************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "SugarCaneBlock": () => (/* binding */ SugarCaneBlock)
+/* harmony export */ });
+/* harmony import */ var _block__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./block */ "./src/block/block.ts");
+/* harmony import */ var _block_face__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./block-face */ "./src/block/block-face.ts");
+var __extends = (undefined && undefined.__extends) || (function () {
+    var extendStatics = function (d, b) {
+        extendStatics = Object.setPrototypeOf ||
+            ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
+            function (d, b) { for (var p in b) if (Object.prototype.hasOwnProperty.call(b, p)) d[p] = b[p]; };
+        return extendStatics(d, b);
+    };
+    return function (d, b) {
+        if (typeof b !== "function" && b !== null)
+            throw new TypeError("Class extends value " + String(b) + " is not a constructor or null");
+        extendStatics(d, b);
+        function __() { this.constructor = d; }
+        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
+    };
+})();
+var _a, _b;
+
+
+var SugarCaneBlockModel = {
+    elements: [
+        {
+            from: [0, 0, 7.5],
+            to: [15, 15, 7.5],
+            rotation: {
+                angle: 45,
+                axis: 'y',
+                origin: [0.5, 0.5, 0.5],
+            },
+            faces: (_a = {},
+                _a[_block_face__WEBPACK_IMPORTED_MODULE_1__.BlockFace.FRONT] = { texture: 'textures/blocks/sugar_cane.png' },
+                _a[_block_face__WEBPACK_IMPORTED_MODULE_1__.BlockFace.BACK] = { texture: 'textures/blocks/sugar_cane.png' },
+                _a),
+        },
+        {
+            from: [0, 0, 7.5],
+            to: [15, 15, 7.5],
+            rotation: {
+                angle: -45,
+                axis: 'y',
+                origin: [0.5, 0.5, 0.5],
+            },
+            faces: (_b = {},
+                _b[_block_face__WEBPACK_IMPORTED_MODULE_1__.BlockFace.FRONT] = { texture: 'textures/blocks/sugar_cane.png' },
+                _b[_block_face__WEBPACK_IMPORTED_MODULE_1__.BlockFace.BACK] = { texture: 'textures/blocks/sugar_cane.png' },
+                _b),
+        },
+    ],
+};
+var SugarCaneBlock = /** @class */ (function (_super) {
+    __extends(SugarCaneBlock, _super);
+    function SugarCaneBlock() {
+        return _super.call(this, 'sugar_cane', [SugarCaneBlockModel]) || this;
+    }
+    SugarCaneBlock.prototype.isCollidable = function () {
+        return false;
+    };
+    return SugarCaneBlock;
+}(_block__WEBPACK_IMPORTED_MODULE_0__.Block));
+
+
+
+/***/ }),
+
 /***/ "./src/block/texture-atlas.ts":
 /*!************************************!*\
   !*** ./src/block/texture-atlas.ts ***!
@@ -1209,7 +1441,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */ __webpack_require__.d(__webpack_exports__, {
 /* harmony export */   "Game": () => (/* binding */ Game)
 /* harmony export */ });
-/* harmony import */ var three__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! three */ "./node_modules/three/build/three.module.js");
+/* harmony import */ var three__WEBPACK_IMPORTED_MODULE_10__ = __webpack_require__(/*! three */ "./node_modules/three/build/three.module.js");
 /* harmony import */ var _block_blocks__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./block/blocks */ "./src/block/blocks.ts");
 /* harmony import */ var _input_input__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./input/input */ "./src/input/input.ts");
 /* harmony import */ var _level__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./level */ "./src/level.ts");
@@ -1219,6 +1451,8 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _world_chunk_chunk_geometry_builder_pool__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ./world/chunk/chunk-geometry-builder-pool */ "./src/world/chunk/chunk-geometry-builder-pool.ts");
 /* harmony import */ var stats_js__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! stats.js */ "./node_modules/stats.js/build/stats.min.js");
 /* harmony import */ var stats_js__WEBPACK_IMPORTED_MODULE_7___default = /*#__PURE__*/__webpack_require__.n(stats_js__WEBPACK_IMPORTED_MODULE_7__);
+/* harmony import */ var _audio_audio_manager__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ./audio/audio-manager */ "./src/audio/audio-manager.ts");
+/* harmony import */ var _audio_sounds__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! ./audio/sounds */ "./src/audio/sounds.ts");
 var __awaiter = (undefined && undefined.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
     return new (P || (P = Promise))(function (resolve, reject) {
@@ -1264,6 +1498,8 @@ var __generator = (undefined && undefined.__generator) || function (thisArg, bod
 
 
 
+
+
 // TODO: This class has too many responsibilities. Factor it out.
 var Game = /** @class */ (function () {
     function Game(root) {
@@ -1272,28 +1508,30 @@ var Game = /** @class */ (function () {
         this.lastAnimationFrameAt = 0;
         this.timeSinceLastTick = 0;
         this.ticksPerSecond = 20;
+        this.blocks = new _block_blocks__WEBPACK_IMPORTED_MODULE_0__.Blocks();
         this.chunkDataGeneratorWorkerPool = [];
         this.chunkDataGenerationResults = {};
         this.chunkGeometryResults = {};
         // TODO: Make this configurable or at least random.
         this.seed = 'ijn3fi3fin3fim';
-        this.audioListener = new three__WEBPACK_IMPORTED_MODULE_8__.AudioListener();
-        this.musicAudio = new three__WEBPACK_IMPORTED_MODULE_8__.Audio(this.audioListener);
+        this.audioListener = new three__WEBPACK_IMPORTED_MODULE_10__.AudioListener();
+        this.audioManager = new _audio_audio_manager__WEBPACK_IMPORTED_MODULE_8__.AudioManager(this.audioListener, new three__WEBPACK_IMPORTED_MODULE_10__.AudioLoader(), _audio_sounds__WEBPACK_IMPORTED_MODULE_9__.ListOfSounds);
+        this.musicAudio = new three__WEBPACK_IMPORTED_MODULE_10__.Audio(this.audioListener);
         this.chunkGeneratorPool = new _world_chunk_chunk_generator_pool__WEBPACK_IMPORTED_MODULE_5__.ChunkGeneratorPool();
-        this.chunkGeometryBuilderPool = new _world_chunk_chunk_geometry_builder_pool__WEBPACK_IMPORTED_MODULE_6__.ChunkGeometryBuilderPool();
+        this.chunkGeometryBuilderPool = new _world_chunk_chunk_geometry_builder_pool__WEBPACK_IMPORTED_MODULE_6__.ChunkGeometryBuilderPool(this.blocks.serializeBlockModels());
         this.stats = new (stats_js__WEBPACK_IMPORTED_MODULE_7___default())();
         Game.main = this;
-        this.scene = new three__WEBPACK_IMPORTED_MODULE_8__.Scene();
-        this.scene.fog = new three__WEBPACK_IMPORTED_MODULE_8__.Fog(0xe6fcff, 90, 110);
+        this.scene = new three__WEBPACK_IMPORTED_MODULE_10__.Scene();
+        this.scene.fog = new three__WEBPACK_IMPORTED_MODULE_10__.Fog(0xe6fcff, 90, 110);
         var width = root.clientWidth, height = root.clientHeight;
-        var ambientLight = new three__WEBPACK_IMPORTED_MODULE_8__.AmbientLight(0x888888);
+        var ambientLight = new three__WEBPACK_IMPORTED_MODULE_10__.AmbientLight(0x888888);
         this.scene.add(ambientLight);
-        this.renderer = new three__WEBPACK_IMPORTED_MODULE_8__.WebGLRenderer();
+        this.renderer = new three__WEBPACK_IMPORTED_MODULE_10__.WebGLRenderer();
         this.renderer.setSize(width, height);
         this.renderer.setClearColor(0xe6fcff);
         var canvas = root.appendChild(this.renderer.domElement);
         canvas.addEventListener('click', function () { return canvas.requestPointerLock(); });
-        this.camera = new three__WEBPACK_IMPORTED_MODULE_8__.PerspectiveCamera(75, width / height, 0.1, 100000);
+        this.camera = new three__WEBPACK_IMPORTED_MODULE_10__.PerspectiveCamera(75, width / height, 0.1, 100000);
         this.camera.add(this.audioListener);
         this.input = new _input_input__WEBPACK_IMPORTED_MODULE_1__.Input(document.body);
         var originCross = new _origin_cross__WEBPACK_IMPORTED_MODULE_3__.OriginCross();
@@ -1321,14 +1559,11 @@ var Game = /** @class */ (function () {
                         _a.sent();
                         // Workers
                         console.log("Waking up the workers...");
-                        return [4 /*yield*/, this.chunkGeometryBuilderPool.init(this.blocks)];
+                        return [4 /*yield*/, this.chunkGeometryBuilderPool.addWorkers(4)];
                     case 2:
                         _a.sent();
-                        return [4 /*yield*/, this.chunkGeometryBuilderPool.addWorkers(4)];
-                    case 3:
-                        _a.sent();
                         return [4 /*yield*/, this.chunkGeneratorPool.addWorkers(1)];
-                    case 4:
+                    case 3:
                         _a.sent();
                         // Legacy
                         for (i = 0; i < 4; i++) {
@@ -1350,54 +1585,26 @@ var Game = /** @class */ (function () {
                         }
                         // Level
                         console.log("Leveling...");
-                        this.level = new _level__WEBPACK_IMPORTED_MODULE_2__.Level(this.scene);
+                        this.level = new _level__WEBPACK_IMPORTED_MODULE_2__.Level(this, this.scene);
                         return [4 /*yield*/, this.level.init()];
-                    case 5:
+                    case 4:
                         _a.sent();
                         // Audio
                         console.log("Making it sound nice...");
-                        musicLoader = new three__WEBPACK_IMPORTED_MODULE_8__.AudioLoader();
+                        return [4 /*yield*/, this.audioManager.load()];
+                    case 5:
+                        _a.sent();
+                        musicLoader = new three__WEBPACK_IMPORTED_MODULE_10__.AudioLoader();
                         return [4 /*yield*/, musicLoader.loadAsync('audio/music/shimmer.mp3')];
                     case 6:
                         shimmer = _a.sent();
                         this.musicAudio.setLoop(true);
                         this.musicAudio.setBuffer(shimmer);
                         this.musicAudio.setVolume(0.2);
-                        this.musicAudio.play();
                         return [2 /*return*/];
                 }
             });
         });
-    };
-    Game.prototype.generateChunkData = function (position) {
-        var key = JSON.stringify(position.toArray());
-        this.chunkDataGenerationResults[key] = undefined;
-        this.instructWorker({
-            type: 'generate',
-            position: position.toArray(),
-        });
-    };
-    Game.prototype.instructWorker = function (message) {
-        var worker = this.chunkDataGeneratorWorkerPool.pop();
-        if (!worker) {
-            throw new Error('No worker to work :-(');
-        }
-        worker.postMessage(message);
-        this.chunkDataGeneratorWorkerPool.unshift(worker);
-    };
-    Game.prototype.getMaybeChunkData = function (position) {
-        var key = JSON.stringify(position.toArray());
-        if (this.chunkDataGenerationResults[key] === undefined) {
-            return undefined;
-        }
-        return this.chunkDataGenerationResults[key];
-    };
-    Game.prototype.getMaybeChunkGeometry = function (position) {
-        var key = JSON.stringify(position.toArray());
-        if (this.chunkGeometryResults[key] === undefined) {
-            return undefined;
-        }
-        return this.chunkGeometryResults[key];
     };
     Game.prototype.startLoop = function () {
         this.looping = true;
@@ -1592,7 +1799,8 @@ var __generator = (undefined && undefined.__generator) || function (thisArg, bod
 
 // TODO: The abstraction between level & world isn't really clear. Come up with a concept.
 var Level = /** @class */ (function () {
-    function Level(scene) {
+    function Level(game, scene) {
+        this.game = game;
         this.scene = scene;
         // Lighting
         this.sun = new three__WEBPACK_IMPORTED_MODULE_3__.DirectionalLight(0xffffff, 0.6);
@@ -1603,7 +1811,7 @@ var Level = /** @class */ (function () {
         this.scene.add(this.sun, this.sunTarget);
         // Player
         this.player = new _player_player__WEBPACK_IMPORTED_MODULE_0__.Player(_game__WEBPACK_IMPORTED_MODULE_1__.Game.main.camera, _game__WEBPACK_IMPORTED_MODULE_1__.Game.main.input, new three__WEBPACK_IMPORTED_MODULE_3__.Vector3(0, 40, 0), new three__WEBPACK_IMPORTED_MODULE_3__.Vector2((0,three_src_math_MathUtils__WEBPACK_IMPORTED_MODULE_4__.degToRad)(0), (0,three_src_math_MathUtils__WEBPACK_IMPORTED_MODULE_4__.degToRad)(0)));
-        this.world = new _world_world__WEBPACK_IMPORTED_MODULE_2__.World(this.scene);
+        this.world = new _world_world__WEBPACK_IMPORTED_MODULE_2__.World(this, this.scene);
     }
     Level.prototype.init = function () {
         return __awaiter(this, void 0, void 0, function () {
@@ -1650,6 +1858,9 @@ var Level = /** @class */ (function () {
     };
     Level.prototype.getChunkMeshes = function () {
         return this.world.__tempGetChunkMeshes();
+    };
+    Level.prototype.getGame = function () {
+        return this.game;
     };
     return Level;
 }());
@@ -1881,31 +2092,8 @@ var Player = /** @class */ (function () {
             {
                 var world = _game__WEBPACK_IMPORTED_MODULE_1__.Game.main.level.getWorld();
                 this.worldCursor.set(world, hitBlockPos);
-                var hitBlock = world.getBlock(hitBlockPos);
-                // if (hitBlock) {
-                //     const modelIndex = hitBlock.getBlockModel(world.getBlockState(hitBlockPos)!);
-                //     const model = hitBlock.blockModels[modelIndex];
-                //     const [element] = model.elements;
-                //     if (element !== undefined) {
-                //         const distance = 0.001;
-                //         const [x, y, z] = element.from;
-                //         const [width, height, depth] = [
-                //             (element.to[0] - x) / 15 + distance * 2,
-                //             (element.to[1] - y) / 15 + distance * 2,
-                //             (element.to[2] - z) / 15 + distance * 2,
-                //         ];
-                //         this.worldCursorGeometry = new BoxGeometry(width, height, depth);
-                //         this.worldCursorGeometry.translate(
-                //             (hitBlockPos.x + width / 2) + x / 15 - distance,
-                //             (hitBlockPos.y + height / 2) + y / 15 - distance,
-                //             (hitBlockPos.z + depth / 2) + z / 15 - distance,
-                //         );
-                //         this.worldCursorMaterial = createWorldCursorMaterial(this.worldCursorGeometry);
-                //         this.worldCursor.material = this.worldCursorMaterial;
-                //         this.worldCursor.geometry = this.worldCursorGeometry;
-                //     }
-                // }
                 if (this.input.isKeyDowned(_input_input__WEBPACK_IMPORTED_MODULE_2__.RightMouseButton)) {
+                    var hitBlock = world.getBlock(hitBlockPos);
                     var interactionResult = hitBlock === null || hitBlock === void 0 ? void 0 : hitBlock.onInteract(world, hitBlockPos);
                     if (interactionResult === false) {
                         if (this.audio.isPlaying)
@@ -1926,6 +2114,8 @@ var Player = /** @class */ (function () {
                 }
             }
         }
+        // TODO: Remove this temporary fix. It solves the problem of the player falling before the world terrain
+        // is generated.
         if (this.input.isKeyPressed(' ')) {
             this.start = true;
         }
@@ -1941,28 +2131,6 @@ var Player = /** @class */ (function () {
         // Movement
         var movementSpeed = this.flying ? this.flyingSpeed : this.walkingSpeed;
         {
-            var inputVector = new three__WEBPACK_IMPORTED_MODULE_7__.Vector3();
-            if (this.input.isKeyPressed('W')) {
-                inputVector.setX(-1);
-            }
-            if (this.input.isKeyPressed('S')) {
-                inputVector.setX(1);
-            }
-            if (this.input.isKeyPressed('D')) {
-                inputVector.setZ(1);
-            }
-            if (this.input.isKeyPressed('A')) {
-                inputVector.setZ(-1);
-            }
-            if (inputVector.length() > 1) {
-                inputVector = inputVector.normalize();
-            }
-            if (this.input.isKeyPressed(' ') && (this.isOnGround || this.flying)) {
-                inputVector.setY(0.012);
-            }
-            if (this.input.isKeyPressed('Shift') && this.flying) {
-                inputVector.setY(-0.015);
-            }
             // Cheating
             if (this.input.isKeyDowned('F')) {
                 this.flying = !this.flying;
@@ -1975,6 +2143,7 @@ var Player = /** @class */ (function () {
             var forward = new three__WEBPACK_IMPORTED_MODULE_7__.Vector2(x, z).normalize();
             var right = new three__WEBPACK_IMPORTED_MODULE_7__.Vector2(-z, x).normalize();
             this.velocity.multiply(new three__WEBPACK_IMPORTED_MODULE_7__.Vector3(0.9, 1, 0.9));
+            var inputVector = this.getInputVector();
             this.velocity.add(new three__WEBPACK_IMPORTED_MODULE_7__.Vector3((forward.y * inputVector.x + right.y * inputVector.z) * movementSpeed, inputVector.y, (forward.x * inputVector.x + right.x * inputVector.z) * movementSpeed));
             if (!this.flying) {
                 this.velocity.setY(this.velocity.y - 0.00005 * deltaTime);
@@ -1984,30 +2153,54 @@ var Player = /** @class */ (function () {
             }
         }
         if (!this.noclip) {
-            var potentialPosition = this.position.clone().add(this.velocity.clone().multiplyScalar(deltaTime).multiply(new three__WEBPACK_IMPORTED_MODULE_7__.Vector3(movementSpeed, 1, movementSpeed)));
-            var _b = potentialPosition.toArray(), potentialX = _b[0], potentialY = _b[1], potentialZ = _b[2];
-            var collisionX = this.createTerrainCollisionBoxes([potentialX, this.position.y, this.position.z]);
-            if (collisionX)
-                this.velocity.setX(0);
-            var collisionY = this.createTerrainCollisionBoxes([this.position.x, potentialY, this.position.z]);
-            if (collisionY) {
-                if (this.velocity.y < 0) {
-                    this.isOnGround = true;
-                }
-                else {
-                    this.isOnGround = false;
-                }
-                this.velocity.setY(0);
-            }
-            else {
-                this.isOnGround = false;
-            }
-            var collisionZ = this.createTerrainCollisionBoxes([this.position.x, this.position.y, potentialZ]);
-            if (collisionZ)
-                this.velocity.setZ(0);
+            this.updateCollision(deltaTime, movementSpeed);
         }
         this.updateMovement(deltaTime, movementSpeed);
         this.updateCamera(deltaTime);
+    };
+    Player.prototype.getInputVector = function () {
+        var inputVector = new three__WEBPACK_IMPORTED_MODULE_7__.Vector3();
+        if (this.input.isKeyPressed('W')) {
+            inputVector.setX(-1);
+        }
+        if (this.input.isKeyPressed('S')) {
+            inputVector.setX(1);
+        }
+        if (this.input.isKeyPressed('D')) {
+            inputVector.setZ(1);
+        }
+        if (this.input.isKeyPressed('A')) {
+            inputVector.setZ(-1);
+        }
+        if (inputVector.length() > 1) {
+            inputVector = inputVector.normalize();
+        }
+        if (this.input.isKeyPressed(' ') && (this.isOnGround || this.flying)) {
+            inputVector.setY(0.012);
+        }
+        if (this.input.isKeyPressed('Shift') && this.flying) {
+            inputVector.setY(-0.015);
+        }
+        return inputVector;
+    };
+    Player.prototype.updateCollision = function (deltaTime, movementSpeed) {
+        var deltaPosition = this.velocity.clone().multiplyScalar(deltaTime).multiply(new three__WEBPACK_IMPORTED_MODULE_7__.Vector3(movementSpeed, 1, movementSpeed));
+        var potential = this.position.clone().add(deltaPosition);
+        var collisionX = this.createTerrainCollisionBoxes([potential.x, this.position.y, this.position.z]);
+        if (collisionX) {
+            this.velocity.setX(0);
+        }
+        var collisionZ = this.createTerrainCollisionBoxes([this.position.x, this.position.y, potential.z]);
+        if (collisionZ) {
+            this.velocity.setZ(0);
+        }
+        var collisionY = this.createTerrainCollisionBoxes([this.position.x, potential.y, this.position.z]);
+        if (!collisionY) {
+            this.isOnGround = false;
+            return;
+        }
+        this.isOnGround = this.velocity.y < 0;
+        this.velocity.setY(0);
     };
     Player.prototype.createTerrainCollisionBoxes = function (_a) {
         var x = _a[0], y = _a[1], z = _a[2];
@@ -2070,13 +2263,13 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var three__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! three */ "./node_modules/three/build/three.module.js");
 
 var vertexShader = "\n    varying vec2 vUv;\n    void main()\t{\n        vUv = uv;\n        gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0);\n    }\n";
-var fragmentShader = "\n    //#extension GL_OES_standard_derivatives : enable\n\n    varying vec2 vUv;\n    uniform float thickness;\n\n    float edgeFactor(vec2 p) {\n        vec2 grid = abs(fract(p - 0.5) - 0.5) / fwidth(p) / thickness;\n        return min(grid.x, grid.y);\n    }\n\n    void main() {\n        float a = edgeFactor(vUv);\n        vec3 c = mix(vec3(1), vec3(0), a);\n        gl_FragColor = vec4(c, 1.0);\n    }\n";
+var fragmentShader = "\n    //#extension GL_OES_standard_derivatives : enable\n\n    varying vec2 vUv;\n    uniform float thickness;\n\n    float edgeFactor(vec2 p) {\n        vec2 grid = abs(fract(p - 0.5) - 0.5) / fwidth(p) / thickness;\n        return min(grid.x, grid.y);\n    }\n\n    void main() {\n        float a = edgeFactor(vUv);\n        vec3 c = mix(vec3(0), vec3(1), a);\n        gl_FragColor = vec4(c, 0.5);\n    }\n";
 function createWorldCursorMaterial() {
     return new three__WEBPACK_IMPORTED_MODULE_0__.ShaderMaterial({
         uniforms: {
             thickness: { value: 4 },
         },
-        blending: three__WEBPACK_IMPORTED_MODULE_0__.AdditiveBlending,
+        blending: three__WEBPACK_IMPORTED_MODULE_0__.MultiplyBlending,
         vertexShader: vertexShader,
         fragmentShader: fragmentShader,
     });
@@ -3327,12 +3520,11 @@ var __generator = (undefined && undefined.__generator) || function (thisArg, bod
 
 var ChunkGeometryBuilderPool = /** @class */ (function (_super) {
     __extends(ChunkGeometryBuilderPool, _super);
-    function ChunkGeometryBuilderPool() {
-        return _super.call(this) || this;
+    function ChunkGeometryBuilderPool(blockModels) {
+        var _this = _super.call(this) || this;
+        _this.blockModels = blockModels;
+        return _this;
     }
-    ChunkGeometryBuilderPool.prototype.init = function (blocks) {
-        this.blockModels = blocks.serializeBlockModels();
-    };
     ChunkGeometryBuilderPool.prototype.buildGeometry = function (blockData) {
         return __awaiter(this, void 0, void 0, function () {
             var _a, solid, water, transparent;
@@ -3361,9 +3553,6 @@ var ChunkGeometryBuilderPool = /** @class */ (function (_super) {
     ChunkGeometryBuilderPool.prototype.instantiateWorker = function () {
         return __awaiter(this, void 0, void 0, function () {
             return __generator(this, function (_a) {
-                if (!this.blockModels) {
-                    throw new Error('Can\'t instantiate chunk geometry builder worker!');
-                }
                 return [2 /*return*/, new ((0,comlink__WEBPACK_IMPORTED_MODULE_3__.wrap)(new _chunk_geometry_builder_worker_ts__WEBPACK_IMPORTED_MODULE_1__["default"]()))(this.blockModels)];
             });
         });
@@ -3427,7 +3616,8 @@ var __generator = (undefined && undefined.__generator) || function (thisArg, bod
 
 
 var World = /** @class */ (function () {
-    function World(scene) {
+    function World(level, scene) {
+        this.level = level;
         this.scene = scene;
         this.chunkColumnManager = new _chunk_column_manager__WEBPACK_IMPORTED_MODULE_1__.ChunkColumnManager(scene, 7, 3, 4);
     }
@@ -3474,13 +3664,6 @@ var World = /** @class */ (function () {
             (0,_util_mod__WEBPACK_IMPORTED_MODULE_0__.mod)(pos.z, 16),
         ]);
     };
-    // public getBlockState<T extends BlockStateValues>(pos: BlockPos): BlockState<T> | undefined {
-    //     const state = this.blockStates[`${pos.x};${pos.y};${pos.z}`];
-    //     if (!state) {
-    //         return undefined;
-    //     }
-    //     return this.blockStates[`${pos.x};${pos.y};${pos.z}`] as BlockState<T>;
-    // }
     World.prototype.getBlockState = function (pos) {
         var chunk = this.chunkColumnManager.getChunkByBlockPos(pos);
         if (!chunk) {
@@ -3498,6 +3681,9 @@ var World = /** @class */ (function () {
             return undefined;
         }
         chunk.setBlockState([(0,_util_mod__WEBPACK_IMPORTED_MODULE_0__.mod)(pos.x, 16), (0,_util_mod__WEBPACK_IMPORTED_MODULE_0__.mod)(pos.y, 16), (0,_util_mod__WEBPACK_IMPORTED_MODULE_0__.mod)(pos.z, 16)], blockState);
+    };
+    World.prototype.playSound = function (name) {
+        this.level.getGame().audioManager.playSound(name);
     };
     World.prototype.__tempGetChunkMeshes = function () {
         return this.chunkColumnManager.__tempGetChunkMeshes();
@@ -3521,7 +3707,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */   "default": () => (/* binding */ Worker_fn)
 /* harmony export */ });
 function Worker_fn() {
-  return new Worker(__webpack_require__.p + "chunk-data-generator.worker.24f6697f3b942eadd797.worker.js");
+  return new Worker(__webpack_require__.p + "chunk-data-generator.worker.a4219c634c51a9b81e25.worker.js");
 }
 
 
@@ -3539,7 +3725,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */   "default": () => (/* binding */ Worker_fn)
 /* harmony export */ });
 function Worker_fn() {
-  return new Worker(__webpack_require__.p + "chunk-generator.worker.c32d952204e7977b6c9e.worker.js");
+  return new Worker(__webpack_require__.p + "chunk-generator.worker.097688d8d70f95457573.worker.js");
 }
 
 
@@ -3557,7 +3743,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */   "default": () => (/* binding */ Worker_fn)
 /* harmony export */ });
 function Worker_fn() {
-  return new Worker(__webpack_require__.p + "chunk-geometry-builder.worker.bf2577443edc8de32748.worker.js");
+  return new Worker(__webpack_require__.p + "chunk-geometry-builder.worker.16c7b56a974a7291baf5.worker.js");
 }
 
 
@@ -4325,6 +4511,45 @@ async function pMap(
 }
 
 const pMapSkip = Symbol('skip');
+
+
+/***/ }),
+
+/***/ "./node_modules/p-reduce/index.js":
+/*!****************************************!*\
+  !*** ./node_modules/p-reduce/index.js ***!
+  \****************************************/
+/***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __webpack_require__) => {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "default": () => (/* binding */ pReduce)
+/* harmony export */ });
+async function pReduce(iterable, reducer, initialValue) {
+	return new Promise((resolve, reject) => {
+		const iterator = iterable[Symbol.iterator]();
+		let index = 0;
+
+		const next = async total => {
+			const element = iterator.next();
+
+			if (element.done) {
+				resolve(total);
+				return;
+			}
+
+			try {
+				const [resolvedTotal, resolvedValue] = await Promise.all([total, element.value]);
+				next(reducer(resolvedTotal, resolvedValue, index++));
+			} catch (error) {
+				reject(error);
+			}
+		};
+
+		next(initialValue);
+	});
+}
 
 
 /***/ }),

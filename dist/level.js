@@ -41,7 +41,8 @@ import { degToRad } from "three/src/math/MathUtils";
 import { World } from "./world/world";
 // TODO: The abstraction between level & world isn't really clear. Come up with a concept.
 var Level = /** @class */ (function () {
-    function Level(scene) {
+    function Level(game, scene) {
+        this.game = game;
         this.scene = scene;
         // Lighting
         this.sun = new DirectionalLight(0xffffff, 0.6);
@@ -52,7 +53,7 @@ var Level = /** @class */ (function () {
         this.scene.add(this.sun, this.sunTarget);
         // Player
         this.player = new Player(Game.main.camera, Game.main.input, new Vector3(0, 40, 0), new Vector2(degToRad(0), degToRad(0)));
-        this.world = new World(this.scene);
+        this.world = new World(this, this.scene);
     }
     Level.prototype.init = function () {
         return __awaiter(this, void 0, void 0, function () {
@@ -99,6 +100,9 @@ var Level = /** @class */ (function () {
     };
     Level.prototype.getChunkMeshes = function () {
         return this.world.__tempGetChunkMeshes();
+    };
+    Level.prototype.getGame = function () {
+        return this.game;
     };
     return Level;
 }());

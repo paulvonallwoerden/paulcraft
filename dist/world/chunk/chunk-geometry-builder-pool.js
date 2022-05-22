@@ -55,12 +55,11 @@ import ChunkGeometryBuilderWorker from "./chunk-geometry-builder.worker.ts";
 import { BufferAttribute, BufferGeometry } from "three";
 var ChunkGeometryBuilderPool = /** @class */ (function (_super) {
     __extends(ChunkGeometryBuilderPool, _super);
-    function ChunkGeometryBuilderPool() {
-        return _super.call(this) || this;
+    function ChunkGeometryBuilderPool(blockModels) {
+        var _this = _super.call(this) || this;
+        _this.blockModels = blockModels;
+        return _this;
     }
-    ChunkGeometryBuilderPool.prototype.init = function (blocks) {
-        this.blockModels = blocks.serializeBlockModels();
-    };
     ChunkGeometryBuilderPool.prototype.buildGeometry = function (blockData) {
         return __awaiter(this, void 0, void 0, function () {
             var _a, solid, water, transparent;
@@ -89,9 +88,6 @@ var ChunkGeometryBuilderPool = /** @class */ (function (_super) {
     ChunkGeometryBuilderPool.prototype.instantiateWorker = function () {
         return __awaiter(this, void 0, void 0, function () {
             return __generator(this, function (_a) {
-                if (!this.blockModels) {
-                    throw new Error('Can\'t instantiate chunk geometry builder worker!');
-                }
                 return [2 /*return*/, new (wrap(new ChunkGeometryBuilderWorker()))(this.blockModels)];
             });
         });

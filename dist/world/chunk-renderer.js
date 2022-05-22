@@ -39,7 +39,7 @@ var ChunkRenderer = /** @class */ (function () {
             blockData, function (blockId) { return blockId === 7; }),
             transparent: this.buildGeometryWithOptions(
             // There currently are no transparent blocks.
-            blockData, function (blockId) { return blockId === 6; }),
+            blockData, function (blockId) { return [6, 8].includes(blockId); }),
         };
     };
     ChunkRenderer.prototype.buildGeometryWithOptions = function (blockData, isVisible) {

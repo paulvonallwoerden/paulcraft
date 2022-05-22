@@ -137,31 +137,8 @@ var Player = /** @class */ (function () {
             {
                 var world = Game.main.level.getWorld();
                 this.worldCursor.set(world, hitBlockPos);
-                var hitBlock = world.getBlock(hitBlockPos);
-                // if (hitBlock) {
-                //     const modelIndex = hitBlock.getBlockModel(world.getBlockState(hitBlockPos)!);
-                //     const model = hitBlock.blockModels[modelIndex];
-                //     const [element] = model.elements;
-                //     if (element !== undefined) {
-                //         const distance = 0.001;
-                //         const [x, y, z] = element.from;
-                //         const [width, height, depth] = [
-                //             (element.to[0] - x) / 15 + distance * 2,
-                //             (element.to[1] - y) / 15 + distance * 2,
-                //             (element.to[2] - z) / 15 + distance * 2,
-                //         ];
-                //         this.worldCursorGeometry = new BoxGeometry(width, height, depth);
-                //         this.worldCursorGeometry.translate(
-                //             (hitBlockPos.x + width / 2) + x / 15 - distance,
-                //             (hitBlockPos.y + height / 2) + y / 15 - distance,
-                //             (hitBlockPos.z + depth / 2) + z / 15 - distance,
-                //         );
-                //         this.worldCursorMaterial = createWorldCursorMaterial(this.worldCursorGeometry);
-                //         this.worldCursor.material = this.worldCursorMaterial;
-                //         this.worldCursor.geometry = this.worldCursorGeometry;
-                //     }
-                // }
                 if (this.input.isKeyDowned(RightMouseButton)) {
+                    var hitBlock = world.getBlock(hitBlockPos);
                     var interactionResult = hitBlock === null || hitBlock === void 0 ? void 0 : hitBlock.onInteract(world, hitBlockPos);
                     if (interactionResult === false) {
                         if (this.audio.isPlaying)
@@ -182,6 +159,8 @@ var Player = /** @class */ (function () {
                 }
             }
         }
+        // TODO: Remove this temporary fix. It solves the problem of the player falling before the world terrain
+        // is generated.
         if (this.input.isKeyPressed(' ')) {
             this.start = true;
         }
@@ -197,28 +176,6 @@ var Player = /** @class */ (function () {
         // Movement
         var movementSpeed = this.flying ? this.flyingSpeed : this.walkingSpeed;
         {
-            var inputVector = new Vector3();
-            if (this.input.isKeyPressed('W')) {
-                inputVector.setX(-1);
-            }
-            if (this.input.isKeyPressed('S')) {
-                inputVector.setX(1);
-            }
-            if (this.input.isKeyPressed('D')) {
-                inputVector.setZ(1);
-            }
-            if (this.input.isKeyPressed('A')) {
-                inputVector.setZ(-1);
-            }
-            if (inputVector.length() > 1) {
-                inputVector = inputVector.normalize();
-            }
-            if (this.input.isKeyPressed(' ') && (this.isOnGround || this.flying)) {
-                inputVector.setY(0.012);
-            }
-            if (this.input.isKeyPressed('Shift') && this.flying) {
-                inputVector.setY(-0.015);
-            }
             // Cheating
             if (this.input.isKeyDowned('F')) {
                 this.flying = !this.flying;
@@ -231,6 +188,7 @@ var Player = /** @class */ (function () {
             var forward = new Vector2(x, z).normalize();
             var right = new Vector2(-z, x).normalize();
             this.velocity.multiply(new Vector3(0.9, 1, 0.9));
+            var inputVector = this.getInputVector();
             this.velocity.add(new Vector3((forward.y * inputVector.x + right.y * inputVector.z) * movementSpeed, inputVector.y, (forward.x * inputVector.x + right.x * inputVector.z) * movementSpeed));
             if (!this.flying) {
                 this.velocity.setY(this.velocity.y - 0.00005 * deltaTime);
@@ -240,30 +198,54 @@ var Player = /** @class */ (function () {
             }
         }
         if (!this.noclip) {
-            var potentialPosition = this.position.clone().add(this.velocity.clone().multiplyScalar(deltaTime).multiply(new Vector3(movementSpeed, 1, movementSpeed)));
-            var _b = potentialPosition.toArray(), potentialX = _b[0], potentialY = _b[1], potentialZ = _b[2];
-            var collisionX = this.createTerrainCollisionBoxes([potentialX, this.position.y, this.position.z]);
-            if (collisionX)
-                this.velocity.setX(0);
-            var collisionY = this.createTerrainCollisionBoxes([this.position.x, potentialY, this.position.z]);
-            if (collisionY) {
-                if (this.velocity.y < 0) {
-                    this.isOnGround = true;
-                }
-                else {
-                    this.isOnGround = false;
-                }
-                this.velocity.setY(0);
-            }
-            else {
-                this.isOnGround = false;
-            }
-            var collisionZ = this.createTerrainCollisionBoxes([this.position.x, this.position.y, potentialZ]);
-            if (collisionZ)
-                this.velocity.setZ(0);
+            this.updateCollision(deltaTime, movementSpeed);
         }
         this.updateMovement(deltaTime, movementSpeed);
         this.updateCamera(deltaTime);
+    };
+    Player.prototype.getInputVector = function () {
+        var inputVector = new Vector3();
+        if (this.input.isKeyPressed('W')) {
+            inputVector.setX(-1);
+        }
+        if (this.input.isKeyPressed('S')) {
+            inputVector.setX(1);
+        }
+        if (this.input.isKeyPressed('D')) {
+            inputVector.setZ(1);
+        }
+        if (this.input.isKeyPressed('A')) {
+            inputVector.setZ(-1);
+        }
+        if (inputVector.length() > 1) {
+            inputVector = inputVector.normalize();
+        }
+        if (this.input.isKeyPressed(' ') && (this.isOnGround || this.flying)) {
+            inputVector.setY(0.012);
+        }
+        if (this.input.isKeyPressed('Shift') && this.flying) {
+            inputVector.setY(-0.015);
+        }
+        return inputVector;
+    };
+    Player.prototype.updateCollision = function (deltaTime, movementSpeed) {
+        var deltaPosition = this.velocity.clone().multiplyScalar(deltaTime).multiply(new Vector3(movementSpeed, 1, movementSpeed));
+        var potential = this.position.clone().add(deltaPosition);
+        var collisionX = this.createTerrainCollisionBoxes([potential.x, this.position.y, this.position.z]);
+        if (collisionX) {
+            this.velocity.setX(0);
+        }
+        var collisionZ = this.createTerrainCollisionBoxes([this.position.x, this.position.y, potential.z]);
+        if (collisionZ) {
+            this.velocity.setZ(0);
+        }
+        var collisionY = this.createTerrainCollisionBoxes([this.position.x, potential.y, this.position.z]);
+        if (!collisionY) {
+            this.isOnGround = false;
+            return;
+        }
+        this.isOnGround = this.velocity.y < 0;
+        this.velocity.setY(0);
     };
     Player.prototype.createTerrainCollisionBoxes = function (_a) {
         var x = _a[0], y = _a[1], z = _a[2];

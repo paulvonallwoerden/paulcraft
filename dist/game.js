@@ -43,6 +43,8 @@ import ChunkDataGeneratorWorker from './world/chunk-data-generator.worker.ts';
 import { ChunkGeneratorPool } from './world/chunk/chunk-generator-pool';
 import { ChunkGeometryBuilderPool } from './world/chunk/chunk-geometry-builder-pool';
 import Stats from 'stats.js';
+import { AudioManager } from './audio/audio-manager';
+import { ListOfSounds } from './audio/sounds';
 // TODO: This class has too many responsibilities. Factor it out.
 var Game = /** @class */ (function () {
     function Game(root) {
@@ -51,15 +53,17 @@ var Game = /** @class */ (function () {
         this.lastAnimationFrameAt = 0;
         this.timeSinceLastTick = 0;
         this.ticksPerSecond = 20;
+        this.blocks = new Blocks();
         this.chunkDataGeneratorWorkerPool = [];
         this.chunkDataGenerationResults = {};
         this.chunkGeometryResults = {};
         // TODO: Make this configurable or at least random.
         this.seed = 'ijn3fi3fin3fim';
         this.audioListener = new AudioListener();
+        this.audioManager = new AudioManager(this.audioListener, new AudioLoader(), ListOfSounds);
         this.musicAudio = new Audio(this.audioListener);
         this.chunkGeneratorPool = new ChunkGeneratorPool();
-        this.chunkGeometryBuilderPool = new ChunkGeometryBuilderPool();
+        this.chunkGeometryBuilderPool = new ChunkGeometryBuilderPool(this.blocks.serializeBlockModels());
         this.stats = new Stats();
         Game.main = this;
         this.scene = new Scene();
@@ -100,14 +104,11 @@ var Game = /** @class */ (function () {
                         _a.sent();
                         // Workers
                         console.log("Waking up the workers...");
-                        return [4 /*yield*/, this.chunkGeometryBuilderPool.init(this.blocks)];
+                        return [4 /*yield*/, this.chunkGeometryBuilderPool.addWorkers(4)];
                     case 2:
                         _a.sent();
-                        return [4 /*yield*/, this.chunkGeometryBuilderPool.addWorkers(4)];
-                    case 3:
-                        _a.sent();
                         return [4 /*yield*/, this.chunkGeneratorPool.addWorkers(1)];
-                    case 4:
+                    case 3:
                         _a.sent();
                         // Legacy
                         for (i = 0; i < 4; i++) {
@@ -129,12 +130,15 @@ var Game = /** @class */ (function () {
                         }
                         // Level
                         console.log("Leveling...");
-                        this.level = new Level(this.scene);
+                        this.level = new Level(this, this.scene);
                         return [4 /*yield*/, this.level.init()];
-                    case 5:
+                    case 4:
                         _a.sent();
                         // Audio
                         console.log("Making it sound nice...");
+                        return [4 /*yield*/, this.audioManager.load()];
+                    case 5:
+                        _a.sent();
                         musicLoader = new AudioLoader();
                         return [4 /*yield*/, musicLoader.loadAsync('audio/music/shimmer.mp3')];
                     case 6:
@@ -142,41 +146,10 @@ var Game = /** @class */ (function () {
                         this.musicAudio.setLoop(true);
                         this.musicAudio.setBuffer(shimmer);
                         this.musicAudio.setVolume(0.2);
-                        this.musicAudio.play();
                         return [2 /*return*/];
                 }
             });
         });
-    };
-    Game.prototype.generateChunkData = function (position) {
-        var key = JSON.stringify(position.toArray());
-        this.chunkDataGenerationResults[key] = undefined;
-        this.instructWorker({
-            type: 'generate',
-            position: position.toArray(),
-        });
-    };
-    Game.prototype.instructWorker = function (message) {
-        var worker = this.chunkDataGeneratorWorkerPool.pop();
-        if (!worker) {
-            throw new Error('No worker to work :-(');
-        }
-        worker.postMessage(message);
-        this.chunkDataGeneratorWorkerPool.unshift(worker);
-    };
-    Game.prototype.getMaybeChunkData = function (position) {
-        var key = JSON.stringify(position.toArray());
-        if (this.chunkDataGenerationResults[key] === undefined) {
-            return undefined;
-        }
-        return this.chunkDataGenerationResults[key];
-    };
-    Game.prototype.getMaybeChunkGeometry = function (position) {
-        var key = JSON.stringify(position.toArray());
-        if (this.chunkGeometryResults[key] === undefined) {
-            return undefined;
-        }
-        return this.chunkGeometryResults[key];
     };
     Game.prototype.startLoop = function () {
         this.looping = true;

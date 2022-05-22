@@ -55,6 +55,7 @@ import { DoorBlock } from "./door-block";
 import { GrassBlock } from "./grass-block";
 import { SandBlock } from "./sand-block";
 import { StoneBlock } from "./stone-block";
+import { SugarCaneBlock } from "./sugar-cane-block";
 import { TextureAtlas } from "./texture-atlas";
 import { WaterBlock } from "./water-block";
 var Blocks = /** @class */ (function () {
@@ -119,6 +120,7 @@ var Blocks = /** @class */ (function () {
     Blocks.CAULDRON = new CauldronBlock();
     Blocks.DOOR = new DoorBlock();
     Blocks.WATER = new WaterBlock();
+    Blocks.SUGAR_CANE = new SugarCaneBlock();
     Blocks.blocks = [
         Blocks.AIR,
         Blocks.STONE,
@@ -128,6 +130,7 @@ var Blocks = /** @class */ (function () {
         Blocks.CAULDRON,
         Blocks.DOOR,
         Blocks.WATER,
+        Blocks.SUGAR_CANE,
     ];
     return Blocks;
 }());
