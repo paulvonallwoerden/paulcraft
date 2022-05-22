@@ -113,11 +113,24 @@ export class BlockModelRenderer {
         // Vertices
         const [[fromX, fromY, fromZ], [toX, toY, toZ]] = this.normalizeToFrom(element.from, element.to);
         const [sizeX, sizeY, sizeZ] = [toX - fromX, toY - fromY, toZ - fromZ];
-        const rts = this.makeTrsMatrixFromBlockModelRotation(blockModel.rotation).multiply(new Matrix4().compose(
+        const modelMatrix = this.makeTrsMatrixFromBlockModelRotation(blockModel.rotation);
+        const elementMatrix = this.makeTrsMatrixFromBlockModelRotation(element.rotation);
+        const faceMatrix = new Matrix4().compose(
             new Vector3(fromX / 15, fromY / 15, fromZ / 15),
             new Quaternion().identity(),
             new Vector3(sizeX / 15, sizeY / 15, sizeZ / 15),
-        ).multiply(FaceTrsMatrices[blockFace]));
+        );
+
+        const rts = modelMatrix
+            .multiply(elementMatrix)
+            .multiply(faceMatrix)
+            .multiply(FaceTrsMatrices[blockFace]);
+
+        // const rts = this.makeTrsMatrixFromBlockModelRotation(blockModel.rotation).multiply(new Matrix4().compose(
+        //     new Vector3(fromX / 15, fromY / 15, fromZ / 15),
+        //     new Quaternion().identity(),
+        //     new Vector3(sizeX / 15, sizeY / 15, sizeZ / 15),
+        // ).multiply(FaceTrsMatrices[blockFace]));
 
         mesh.vertices.push(
             ...new Vector3(0, 0, 0).applyMatrix4(rts).add(position).toArray(),

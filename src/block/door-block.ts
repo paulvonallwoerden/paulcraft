@@ -1,10 +1,10 @@
-import { World } from "../world/world";
-import { Block } from "./block";
-import { BlockFaces } from "./block-face";
-import { BlockModel } from "./block-model/block-model";
-import { BlockPos } from "./block-pos";
-import { BlockState } from "./block-state/block-state";
-import { Blocks } from "./blocks";
+import { World } from '../world/world';
+import { Block } from './block';
+import { BlockFaces } from './block-face';
+import { BlockModel } from './block-model/block-model';
+import { BlockPos } from './block-pos';
+import { BlockState } from './block-state/block-state';
+import { Blocks } from './blocks';
 
 export function makeClosedDoorBlockModel(rotation: number, texture: string): BlockModel {
     return {
@@ -86,13 +86,13 @@ export class DoorBlock extends Block {
         const top = world.getBlock(topPos);
         if (top instanceof DoorBlock) {
             top.toggleOpen(world, topPos);
-            this.toggleOpen(world, pos);
+            this.toggleOpen(world, pos, true);
         } else {
             const bottomPos = { ...pos, y: pos.y - 1 };
             const bottom = world.getBlock(bottomPos);
             if (bottom instanceof DoorBlock) {
                 bottom.toggleOpen(world, bottomPos);
-                this.toggleOpen(world, pos);
+                this.toggleOpen(world, pos, true);
             }
         }
 
@@ -119,9 +119,15 @@ export class DoorBlock extends Block {
         return !state.get('open');
     }
 
-    protected toggleOpen(world: World, pos: BlockPos) {
+    protected toggleOpen(world: World, pos: BlockPos, playSound = false) {
         const state = world.getBlockState(pos)!;
-        state.set('open', !state.get('open'));
+        const isOpen = state.get('open');
+        state.set('open', !isOpen);
         world.setBlockState(pos, state);
+
+        if (playSound) {
+            if (!isOpen) world.playSound('block.door.open');
+            if (isOpen) world.playSound('block.door.close');
+        }
     }
 }

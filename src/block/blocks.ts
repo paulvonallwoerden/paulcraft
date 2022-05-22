@@ -1,9 +1,7 @@
-import { Material, MeshStandardMaterial, Texture } from "three";
+import { Material, MeshStandardMaterial } from "three";
 import { removeDuplicates } from "../util/remove-duplicates";
 import { AirBlock } from "./air-block";
 import { Block } from "./block";
-import { BlockFace, BlockFaces } from "./block-face";
-import { AIR_BLOCK_ID, BRICKS_BLOCK_ID, DIRT_BLOCK_ID, GLASS_BLOCK_ID, GRASS_BLOCK_ID, MYCELIUM_BLOCK_ID, OAK_LEAVES_BLOCK_ID, OAK_LOG_BLOCK_ID, OAK_PLANKS_BLOCK_ID, SAND_BLOCK_ID, SNOW_BLOCK_ID, STONE_BLOCK_ID, SUGAR_CANE_BLOCK_ID, TNT_BLOCK_ID, WATER_BLOCK_ID } from "./block-ids";
 import { BlockModel, getBlockModelTextures } from "./block-model/block-model";
 import { CauldronBlock } from "./cauldron-block";
 import { DirtBlock } from "./dirt-block";
@@ -11,6 +9,7 @@ import { DoorBlock } from "./door-block";
 import { GrassBlock } from "./grass-block";
 import { SandBlock } from "./sand-block";
 import { StoneBlock } from "./stone-block";
+import { SugarCaneBlock } from "./sugar-cane-block";
 import { TextureAtlas } from "./texture-atlas";
 import { WaterBlock } from "./water-block";
 
@@ -30,6 +29,7 @@ export class Blocks {
     public static readonly CAULDRON = new CauldronBlock();
     public static readonly DOOR = new DoorBlock();
     public static readonly WATER = new WaterBlock();
+    public static readonly SUGAR_CANE = new SugarCaneBlock();
 
     private static readonly blocks: Block[] = [
         Blocks.AIR,
@@ -40,6 +40,7 @@ export class Blocks {
         Blocks.CAULDRON,
         Blocks.DOOR,
         Blocks.WATER,
+        Blocks.SUGAR_CANE,
     ];
 
     private textureAtlas: TextureAtlas;

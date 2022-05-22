@@ -1,5 +1,5 @@
-import { Vector3Tuple, Vector4Tuple } from "three";
-import { BlockFace } from "../block-face";
+import { Vector3Tuple } from 'three';
+import { BlockFace } from '../block-face';
 
 export interface BlockModelRotation {
     axis: 'x' | 'y' | 'z';
@@ -8,9 +8,9 @@ export interface BlockModelRotation {
 }
 
 export interface BlockModelFace {
+    readonly cull?: boolean;
     readonly texture: string;
     readonly lockUv?: boolean;
-    readonly cull?: boolean;
 }
 
 export interface BlockModelElement {

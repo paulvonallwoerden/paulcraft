@@ -7,17 +7,15 @@ import { ChunkGeometryBuilder } from "./chunk-geometry-builder.worker";
 import { BufferAttribute, BufferGeometry } from "three";
 
 export class ChunkGeometryBuilderPool extends WorkerPool<ChunkGeometryBuilder> {
-    private blockModels?: SerializedBlockModels;
-
-    public constructor() {
+    public constructor(private readonly blockModels: SerializedBlockModels) {
         super();
     }
 
-    public init(blocks: Blocks) {
-        this.blockModels = blocks.serializeBlockModels();
-    }
-
-    public async buildGeometry(blockData: ChunkBlockData): Promise<{ solid: BufferGeometry, water: BufferGeometry, transparent: BufferGeometry }> {
+    public async buildGeometry(blockData: ChunkBlockData): Promise<{
+        solid: BufferGeometry,
+        water: BufferGeometry,
+        transparent: BufferGeometry,
+    }> {
         const { solid, water, transparent } = await this.getWorker().buildGeometry(blockData);
 
         return {
@@ -38,10 +36,6 @@ export class ChunkGeometryBuilderPool extends WorkerPool<ChunkGeometryBuilder> {
     }
 
     protected async instantiateWorker(): Promise<Remote<ChunkGeometryBuilder>> {
-        if (!this.blockModels) {
-            throw new Error('Can\'t instantiate chunk geometry builder worker!');
-        }
-
         return new (wrap<typeof ChunkGeometryBuilder>(new ChunkGeometryBuilderWorker()))(
             this.blockModels,
         );
