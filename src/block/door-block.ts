@@ -74,8 +74,6 @@ export class DoorBlock extends Block {
 
     public onPlace(player: Player, world: World, pos: BlockPos): boolean {
         const facing = player.getFacingDirection();
-        console.log('Facing: ' + facing);
-
         world.setBlockState(pos, new BlockState({ ...DefaultDoorBlockStateValues, facing }));
 
         const topPos = { ...pos, y: pos.y + 1 };
