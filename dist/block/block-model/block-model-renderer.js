@@ -27,9 +27,12 @@ var FaceTrsMatrices = (_b = {},
     _b[BlockFace.FRONT] = new Matrix4().compose(new Vector3(0, 0, 1), new Quaternion().identity(), new Vector3(1, 1, 1)),
     _b[BlockFace.BACK] = new Matrix4().compose(new Vector3(1, 0, 0), new Quaternion().setFromEuler(new Euler(0, degToRad(180), 0), true), new Vector3(1, 1, 1)),
     _b);
+var DefaultElementFromToModifier = function (fromAndTo) { return fromAndTo; };
 var BlockModelRenderer = /** @class */ (function () {
-    function BlockModelRenderer(blockUvs) {
+    function BlockModelRenderer(blockUvs, elementFromToModifier) {
+        if (elementFromToModifier === void 0) { elementFromToModifier = DefaultElementFromToModifier; }
         this.blockUvs = blockUvs;
+        this.elementFromToModifier = elementFromToModifier;
     }
     BlockModelRenderer.prototype.render = function (position, blockModel, solidityMap) {
         var _this = this;
@@ -56,7 +59,7 @@ var BlockModelRenderer = /** @class */ (function () {
             return mesh;
         }
         // Vertices
-        var _g = this.normalizeToFrom(element.from, element.to), _h = _g[0], fromX = _h[0], fromY = _h[1], fromZ = _h[2], _j = _g[1], toX = _j[0], toY = _j[1], toZ = _j[2];
+        var _g = this.elementFromToModifier(this.normalizeToFrom(element.from, element.to)), _h = _g[0], fromX = _h[0], fromY = _h[1], fromZ = _h[2], _j = _g[1], toX = _j[0], toY = _j[1], toZ = _j[2];
         var _k = [toX - fromX, toY - fromY, toZ - fromZ], sizeX = _k[0], sizeY = _k[1], sizeZ = _k[2];
         var modelMatrix = this.makeTrsMatrixFromBlockModelRotation(blockModel.rotation);
         var elementMatrix = this.makeTrsMatrixFromBlockModelRotation(element.rotation);
@@ -65,11 +68,6 @@ var BlockModelRenderer = /** @class */ (function () {
             .multiply(elementMatrix)
             .multiply(faceMatrix)
             .multiply(FaceTrsMatrices[blockFace]);
-        // const rts = this.makeTrsMatrixFromBlockModelRotation(blockModel.rotation).multiply(new Matrix4().compose(
-        //     new Vector3(fromX / 15, fromY / 15, fromZ / 15),
-        //     new Quaternion().identity(),
-        //     new Vector3(sizeX / 15, sizeY / 15, sizeZ / 15),
-        // ).multiply(FaceTrsMatrices[blockFace]));
         (_a = mesh.vertices).push.apply(_a, __spreadArray(__spreadArray(__spreadArray(__spreadArray([], new Vector3(0, 0, 0).applyMatrix4(rts).add(position).toArray(), false), new Vector3(1, 0, 0).applyMatrix4(rts).add(position).toArray(), false), new Vector3(0, 1, 0).applyMatrix4(rts).add(position).toArray(), false), new Vector3(1, 1, 0).applyMatrix4(rts).add(position).toArray(), false));
         // Triangles
         var triangleOffset = (mesh.vertices.length / 3) - 4;

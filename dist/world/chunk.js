@@ -34,21 +34,19 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
         if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
     }
 };
-import { Mesh, Vector3 } from "three";
-import { Game } from "../game";
-import { xyzTupelToIndex, xzyToIndex } from "../util/index-to-vector3";
-import { Blocks } from "../block/blocks";
+import { Mesh, Vector3 } from 'three';
+import { Game } from '../game';
+import { xyzTupelToIndex, xzyToIndex } from '../util/index-to-vector3';
+import { Blocks } from '../block/blocks';
 export var CHUNK_WIDTH = 16;
 export var CHUNK_HEIGHT = 16;
 var Chunk = /** @class */ (function () {
     function Chunk(chunkColumn, position) {
         this.chunkColumn = chunkColumn;
         this.position = position;
-        this.isBlockDataDirty = false;
         this.shouldRebuild = false;
         this.blockData = new Uint8Array(CHUNK_WIDTH * CHUNK_WIDTH * CHUNK_HEIGHT);
         this.blockStates = new Map();
-        this.timeSinceFirstRender = -1;
         var _a = Game.main.blocks.getBlockMaterials(), solid = _a.solid, transparent = _a.transparent, water = _a.water;
         this.solidMesh = new Mesh(undefined, solid);
         this.transparentMesh = new Mesh(undefined, transparent);
@@ -69,8 +67,13 @@ var Chunk = /** @class */ (function () {
         scene.remove(this.transparentMesh);
     };
     Chunk.prototype.onTick = function (deltaTime) { };
+    /**
+     * Some blocks are chosen at random and ticked.
+     *
+     * Reference: https://minecraft.fandom.com/wiki/Tick#Random_tick
+     */
     Chunk.prototype.tickBlocks = function () {
-        for (var i = 0; i < 10; i++) {
+        for (var i = 0; i < 3; i++) {
             this.tickRandomBlock();
         }
     };
@@ -88,37 +91,28 @@ var Chunk = /** @class */ (function () {
         });
     };
     Chunk.prototype.lateUpdate = function (deltaTime) {
-        if (this.isBlockDataDirty || this.shouldRebuild) {
-            this.isBlockDataDirty = false;
+        if (this.shouldRebuild) {
             this.shouldRebuild = false;
             this.buildMesh();
         }
-        if (this.timeSinceFirstRender >= 0 && !Array.isArray(this.solidMesh.material) && this.solidMesh.material.transparent) {
-            this.timeSinceFirstRender += deltaTime;
-            this.solidMesh.material.opacity = this.timeSinceFirstRender / 1000;
-            this.solidMesh.material.transparent = this.timeSinceFirstRender < 1000;
-        }
     };
-    Chunk.prototype.generateTerrain = function (skipMeshBuild) {
-        if (skipMeshBuild === void 0) { skipMeshBuild = false; }
+    Chunk.prototype.generateTerrain = function () {
         return __awaiter(this, void 0, void 0, function () {
-            var heightMap, _a;
+            var _a;
             return __generator(this, function (_b) {
                 switch (_b.label) {
                     case 0:
-                        heightMap = this.chunkColumn.heightMap;
-                        if (!heightMap) {
-                            return [2 /*return*/];
-                        }
                         _a = this;
-                        return [4 /*yield*/, Game.main.chunkGeneratorPool.buildBaseTerrain(this.position, heightMap)];
+                        return [4 /*yield*/, Game.main.chunkGeneratorPool.buildBaseTerrain(this.position)];
                     case 1:
                         _a.blockData = _b.sent();
-                        this.isBlockDataDirty = !skipMeshBuild;
                         return [2 /*return*/];
                 }
             });
         });
+    };
+    Chunk.prototype.requestRebuild = function () {
+        this.shouldRebuild = true;
     };
     Chunk.prototype.buildMesh = function () {
         return __awaiter(this, void 0, void 0, function () {
@@ -142,9 +136,6 @@ var Chunk = /** @class */ (function () {
                         this.solidMesh.geometry = geometry.solid;
                         this.waterMesh.geometry = geometry.water;
                         this.transparentMesh.geometry = geometry.transparent;
-                        if (this.timeSinceFirstRender < 0) {
-                            this.timeSinceFirstRender = 0;
-                        }
                         return [2 /*return*/];
                 }
             });
@@ -163,10 +154,10 @@ var Chunk = /** @class */ (function () {
     Chunk.prototype.setBlock = function (_a, block) {
         var x = _a[0], y = _a[1], z = _a[2];
         this.blockData[xyzTupelToIndex(x, y, z, CHUNK_WIDTH, CHUNK_WIDTH)] = Blocks.getBlockId(block);
-        this.isBlockDataDirty = true;
+        this.requestRebuild();
         // TODO: Only update the relevant chunk
         if (x <= 0 || y <= 0 || z <= 0 || x >= CHUNK_WIDTH - 1 || y >= CHUNK_HEIGHT - 1 || z >= CHUNK_WIDTH - 1) {
-            this.getNeighborChunks().forEach(function (chunk) { return chunk ? chunk.shouldRebuild = true : null; });
+            this.getNeighborChunks().filter(function (chunk) { return chunk !== undefined; }).forEach(function (chunk) { return chunk.requestRebuild(); });
         }
     };
     Chunk.prototype.getBlock = function (_a) {

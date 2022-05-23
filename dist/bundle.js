@@ -240,6 +240,156 @@ var BlockFaces = [
 
 /***/ }),
 
+/***/ "./src/block/block-model/block-model-renderer.ts":
+/*!*******************************************************!*\
+  !*** ./src/block/block-model/block-model-renderer.ts ***!
+  \*******************************************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "BlockModelRenderer": () => (/* binding */ BlockModelRenderer)
+/* harmony export */ });
+/* harmony import */ var three__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! three */ "./node_modules/three/build/three.module.js");
+/* harmony import */ var three_src_math_MathUtils__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! three/src/math/MathUtils */ "./node_modules/three/src/math/MathUtils.js");
+/* harmony import */ var _block_face__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../block-face */ "./src/block/block-face.ts");
+var __spreadArray = (undefined && undefined.__spreadArray) || function (to, from, pack) {
+    if (pack || arguments.length === 2) for (var i = 0, l = from.length, ar; i < l; i++) {
+        if (ar || !(i in from)) {
+            if (!ar) ar = Array.prototype.slice.call(from, 0, i);
+            ar[i] = from[i];
+        }
+    }
+    return to.concat(ar || Array.prototype.slice.call(from));
+};
+var _a, _b;
+
+
+
+var FaceNormals = (_a = {},
+    _a[_block_face__WEBPACK_IMPORTED_MODULE_0__.BlockFace.TOP] = [0, 1, 0],
+    _a[_block_face__WEBPACK_IMPORTED_MODULE_0__.BlockFace.BOTTOM] = [0, -1, 0],
+    _a[_block_face__WEBPACK_IMPORTED_MODULE_0__.BlockFace.LEFT] = [1, 0, 0],
+    _a[_block_face__WEBPACK_IMPORTED_MODULE_0__.BlockFace.RIGHT] = [-1, 0, 0],
+    _a[_block_face__WEBPACK_IMPORTED_MODULE_0__.BlockFace.FRONT] = [0, 0, 1],
+    _a[_block_face__WEBPACK_IMPORTED_MODULE_0__.BlockFace.BACK] = [0, 0, -1],
+    _a);
+var FaceTrsMatrices = (_b = {},
+    _b[_block_face__WEBPACK_IMPORTED_MODULE_0__.BlockFace.TOP] = new three__WEBPACK_IMPORTED_MODULE_1__.Matrix4().compose(new three__WEBPACK_IMPORTED_MODULE_1__.Vector3(0, 1, 1), new three__WEBPACK_IMPORTED_MODULE_1__.Quaternion().setFromEuler(new three__WEBPACK_IMPORTED_MODULE_1__.Euler((0,three_src_math_MathUtils__WEBPACK_IMPORTED_MODULE_2__.degToRad)(-90), 0, 0), true), new three__WEBPACK_IMPORTED_MODULE_1__.Vector3(1, 1, 1)),
+    _b[_block_face__WEBPACK_IMPORTED_MODULE_0__.BlockFace.BOTTOM] = new three__WEBPACK_IMPORTED_MODULE_1__.Matrix4().compose(new three__WEBPACK_IMPORTED_MODULE_1__.Vector3(0, 0, 0), new three__WEBPACK_IMPORTED_MODULE_1__.Quaternion().setFromEuler(new three__WEBPACK_IMPORTED_MODULE_1__.Euler((0,three_src_math_MathUtils__WEBPACK_IMPORTED_MODULE_2__.degToRad)(90), 0, 0), true), new three__WEBPACK_IMPORTED_MODULE_1__.Vector3(1, 1, 1)),
+    _b[_block_face__WEBPACK_IMPORTED_MODULE_0__.BlockFace.LEFT] = new three__WEBPACK_IMPORTED_MODULE_1__.Matrix4().compose(new three__WEBPACK_IMPORTED_MODULE_1__.Vector3(1, 0, 1), new three__WEBPACK_IMPORTED_MODULE_1__.Quaternion().setFromEuler(new three__WEBPACK_IMPORTED_MODULE_1__.Euler(0, (0,three_src_math_MathUtils__WEBPACK_IMPORTED_MODULE_2__.degToRad)(90), 0), true), new three__WEBPACK_IMPORTED_MODULE_1__.Vector3(1, 1, 1)),
+    _b[_block_face__WEBPACK_IMPORTED_MODULE_0__.BlockFace.RIGHT] = new three__WEBPACK_IMPORTED_MODULE_1__.Matrix4().compose(new three__WEBPACK_IMPORTED_MODULE_1__.Vector3(0, 0, 0), new three__WEBPACK_IMPORTED_MODULE_1__.Quaternion().setFromEuler(new three__WEBPACK_IMPORTED_MODULE_1__.Euler(0, (0,three_src_math_MathUtils__WEBPACK_IMPORTED_MODULE_2__.degToRad)(-90), 0), true), new three__WEBPACK_IMPORTED_MODULE_1__.Vector3(1, 1, 1)),
+    _b[_block_face__WEBPACK_IMPORTED_MODULE_0__.BlockFace.FRONT] = new three__WEBPACK_IMPORTED_MODULE_1__.Matrix4().compose(new three__WEBPACK_IMPORTED_MODULE_1__.Vector3(0, 0, 1), new three__WEBPACK_IMPORTED_MODULE_1__.Quaternion().identity(), new three__WEBPACK_IMPORTED_MODULE_1__.Vector3(1, 1, 1)),
+    _b[_block_face__WEBPACK_IMPORTED_MODULE_0__.BlockFace.BACK] = new three__WEBPACK_IMPORTED_MODULE_1__.Matrix4().compose(new three__WEBPACK_IMPORTED_MODULE_1__.Vector3(1, 0, 0), new three__WEBPACK_IMPORTED_MODULE_1__.Quaternion().setFromEuler(new three__WEBPACK_IMPORTED_MODULE_1__.Euler(0, (0,three_src_math_MathUtils__WEBPACK_IMPORTED_MODULE_2__.degToRad)(180), 0), true), new three__WEBPACK_IMPORTED_MODULE_1__.Vector3(1, 1, 1)),
+    _b);
+var DefaultElementFromToModifier = function (fromAndTo) { return fromAndTo; };
+var BlockModelRenderer = /** @class */ (function () {
+    function BlockModelRenderer(blockUvs, elementFromToModifier) {
+        if (elementFromToModifier === void 0) { elementFromToModifier = DefaultElementFromToModifier; }
+        this.blockUvs = blockUvs;
+        this.elementFromToModifier = elementFromToModifier;
+    }
+    BlockModelRenderer.prototype.render = function (position, blockModel, solidityMap) {
+        var _this = this;
+        return blockModel.elements.reduce(function (mesh, element) { return _this.renderElement(blockModel, position, element, solidityMap, mesh); }, {
+            normals: [],
+            triangles: [],
+            uv: [],
+            vertices: [],
+        });
+    };
+    BlockModelRenderer.prototype.renderElement = function (blockModel, position, element, solidityMap, mesh) {
+        var _this = this;
+        return _block_face__WEBPACK_IMPORTED_MODULE_0__.BlockFaces.reduce(function (modifiedMesh, blockFace) {
+            var modelFace = element.faces[blockFace];
+            if (modelFace === undefined) {
+                return modifiedMesh;
+            }
+            return _this.renderFace(blockModel, position, element, modelFace, blockFace, solidityMap, modifiedMesh);
+        }, mesh);
+    };
+    BlockModelRenderer.prototype.renderFace = function (blockModel, position, element, modelFace, blockFace, solidityMap, mesh) {
+        var _a, _b, _c, _d, _e, _f;
+        if (modelFace.cull && solidityMap[blockFace] === true) {
+            return mesh;
+        }
+        // Vertices
+        var _g = this.elementFromToModifier(this.normalizeToFrom(element.from, element.to)), _h = _g[0], fromX = _h[0], fromY = _h[1], fromZ = _h[2], _j = _g[1], toX = _j[0], toY = _j[1], toZ = _j[2];
+        var _k = [toX - fromX, toY - fromY, toZ - fromZ], sizeX = _k[0], sizeY = _k[1], sizeZ = _k[2];
+        var modelMatrix = this.makeTrsMatrixFromBlockModelRotation(blockModel.rotation);
+        var elementMatrix = this.makeTrsMatrixFromBlockModelRotation(element.rotation);
+        var faceMatrix = new three__WEBPACK_IMPORTED_MODULE_1__.Matrix4().compose(new three__WEBPACK_IMPORTED_MODULE_1__.Vector3(fromX / 15, fromY / 15, fromZ / 15), new three__WEBPACK_IMPORTED_MODULE_1__.Quaternion().identity(), new three__WEBPACK_IMPORTED_MODULE_1__.Vector3(sizeX / 15, sizeY / 15, sizeZ / 15));
+        var rts = modelMatrix
+            .multiply(elementMatrix)
+            .multiply(faceMatrix)
+            .multiply(FaceTrsMatrices[blockFace]);
+        (_a = mesh.vertices).push.apply(_a, __spreadArray(__spreadArray(__spreadArray(__spreadArray([], new three__WEBPACK_IMPORTED_MODULE_1__.Vector3(0, 0, 0).applyMatrix4(rts).add(position).toArray(), false), new three__WEBPACK_IMPORTED_MODULE_1__.Vector3(1, 0, 0).applyMatrix4(rts).add(position).toArray(), false), new three__WEBPACK_IMPORTED_MODULE_1__.Vector3(0, 1, 0).applyMatrix4(rts).add(position).toArray(), false), new three__WEBPACK_IMPORTED_MODULE_1__.Vector3(1, 1, 0).applyMatrix4(rts).add(position).toArray(), false));
+        // Triangles
+        var triangleOffset = (mesh.vertices.length / 3) - 4;
+        mesh.triangles.push(triangleOffset, triangleOffset + 1, triangleOffset + 2, triangleOffset + 2, triangleOffset + 1, triangleOffset + 3);
+        // Normals
+        for (var i = 0; i < 4; i++) {
+            (_b = mesh.normals).push.apply(_b, FaceNormals[blockFace]);
+        }
+        // UVs
+        var texture = modelFace.texture;
+        var _l = [sizeX / 16, sizeY / 16, sizeZ / 16], uvScaleX = _l[0], uvScaleY = _l[1], uvScaleZ = _l[2];
+        var uvs = this.blockUvs[texture];
+        switch (blockFace) {
+            case _block_face__WEBPACK_IMPORTED_MODULE_0__.BlockFace.FRONT:
+            case _block_face__WEBPACK_IMPORTED_MODULE_0__.BlockFace.BACK:
+                (_c = mesh.uv).push.apply(_c, this.scaleUvs(uvs, [0, 0], [uvScaleX, uvScaleY]));
+                break;
+            case _block_face__WEBPACK_IMPORTED_MODULE_0__.BlockFace.LEFT:
+            case _block_face__WEBPACK_IMPORTED_MODULE_0__.BlockFace.RIGHT:
+                (_d = mesh.uv).push.apply(_d, this.scaleUvs(uvs, [0, 0], [uvScaleZ, uvScaleY]));
+                break;
+            case _block_face__WEBPACK_IMPORTED_MODULE_0__.BlockFace.TOP:
+            case _block_face__WEBPACK_IMPORTED_MODULE_0__.BlockFace.BOTTOM:
+                (_e = mesh.uv).push.apply(_e, this.scaleUvs(uvs, [0, 0], [uvScaleX, uvScaleZ]));
+                break;
+            default:
+                (_f = mesh.uv).push.apply(_f, uvs);
+                break;
+        }
+        return mesh;
+    };
+    // TODO: This method sucks. It's hard to understand. Make it better.
+    BlockModelRenderer.prototype.scaleUvs = function (uvs, offset, scale) {
+        return [
+            offset[0] + uvs[0], offset[1] + uvs[1],
+            offset[0] + uvs[2] - (1 / 16) * (1 - scale[0]), offset[1] + uvs[3],
+            offset[0] + uvs[4], offset[1] + uvs[5] - (1 / 16) * (1 - scale[1]),
+            offset[0] + uvs[6] - (1 / 16) * (1 - scale[0]), offset[1] + uvs[7] - (1 / 16) * (1 - scale[1]),
+        ];
+    };
+    BlockModelRenderer.prototype.makeTrsMatrixFromBlockModelRotation = function (rotation) {
+        if (rotation === undefined) {
+            return new three__WEBPACK_IMPORTED_MODULE_1__.Matrix4().identity();
+        }
+        var rotationMatrix = new three__WEBPACK_IMPORTED_MODULE_1__.Matrix4().makeRotationAxis(new three__WEBPACK_IMPORTED_MODULE_1__.Vector3(rotation.axis === 'x' ? 1 : 0, rotation.axis === 'y' ? 1 : 0, rotation.axis === 'z' ? 1 : 0), (0,three_src_math_MathUtils__WEBPACK_IMPORTED_MODULE_2__.degToRad)(rotation.angle));
+        if (rotation.origin === undefined) {
+            return rotationMatrix;
+        }
+        var _a = rotation.origin, originX = _a[0], originY = _a[1], originZ = _a[2];
+        var shiftMatrix = new three__WEBPACK_IMPORTED_MODULE_1__.Matrix4().makeTranslation(originX, originY, originZ);
+        var deShiftMatrix = new three__WEBPACK_IMPORTED_MODULE_1__.Matrix4().makeTranslation(-originX, -originY, -originZ);
+        return shiftMatrix.multiply(rotationMatrix).multiply(deShiftMatrix);
+    };
+    BlockModelRenderer.prototype.normalizeToFrom = function (from, to) {
+        return [
+            [Math.min(from[0], to[0]), Math.min(from[1], to[1]), Math.min(from[2], to[2])],
+            [Math.max(from[0], to[0]), Math.max(from[1], to[1]), Math.max(from[2], to[2])],
+        ];
+    };
+    return BlockModelRenderer;
+}());
+
+
+
+/***/ }),
+
 /***/ "./src/block/block-model/block-model.ts":
 /*!**********************************************!*\
   !*** ./src/block/block-model/block-model.ts ***!
@@ -312,7 +462,7 @@ var Block = /** @class */ (function () {
     Block.prototype.onRandomTick = function (level, pos) { };
     Block.prototype.getBlockModel = function (blockState) { return 0; };
     Block.prototype.onSetBlock = function (world, pos) { };
-    Block.prototype.onPlace = function (world, pos) { return true; };
+    Block.prototype.onPlace = function (player, world, pos) { return true; };
     Block.prototype.onBreak = function (world, pos) { };
     Block.prototype.onInteract = function (world, pos) { return false; };
     Block.prototype.isCollidable = function (world, pos) { return true; };
@@ -778,8 +928,7 @@ var DirtBlock = /** @class */ (function (_super) {
 "use strict";
 __webpack_require__.r(__webpack_exports__);
 /* harmony export */ __webpack_require__.d(__webpack_exports__, {
-/* harmony export */   "makeClosedDoorBlockModel": () => (/* binding */ makeClosedDoorBlockModel),
-/* harmony export */   "makeOpenedDoorBlockModel": () => (/* binding */ makeOpenedDoorBlockModel),
+/* harmony export */   "makeDoorBlockModel": () => (/* binding */ makeDoorBlockModel),
 /* harmony export */   "DoorBlock": () => (/* binding */ DoorBlock)
 /* harmony export */ });
 /* harmony import */ var _block__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./block */ "./src/block/block.ts");
@@ -816,16 +965,17 @@ var __assign = (undefined && undefined.__assign) || function () {
 
 
 
-function makeClosedDoorBlockModel(rotation, texture) {
+function makeDoorBlockModel(open, rotation, texture) {
     return {
         rotation: {
             angle: rotation,
-            axis: 'y'
+            axis: 'y',
+            origin: [0.5, 0.5, 0.5],
         },
         elements: [
             {
                 from: [0, 0, 0],
-                to: [2, 15, 15],
+                to: open ? [15, 15, 2] : [2, 15, 15],
                 faces: _block_face__WEBPACK_IMPORTED_MODULE_1__.BlockFaces.reduce(function (faces, face) {
                     var _a;
                     return (__assign(__assign({}, faces), (_a = {}, _a[face] = { texture: texture }, _a)));
@@ -834,39 +984,34 @@ function makeClosedDoorBlockModel(rotation, texture) {
         ],
     };
 }
-function makeOpenedDoorBlockModel(rotation, texture) {
-    return {
-        rotation: {
-            angle: rotation,
-            axis: 'y'
-        },
-        elements: [
-            {
-                from: [0, 0, 0],
-                to: [15, 15, 2],
-                faces: _block_face__WEBPACK_IMPORTED_MODULE_1__.BlockFaces.reduce(function (faces, face) {
-                    var _a;
-                    return (__assign(__assign({}, faces), (_a = {}, _a[face] = { texture: texture }, _a)));
-                }, {}),
-            },
-        ],
-    };
-}
-var DefaultDoorBlockStateValues = { open: false, isTop: false };
+var DefaultDoorBlockStateValues = { open: false, isTop: false, facing: 0 };
 var DoorBlock = /** @class */ (function (_super) {
     __extends(DoorBlock, _super);
     function DoorBlock() {
         return _super.call(this, 'door', [
-            makeClosedDoorBlockModel(0, 'textures/blocks/oak_door_bottom.png'),
-            makeOpenedDoorBlockModel(0, 'textures/blocks/oak_door_bottom.png'),
-            makeClosedDoorBlockModel(0, 'textures/blocks/oak_door_top.png'),
-            makeOpenedDoorBlockModel(0, 'textures/blocks/oak_door_top.png'),
+            makeDoorBlockModel(false, 90, 'textures/blocks/oak_door_bottom.png'),
+            makeDoorBlockModel(true, 90, 'textures/blocks/oak_door_bottom.png'),
+            makeDoorBlockModel(false, 90, 'textures/blocks/oak_door_top.png'),
+            makeDoorBlockModel(true, 90, 'textures/blocks/oak_door_top.png'),
+            makeDoorBlockModel(false, 180, 'textures/blocks/oak_door_bottom.png'),
+            makeDoorBlockModel(true, 180, 'textures/blocks/oak_door_bottom.png'),
+            makeDoorBlockModel(false, 180, 'textures/blocks/oak_door_top.png'),
+            makeDoorBlockModel(true, 180, 'textures/blocks/oak_door_top.png'),
+            makeDoorBlockModel(false, 270, 'textures/blocks/oak_door_bottom.png'),
+            makeDoorBlockModel(true, 270, 'textures/blocks/oak_door_bottom.png'),
+            makeDoorBlockModel(false, 270, 'textures/blocks/oak_door_top.png'),
+            makeDoorBlockModel(true, 270, 'textures/blocks/oak_door_top.png'),
+            makeDoorBlockModel(false, 0, 'textures/blocks/oak_door_bottom.png'),
+            makeDoorBlockModel(true, 0, 'textures/blocks/oak_door_bottom.png'),
+            makeDoorBlockModel(false, 0, 'textures/blocks/oak_door_top.png'),
+            makeDoorBlockModel(true, 0, 'textures/blocks/oak_door_top.png'),
         ]) || this;
     }
     DoorBlock.prototype.getBlockModel = function (blockState) {
         var open = blockState.get('open');
         var top = blockState.get('isTop');
-        return (top ? 2 : 0) + (open ? 1 : 0);
+        var facing = blockState.get('facing');
+        return (top ? 2 : 0) + (open ? 1 : 0) + facing * 4;
     };
     DoorBlock.prototype.onSetBlock = function (world, pos) {
         var existingState = world.getBlockState(pos);
@@ -875,9 +1020,11 @@ var DoorBlock = /** @class */ (function (_super) {
         }
         world.setBlockState(pos, new _block_state_block_state__WEBPACK_IMPORTED_MODULE_2__.BlockState(__assign({}, DefaultDoorBlockStateValues)));
     };
-    DoorBlock.prototype.onPlace = function (world, pos) {
+    DoorBlock.prototype.onPlace = function (player, world, pos) {
+        var facing = player.getFacingDirection();
+        world.setBlockState(pos, new _block_state_block_state__WEBPACK_IMPORTED_MODULE_2__.BlockState(__assign(__assign({}, DefaultDoorBlockStateValues), { facing: facing })));
         var topPos = __assign(__assign({}, pos), { y: pos.y + 1 });
-        world.setBlockState(topPos, new _block_state_block_state__WEBPACK_IMPORTED_MODULE_2__.BlockState(__assign(__assign({}, DefaultDoorBlockStateValues), { isTop: true })));
+        world.setBlockState(topPos, new _block_state_block_state__WEBPACK_IMPORTED_MODULE_2__.BlockState(__assign(__assign({}, DefaultDoorBlockStateValues), { isTop: true, facing: facing })));
         world.setBlock(topPos, _blocks__WEBPACK_IMPORTED_MODULE_3__.Blocks.DOOR);
         return true;
     };
@@ -1945,14 +2092,15 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */   "Player": () => (/* binding */ Player)
 /* harmony export */ });
 /* harmony import */ var p_map__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! p-map */ "./node_modules/p-map/index.js");
-/* harmony import */ var three__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! three */ "./node_modules/three/build/three.module.js");
-/* harmony import */ var three_src_math_MathUtils__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! three/src/math/MathUtils */ "./node_modules/three/src/math/MathUtils.js");
+/* harmony import */ var three__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! three */ "./node_modules/three/build/three.module.js");
+/* harmony import */ var three_src_math_MathUtils__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! three/src/math/MathUtils */ "./node_modules/three/src/math/MathUtils.js");
 /* harmony import */ var _game__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../game */ "./src/game.ts");
 /* harmony import */ var _input_input__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../input/input */ "./src/input/input.ts");
 /* harmony import */ var _util_index_to_vector3__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../util/index-to-vector3 */ "./src/util/index-to-vector3.ts");
 /* harmony import */ var _util_random_element__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../util/random-element */ "./src/util/random-element.ts");
 /* harmony import */ var _block_blocks__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ../block/blocks */ "./src/block/blocks.ts");
 /* harmony import */ var _world_cursor__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ./world-cursor */ "./src/player/world-cursor.ts");
+/* harmony import */ var _util_mod__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ../util/mod */ "./src/util/mod.ts");
 var __awaiter = (undefined && undefined.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
     return new (P || (P = Promise))(function (resolve, reject) {
@@ -1998,6 +2146,7 @@ var __generator = (undefined && undefined.__generator) || function (thisArg, bod
 
 
 
+
 // TODO: Re-factor to:
 // - don't use createTerrainCollisionBoxes as it's stupid.
 // - use block-based ray-casting and not mesh-based ray-casting.
@@ -2013,18 +2162,18 @@ var Player = /** @class */ (function () {
         this.walkingSpeed = 0.025;
         this.flyingSpeed = 0.065;
         this.isOnGround = false;
-        this.velocity = new three__WEBPACK_IMPORTED_MODULE_7__.Vector3();
+        this.velocity = new three__WEBPACK_IMPORTED_MODULE_8__.Vector3();
         this.flying = false;
         this.noclip = false;
         this.start = false;
-        this.raycaster = new three__WEBPACK_IMPORTED_MODULE_7__.Raycaster();
-        this.collisionBox = new three__WEBPACK_IMPORTED_MODULE_7__.Box3(new three__WEBPACK_IMPORTED_MODULE_7__.Vector3(-0.35, 0, -0.35), new three__WEBPACK_IMPORTED_MODULE_7__.Vector3(0.35, 1.8, 0.35));
+        this.raycaster = new three__WEBPACK_IMPORTED_MODULE_8__.Raycaster();
+        this.collisionBox = new three__WEBPACK_IMPORTED_MODULE_8__.Box3(new three__WEBPACK_IMPORTED_MODULE_8__.Vector3(-0.35, 0, -0.35), new three__WEBPACK_IMPORTED_MODULE_8__.Vector3(0.35, 1.8, 0.35));
         this.terrainCollisionBoxes = [];
         this.placeBlockSounds = [];
         this.digBlockSounds = [];
         this.selectedBlockId = _block_blocks__WEBPACK_IMPORTED_MODULE_5__.Blocks.getBlockId(_block_blocks__WEBPACK_IMPORTED_MODULE_5__.Blocks.CAULDRON);
-        this.worldCursor = new _world_cursor__WEBPACK_IMPORTED_MODULE_6__.WorldCursor();
-        this.audio = new three__WEBPACK_IMPORTED_MODULE_7__.Audio(_game__WEBPACK_IMPORTED_MODULE_1__.Game.main.audioListener);
+        this.worldCursor = new _world_cursor__WEBPACK_IMPORTED_MODULE_6__.WorldCursor(_game__WEBPACK_IMPORTED_MODULE_1__.Game.main.blocks);
+        this.audio = new three__WEBPACK_IMPORTED_MODULE_8__.Audio(_game__WEBPACK_IMPORTED_MODULE_1__.Game.main.audioListener);
         this.updateMovement(0, 0);
         this.updateCamera(0);
     }
@@ -2042,7 +2191,7 @@ var Player = /** @class */ (function () {
             return __generator(this, function (_c) {
                 switch (_c.label) {
                     case 0:
-                        audioLoader = new three__WEBPACK_IMPORTED_MODULE_7__.AudioLoader();
+                        audioLoader = new three__WEBPACK_IMPORTED_MODULE_8__.AudioLoader();
                         _a = this;
                         return [4 /*yield*/, (0,p_map__WEBPACK_IMPORTED_MODULE_0__["default"])([
                                 'audio/dig0.mp3',
@@ -2095,21 +2244,21 @@ var Player = /** @class */ (function () {
                 if (this.input.isKeyDowned(_input_input__WEBPACK_IMPORTED_MODULE_2__.RightMouseButton)) {
                     var hitBlock = world.getBlock(hitBlockPos);
                     var interactionResult = hitBlock === null || hitBlock === void 0 ? void 0 : hitBlock.onInteract(world, hitBlockPos);
-                    if (interactionResult === false) {
+                    var samplePoint = intersection.point.clone().add(normalOffset);
+                    var _a = [
+                        Math.floor(samplePoint.x),
+                        Math.floor(samplePoint.y),
+                        Math.floor(samplePoint.z),
+                    ], hitX = _a[0], hitY = _a[1], hitZ = _a[2];
+                    var blockPos = new three__WEBPACK_IMPORTED_MODULE_8__.Vector3(hitX, hitY, hitZ);
+                    if (interactionResult === false && [_block_blocks__WEBPACK_IMPORTED_MODULE_5__.Blocks.AIR, _block_blocks__WEBPACK_IMPORTED_MODULE_5__.Blocks.WATER].includes(world.getBlock(blockPos))) {
                         if (this.audio.isPlaying)
                             this.audio.stop();
                         this.audio.setBuffer((0,_util_random_element__WEBPACK_IMPORTED_MODULE_4__.randomElement)(this.placeBlockSounds));
                         this.audio.play();
-                        var samplePoint = intersection.point.clone().add(normalOffset);
-                        var _a = [
-                            Math.floor(samplePoint.x),
-                            Math.floor(samplePoint.y),
-                            Math.floor(samplePoint.z),
-                        ], hitX = _a[0], hitY = _a[1], hitZ = _a[2];
-                        var blockPos = new three__WEBPACK_IMPORTED_MODULE_7__.Vector3(hitX, hitY, hitZ);
                         var blockToPlace = _block_blocks__WEBPACK_IMPORTED_MODULE_5__.Blocks.getBlockById(this.selectedBlockId);
                         _game__WEBPACK_IMPORTED_MODULE_1__.Game.main.level.setBlockAt(blockPos, blockToPlace);
-                        blockToPlace.onPlace(world, blockPos);
+                        blockToPlace.onPlace(this, world, blockPos);
                     }
                 }
             }
@@ -2140,16 +2289,16 @@ var Player = /** @class */ (function () {
             }
             var x = Math.cos(this.rotation.y);
             var z = Math.sin(this.rotation.y);
-            var forward = new three__WEBPACK_IMPORTED_MODULE_7__.Vector2(x, z).normalize();
-            var right = new three__WEBPACK_IMPORTED_MODULE_7__.Vector2(-z, x).normalize();
-            this.velocity.multiply(new three__WEBPACK_IMPORTED_MODULE_7__.Vector3(0.9, 1, 0.9));
+            var forward = new three__WEBPACK_IMPORTED_MODULE_8__.Vector2(x, z).normalize();
+            var right = new three__WEBPACK_IMPORTED_MODULE_8__.Vector2(-z, x).normalize();
+            this.velocity.multiply(new three__WEBPACK_IMPORTED_MODULE_8__.Vector3(0.9, 1, 0.9));
             var inputVector = this.getInputVector();
-            this.velocity.add(new three__WEBPACK_IMPORTED_MODULE_7__.Vector3((forward.y * inputVector.x + right.y * inputVector.z) * movementSpeed, inputVector.y, (forward.x * inputVector.x + right.x * inputVector.z) * movementSpeed));
+            this.velocity.add(new three__WEBPACK_IMPORTED_MODULE_8__.Vector3((forward.y * inputVector.x + right.y * inputVector.z) * movementSpeed, inputVector.y, (forward.x * inputVector.x + right.x * inputVector.z) * movementSpeed));
             if (!this.flying) {
                 this.velocity.setY(this.velocity.y - 0.00005 * deltaTime);
             }
             else {
-                this.velocity.multiply(new three__WEBPACK_IMPORTED_MODULE_7__.Vector3(1, 0.9, 1));
+                this.velocity.multiply(new three__WEBPACK_IMPORTED_MODULE_8__.Vector3(1, 0.9, 1));
             }
         }
         if (!this.noclip) {
@@ -2159,7 +2308,7 @@ var Player = /** @class */ (function () {
         this.updateCamera(deltaTime);
     };
     Player.prototype.getInputVector = function () {
-        var inputVector = new three__WEBPACK_IMPORTED_MODULE_7__.Vector3();
+        var inputVector = new three__WEBPACK_IMPORTED_MODULE_8__.Vector3();
         if (this.input.isKeyPressed('W')) {
             inputVector.setX(-1);
         }
@@ -2184,7 +2333,7 @@ var Player = /** @class */ (function () {
         return inputVector;
     };
     Player.prototype.updateCollision = function (deltaTime, movementSpeed) {
-        var deltaPosition = this.velocity.clone().multiplyScalar(deltaTime).multiply(new three__WEBPACK_IMPORTED_MODULE_7__.Vector3(movementSpeed, 1, movementSpeed));
+        var deltaPosition = this.velocity.clone().multiplyScalar(deltaTime).multiply(new three__WEBPACK_IMPORTED_MODULE_8__.Vector3(movementSpeed, 1, movementSpeed));
         var potential = this.position.clone().add(deltaPosition);
         var collisionX = this.createTerrainCollisionBoxes([potential.x, this.position.y, this.position.z]);
         if (collisionX) {
@@ -2204,7 +2353,7 @@ var Player = /** @class */ (function () {
     };
     Player.prototype.createTerrainCollisionBoxes = function (_a) {
         var x = _a[0], y = _a[1], z = _a[2];
-        this.collisionBox.set(new three__WEBPACK_IMPORTED_MODULE_7__.Vector3(x - 0.35, y, z - 0.35), new three__WEBPACK_IMPORTED_MODULE_7__.Vector3(x + 0.35, y + 1.8, z + 0.35));
+        this.collisionBox.set(new three__WEBPACK_IMPORTED_MODULE_8__.Vector3(x - 0.35, y, z - 0.35), new three__WEBPACK_IMPORTED_MODULE_8__.Vector3(x + 0.35, y + 1.8, z + 0.35));
         var world = _game__WEBPACK_IMPORTED_MODULE_1__.Game.main.level.getWorld();
         var _b = [Math.floor(x + 0.5), Math.floor(y + 0.5), Math.floor(z + 0.5)], blockX = _b[0], blockY = _b[1], blockZ = _b[2];
         for (var ix = -2; ix < 2; ix += 1) {
@@ -2212,12 +2361,12 @@ var Player = /** @class */ (function () {
                 for (var iz = -2; iz < 2; iz += 1) {
                     var boxIndex = (0,_util_index_to_vector3__WEBPACK_IMPORTED_MODULE_3__.xyzTupelToIndex)(ix + 2, iy + 2, iz + 2, 5, 5);
                     if (!this.terrainCollisionBoxes[boxIndex]) {
-                        this.terrainCollisionBoxes[boxIndex] = new three__WEBPACK_IMPORTED_MODULE_7__.Box3();
+                        this.terrainCollisionBoxes[boxIndex] = new three__WEBPACK_IMPORTED_MODULE_8__.Box3();
                     }
-                    var blockPos = new three__WEBPACK_IMPORTED_MODULE_7__.Vector3(blockX + ix, blockY + iy, blockZ + iz);
+                    var blockPos = new three__WEBPACK_IMPORTED_MODULE_8__.Vector3(blockX + ix, blockY + iy, blockZ + iz);
                     var block = _game__WEBPACK_IMPORTED_MODULE_1__.Game.main.level.getBlockAt(blockPos);
                     var solidBlock = block !== undefined && block.isCollidable(world, blockPos);
-                    this.terrainCollisionBoxes[boxIndex].set(new three__WEBPACK_IMPORTED_MODULE_7__.Vector3(blockX + ix, blockY + iy, blockZ + iz), new three__WEBPACK_IMPORTED_MODULE_7__.Vector3(blockX + ix + 1, blockY + iy + 1, blockZ + iz + 1));
+                    this.terrainCollisionBoxes[boxIndex].set(new three__WEBPACK_IMPORTED_MODULE_8__.Vector3(blockX + ix, blockY + iy, blockZ + iz), new three__WEBPACK_IMPORTED_MODULE_8__.Vector3(blockX + ix + 1, blockY + iy + 1, blockZ + iz + 1));
                     if (!solidBlock) {
                         continue;
                     }
@@ -2231,16 +2380,19 @@ var Player = /** @class */ (function () {
         return false;
     };
     Player.prototype.updateMovement = function (deltaTime, movementSpeed) {
-        this.position.add(this.velocity.clone().multiplyScalar(deltaTime).multiply(new three__WEBPACK_IMPORTED_MODULE_7__.Vector3(movementSpeed, 1, movementSpeed)));
+        this.position.add(this.velocity.clone().multiplyScalar(deltaTime).multiply(new three__WEBPACK_IMPORTED_MODULE_8__.Vector3(movementSpeed, 1, movementSpeed)));
     };
     Player.prototype.updateCamera = function (deltaTime) {
         this.camera.position.set(this.position.x, this.position.y + 1.8, this.position.z);
-        this.rotation.x = three__WEBPACK_IMPORTED_MODULE_7__.MathUtils.clamp(this.rotation.x + (0,three_src_math_MathUtils__WEBPACK_IMPORTED_MODULE_8__.degToRad)(deltaTime * this.input.getMouseDelta()[1] * -0.01), -0.4999 * Math.PI, 0.4999 * Math.PI);
-        this.rotation.y += (0,three_src_math_MathUtils__WEBPACK_IMPORTED_MODULE_8__.degToRad)(deltaTime * this.input.getMouseDelta()[0] * -0.01);
+        this.rotation.x = three__WEBPACK_IMPORTED_MODULE_8__.MathUtils.clamp(this.rotation.x + (0,three_src_math_MathUtils__WEBPACK_IMPORTED_MODULE_9__.degToRad)(deltaTime * this.input.getMouseDelta()[1] * -0.01), -0.4999 * Math.PI, 0.4999 * Math.PI);
+        this.rotation.y += (0,three_src_math_MathUtils__WEBPACK_IMPORTED_MODULE_9__.degToRad)(deltaTime * this.input.getMouseDelta()[0] * -0.01);
         var phi = this.rotation.x - 0.5 * Math.PI;
         var theta = this.rotation.y;
-        var target = new three__WEBPACK_IMPORTED_MODULE_7__.Vector3().setFromSphericalCoords(1, phi, theta).add(this.camera.position);
+        var target = new three__WEBPACK_IMPORTED_MODULE_8__.Vector3().setFromSphericalCoords(1, phi, theta).add(this.camera.position);
         this.camera.lookAt(target);
+    };
+    Player.prototype.getFacingDirection = function () {
+        return (0,_util_mod__WEBPACK_IMPORTED_MODULE_7__.mod)(Math.round((0,three_src_math_MathUtils__WEBPACK_IMPORTED_MODULE_9__.radToDeg)(this.rotation.y) / 90), 4);
     };
     return Player;
 }());
@@ -2289,21 +2441,43 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */ __webpack_require__.d(__webpack_exports__, {
 /* harmony export */   "WorldCursor": () => (/* binding */ WorldCursor)
 /* harmony export */ });
-/* harmony import */ var three__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! three */ "./node_modules/three/build/three.module.js");
-/* harmony import */ var _world_cursor_material__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./world-cursor-material */ "./src/player/world-cursor-material.ts");
+/* harmony import */ var three__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! three */ "./node_modules/three/build/three.module.js");
+/* harmony import */ var _block_block_face__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../block/block-face */ "./src/block/block-face.ts");
+/* harmony import */ var _block_block_model_block_model_renderer__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../block/block-model/block-model-renderer */ "./src/block/block-model/block-model-renderer.ts");
+/* harmony import */ var _util_bounding_box__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../util/bounding-box */ "./src/util/bounding-box.ts");
+/* harmony import */ var _world_cursor_material__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./world-cursor-material */ "./src/player/world-cursor-material.ts");
+var _a;
 
 
+
+
+
+var BLOCK_CURSOR_SOLIDITY_MAP = (_a = {},
+    _a[_block_block_face__WEBPACK_IMPORTED_MODULE_0__.BlockFace.TOP] = false,
+    _a[_block_block_face__WEBPACK_IMPORTED_MODULE_0__.BlockFace.BOTTOM] = false,
+    _a[_block_block_face__WEBPACK_IMPORTED_MODULE_0__.BlockFace.LEFT] = false,
+    _a[_block_block_face__WEBPACK_IMPORTED_MODULE_0__.BlockFace.RIGHT] = false,
+    _a[_block_block_face__WEBPACK_IMPORTED_MODULE_0__.BlockFace.FRONT] = false,
+    _a[_block_block_face__WEBPACK_IMPORTED_MODULE_0__.BlockFace.BACK] = false,
+    _a);
+var BlockCursorOverlap = 0.05;
 var WorldCursor = /** @class */ (function () {
-    function WorldCursor() {
-        this.overlap = 0.001;
-        this.material = (0,_world_cursor_material__WEBPACK_IMPORTED_MODULE_0__.createWorldCursorMaterial)();
-        this.parent = new three__WEBPACK_IMPORTED_MODULE_1__.Object3D();
+    function WorldCursor(blocks) {
+        this.material = (0,_world_cursor_material__WEBPACK_IMPORTED_MODULE_3__.createWorldCursorMaterial)();
+        this.parent = new three__WEBPACK_IMPORTED_MODULE_4__.Object3D();
+        var elementFromToModifier = function (_a) {
+            var from = _a[0], to = _a[1];
+            return [
+                from.map(function (value) { return value - BlockCursorOverlap; }),
+                to.map(function (value) { return value + BlockCursorOverlap; }),
+            ];
+        };
+        this.blockModelRenderer = new _block_block_model_block_model_renderer__WEBPACK_IMPORTED_MODULE_1__.BlockModelRenderer(blocks.serializeBlockModels().textureUvs, elementFromToModifier);
     }
     WorldCursor.prototype.register = function (scene) {
         scene.add(this.parent);
     };
     WorldCursor.prototype.set = function (world, pos) {
-        var _a;
         this.hide();
         var block = world.getBlock(pos);
         var state = world.getBlockState(pos);
@@ -2312,35 +2486,62 @@ var WorldCursor = /** @class */ (function () {
         }
         var modelIndex = state ? block.getBlockModel(state) : 0;
         var model = block.blockModels[modelIndex];
-        var meshes = this.buildMeshes(model, pos);
-        (_a = this.parent).add.apply(_a, meshes);
+        var modelMesh = this.blockModelRenderer.render(new three__WEBPACK_IMPORTED_MODULE_4__.Vector3(pos.x, pos.y, pos.z), model, BLOCK_CURSOR_SOLIDITY_MAP);
+        var points = [];
+        for (var i = 0; i < modelMesh.vertices.length; i += 3) {
+            points.push(new three__WEBPACK_IMPORTED_MODULE_4__.Vector3(modelMesh.vertices[i], modelMesh.vertices[i + 1], modelMesh.vertices[i + 2]));
+        }
+        var boundingBox = (0,_util_bounding_box__WEBPACK_IMPORTED_MODULE_2__.computeBoundingBox)(points);
+        var _a = boundingBox.getSize(new three__WEBPACK_IMPORTED_MODULE_4__.Vector3()).toArray(), width = _a[0], height = _a[1], depth = _a[2];
+        var boundingBoxGeometry = new three__WEBPACK_IMPORTED_MODULE_4__.BoxGeometry(width, height, depth);
+        var mesh = new three__WEBPACK_IMPORTED_MODULE_4__.Mesh(boundingBoxGeometry, this.material);
+        mesh.position.x = boundingBox.min.x + width / 2;
+        mesh.position.y = boundingBox.min.y + height / 2;
+        mesh.position.z = boundingBox.min.z + depth / 2;
+        this.parent.add(mesh);
     };
     WorldCursor.prototype.hide = function () {
         this.parent.clear();
     };
-    WorldCursor.prototype.buildMeshes = function (model, pos) {
-        var _this = this;
-        return model.elements.map(function (element) {
-            var _a = _this.normalizeToFrom(element.from, element.to), from = _a[0], to = _a[1];
-            var _b = [
-                (to[0] - from[0]) / 15 + _this.overlap * 2,
-                (to[1] - from[1]) / 15 + _this.overlap * 2,
-                (to[2] - from[2]) / 15 + _this.overlap * 2,
-            ], width = _b[0], height = _b[1], depth = _b[2];
-            var newGeometry = new three__WEBPACK_IMPORTED_MODULE_1__.BoxGeometry(width, height, depth);
-            newGeometry.translate((pos.x + width / 2) + from[0] / 15 - _this.overlap, (pos.y + height / 2) + from[1] / 15 - _this.overlap, (pos.z + depth / 2) + from[2] / 15 - _this.overlap);
-            return new three__WEBPACK_IMPORTED_MODULE_1__.Mesh(newGeometry, _this.material);
-        });
-    };
-    WorldCursor.prototype.normalizeToFrom = function (from, to) {
-        return [
-            [Math.min(from[0], to[0]), Math.min(from[1], to[1]), Math.min(from[2], to[2])],
-            [Math.max(from[0], to[0]), Math.max(from[1], to[1]), Math.max(from[2], to[2])],
-        ];
-    };
     return WorldCursor;
 }());
 
+
+
+/***/ }),
+
+/***/ "./src/util/bounding-box.ts":
+/*!**********************************!*\
+  !*** ./src/util/bounding-box.ts ***!
+  \**********************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "computeBoundingBox": () => (/* binding */ computeBoundingBox)
+/* harmony export */ });
+/* harmony import */ var three__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! three */ "./node_modules/three/build/three.module.js");
+
+function computeBoundingBox(points) {
+    var box = new three__WEBPACK_IMPORTED_MODULE_0__.Box3();
+    for (var i = 0; i < points.length; i++) {
+        var _a = points[i], x = _a.x, y = _a.y, z = _a.z;
+        if (x < box.min.x)
+            box.min.x = x;
+        if (x > box.max.x)
+            box.max.x = x;
+        if (y < box.min.y)
+            box.min.y = y;
+        if (y > box.max.y)
+            box.max.y = y;
+        if (z < box.min.z)
+            box.min.z = z;
+        if (z > box.max.z)
+            box.max.z = z;
+    }
+    return box;
+}
 
 
 /***/ }),
@@ -2655,157 +2856,118 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */ __webpack_require__.d(__webpack_exports__, {
 /* harmony export */   "ChunkColumnManager": () => (/* binding */ ChunkColumnManager)
 /* harmony export */ });
+/* harmony import */ var three__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! three */ "./node_modules/three/build/three.module.js");
 /* harmony import */ var _chunk_column__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./chunk-column */ "./src/world/chunk-column.ts");
-/* harmony import */ var p_all__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! p-all */ "./node_modules/p-all/index.js");
-var __awaiter = (undefined && undefined.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
-var __generator = (undefined && undefined.__generator) || function (thisArg, body) {
-    var _ = { label: 0, sent: function() { if (t[0] & 1) throw t[1]; return t[1]; }, trys: [], ops: [] }, f, y, t, g;
-    return g = { next: verb(0), "throw": verb(1), "return": verb(2) }, typeof Symbol === "function" && (g[Symbol.iterator] = function() { return this; }), g;
-    function verb(n) { return function (v) { return step([n, v]); }; }
-    function step(op) {
-        if (f) throw new TypeError("Generator is already executing.");
-        while (_) try {
-            if (f = 1, y && (t = op[0] & 2 ? y["return"] : op[0] ? y["throw"] || ((t = y["return"]) && t.call(y), 0) : y.next) && !(t = t.call(y, op[1])).done) return t;
-            if (y = 0, t) op = [op[0] & 2, t.value];
-            switch (op[0]) {
-                case 0: case 1: t = op; break;
-                case 4: _.label++; return { value: op[1], done: false };
-                case 5: _.label++; y = op[1]; op = [0]; continue;
-                case 7: op = _.ops.pop(); _.trys.pop(); continue;
-                default:
-                    if (!(t = _.trys, t = t.length > 0 && t[t.length - 1]) && (op[0] === 6 || op[0] === 2)) { _ = 0; continue; }
-                    if (op[0] === 3 && (!t || (op[1] > t[0] && op[1] < t[3]))) { _.label = op[1]; break; }
-                    if (op[0] === 6 && _.label < t[1]) { _.label = t[1]; t = op; break; }
-                    if (t && _.label < t[2]) { _.label = t[2]; _.ops.push(op); break; }
-                    if (t[2]) _.ops.pop();
-                    _.trys.pop(); continue;
-            }
-            op = body.call(thisArg, _);
-        } catch (e) { op = [6, e]; y = 0; } finally { f = t = 0; }
-        if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
-    }
-};
-var __spreadArray = (undefined && undefined.__spreadArray) || function (to, from, pack) {
-    if (pack || arguments.length === 2) for (var i = 0, l = from.length, ar; i < l; i++) {
-        if (ar || !(i in from)) {
-            if (!ar) ar = Array.prototype.slice.call(from, 0, i);
-            ar[i] = from[i];
-        }
-    }
-    return to.concat(ar || Array.prototype.slice.call(from));
-};
 
 
+var ChunkColumnState;
+(function (ChunkColumnState) {
+    ChunkColumnState[ChunkColumnState["Unregistered"] = -1] = "Unregistered";
+    ChunkColumnState[ChunkColumnState["Registered"] = 0] = "Registered";
+    ChunkColumnState[ChunkColumnState["Generating"] = 1] = "Generating";
+    ChunkColumnState[ChunkColumnState["Generated"] = 2] = "Generated";
+    ChunkColumnState[ChunkColumnState["Rendering"] = 3] = "Rendering";
+    ChunkColumnState[ChunkColumnState["Rendered"] = 4] = "Rendered";
+})(ChunkColumnState || (ChunkColumnState = {}));
 var ChunkColumnManager = /** @class */ (function () {
     function ChunkColumnManager(scene, renderDistance, simulationDistance, chunkUpdateConcurrency) {
         this.scene = scene;
         this.renderDistance = renderDistance;
         this.simulationDistance = simulationDistance;
         this.chunkUpdateConcurrency = chunkUpdateConcurrency;
-        this.chunkColumns = {};
-        this.chunkColumnPositions = [];
-        this.requestedUpdateChunkColumns = [];
-        this.numberOfCurrentlyRunningRequestedChunkUpdates = 0;
+        this.loadedChunkColumns = [];
+        this.chunkColumnStates = new Map();
     }
     ChunkColumnManager.prototype.setCenter = function (centerX, centerZ) {
-        var _this = this;
-        var candidateRange = Math.max(this.renderDistance, this.simulationDistance) + 2;
-        var candidates = [];
-        for (var x = -candidateRange; x <= candidateRange; x += 1) {
-            for (var z = -candidateRange; z <= candidateRange; z += 1) {
-                candidates.push({
-                    x: x + centerX,
-                    z: z + centerZ,
-                    priority: this.calculateChunkColumnPriority(x, z),
-                });
-            }
-        }
-        // Load new columns
-        (0,p_all__WEBPACK_IMPORTED_MODULE_1__["default"])(candidates.map(function (candidate) { return function () { return __awaiter(_this, void 0, void 0, function () {
-            var chunkColumn;
-            return __generator(this, function (_a) {
-                switch (_a.label) {
-                    case 0:
-                        chunkColumn = this.getChunkColumn(candidate.x, candidate.z);
-                        if (!!chunkColumn) return [3 /*break*/, 2];
-                        chunkColumn = new _chunk_column__WEBPACK_IMPORTED_MODULE_0__.ChunkColumn(this, [candidate.x, candidate.z], 8);
-                        chunkColumn.register(this.scene);
-                        this.setChunkColumn(candidate.x, candidate.z, chunkColumn);
-                        return [4 /*yield*/, chunkColumn.generatePrototype()];
-                    case 1:
-                        _a.sent();
-                        _a.label = 2;
-                    case 2: return [4 /*yield*/, chunkColumn.setPriority(candidate.priority)];
-                    case 3:
-                        _a.sent();
-                        return [2 /*return*/];
+        var range = Math.max(this.renderDistance, this.simulationDistance) + 2;
+        for (var offsetX = -range; offsetX <= range; offsetX += 1) {
+            for (var offsetZ = -range; offsetZ <= range; offsetZ += 1) {
+                var x = centerX + offsetX;
+                var z = centerZ + offsetZ;
+                var targetState = this.calculateChunkColumnTargetState(offsetX, offsetZ);
+                var maybeExistingColumn = this.getChunkColumn(x, z);
+                if (maybeExistingColumn) {
+                    var currentState = this.chunkColumnStates.get(maybeExistingColumn);
+                    this.chunkColumnStates.set(maybeExistingColumn, {
+                        is: currentState.is,
+                        target: targetState,
+                    });
                 }
-            });
-        }); }; }), { concurrency: this.chunkUpdateConcurrency });
-        // Unload old columns
-        for (var _i = 0, _a = this.chunkColumnPositions; _i < _a.length; _i++) {
-            var _b = _a[_i], x = _b[0], z = _b[1];
-            var remove = Math.abs(x - centerX) > this.renderDistance + 1 || Math.abs(z - centerZ) > this.renderDistance + 1;
-            var chunkColumn = this.getChunkColumn(x, z);
-            if (remove && chunkColumn) {
-                chunkColumn.unregister(this.scene);
-                this.setChunkColumn(x, z, undefined);
+                else {
+                    var newColumn = new _chunk_column__WEBPACK_IMPORTED_MODULE_0__.ChunkColumn(this, [x, z], 8);
+                    this.loadedChunkColumns.push(newColumn);
+                    newColumn.register(this.scene);
+                    this.chunkColumnStates.set(newColumn, {
+                        is: ChunkColumnState.Registered,
+                        target: targetState,
+                    });
+                }
             }
         }
+        this.loadedChunkColumns.sort(function (a, b) {
+            var aDist = new three__WEBPACK_IMPORTED_MODULE_1__.Vector2().fromArray(a.position).distanceTo(new three__WEBPACK_IMPORTED_MODULE_1__.Vector2(centerX, centerZ));
+            var bDist = new three__WEBPACK_IMPORTED_MODULE_1__.Vector2().fromArray(b.position).distanceTo(new three__WEBPACK_IMPORTED_MODULE_1__.Vector2(centerX, centerZ));
+            return aDist - bDist;
+        });
     };
     ChunkColumnManager.prototype.update = function (deltaTime) {
-        this.handleRequestedChunkUpdates();
+        var _this = this;
+        var _loop_1 = function (i) {
+            var chunkColumn = this_1.loadedChunkColumns[i];
+            var state = this_1.chunkColumnStates.get(chunkColumn);
+            if (state.is === state.target) {
+                return out_i_1 = i, "continue";
+            }
+            if (state.is > state.target && state.target === ChunkColumnState.Unregistered) {
+                this_1.loadedChunkColumns.splice(i, 1);
+                chunkColumn.unregister(this_1.scene);
+                this_1.chunkColumnStates.delete(chunkColumn);
+                i--;
+                return out_i_1 = i, "continue";
+            }
+            if (state.is === ChunkColumnState.Registered) {
+                this_1.chunkColumnStates.set(chunkColumn, { is: ChunkColumnState.Generating, target: state.target });
+                Promise.all(chunkColumn.chunks.map(function (chunk) { return chunk.generateTerrain(); })).then(function () {
+                    var currentState = _this.chunkColumnStates.get(chunkColumn);
+                    _this.chunkColumnStates.set(chunkColumn, { is: ChunkColumnState.Generated, target: currentState.target });
+                });
+                return { value: void 0 };
+            }
+            if (state.is === ChunkColumnState.Generated && this_1.areNeighborColumnsGenerated(chunkColumn)) {
+                this_1.chunkColumnStates.set(chunkColumn, { is: ChunkColumnState.Rendering, target: state.target });
+                Promise.all(chunkColumn.chunks.map(function (chunk) { return chunk.buildMesh(); })).then(function () {
+                    var currentState = _this.chunkColumnStates.get(chunkColumn);
+                    _this.chunkColumnStates.set(chunkColumn, { is: ChunkColumnState.Rendered, target: currentState.target });
+                });
+                return { value: void 0 };
+            }
+            out_i_1 = i;
+        };
+        var this_1 = this, out_i_1;
+        for (var i = 0; i < this.loadedChunkColumns.length; i++) {
+            var state_1 = _loop_1(i);
+            i = out_i_1;
+            if (typeof state_1 === "object")
+                return state_1.value;
+        }
     };
-    ChunkColumnManager.prototype.handleRequestedChunkUpdates = function () {
-        return __awaiter(this, void 0, void 0, function () {
-            var chunkColumnToUpdate;
-            return __generator(this, function (_a) {
-                switch (_a.label) {
-                    case 0:
-                        if (this.numberOfCurrentlyRunningRequestedChunkUpdates > 100) {
-                            return [2 /*return*/];
-                        }
-                        chunkColumnToUpdate = this.requestedUpdateChunkColumns.pop();
-                        if (!chunkColumnToUpdate) {
-                            return [2 /*return*/];
-                        }
-                        this.numberOfCurrentlyRunningRequestedChunkUpdates += 1;
-                        return [4 /*yield*/, chunkColumnToUpdate.requestedUpdate()];
-                    case 1:
-                        _a.sent();
-                        this.numberOfCurrentlyRunningRequestedChunkUpdates -= 1;
-                        return [2 /*return*/];
-                }
-            });
+    ChunkColumnManager.prototype.areNeighborColumnsGenerated = function (chunkColumn) {
+        var _this = this;
+        return ![[-1, 0], [1, 0], [0, -1], [0, 1]].some(function (offset) {
+            var position = [chunkColumn.position[0] + offset[0], chunkColumn.position[1] + offset[1]];
+            var neighbor = _this.getChunkColumn(position[0], position[1]);
+            if (!neighbor) {
+                return true;
+            }
+            var state = _this.chunkColumnStates.get(neighbor);
+            return state === undefined || state.is < ChunkColumnState.Generated;
         });
     };
     ChunkColumnManager.prototype.lateUpdate = function (deltaTime) {
-        var _this = this;
-        this.chunkColumnPositions.forEach(function (_a) {
-            var x = _a[0], z = _a[1];
-            var chunkColumn = _this.getChunkColumn(x, z);
-            if (chunkColumn) {
-                chunkColumn.lateUpdate(deltaTime);
-            }
-        });
+        this.loadedChunkColumns.forEach(function (chunkColumn) { return chunkColumn.lateUpdate(deltaTime); });
     };
     ChunkColumnManager.prototype.tick = function (deltaTime) {
-        var _this = this;
-        this.chunkColumnPositions.forEach(function (_a) {
-            var x = _a[0], z = _a[1];
-            var chunkColumn = _this.getChunkColumn(x, z);
-            if (chunkColumn) {
-                chunkColumn.onTick(deltaTime);
-            }
-        });
+        this.loadedChunkColumns.forEach(function (chunkColumn) { return chunkColumn.onTick(deltaTime); });
     };
     ChunkColumnManager.prototype.getChunkByBlockPos = function (pos) {
         var x = Math.floor(pos.x / 16);
@@ -2818,48 +2980,27 @@ var ChunkColumnManager = /** @class */ (function () {
         return column.chunks[y];
     };
     ChunkColumnManager.prototype.__tempGetChunkMeshes = function () {
-        var _this = this;
-        return this.chunkColumnPositions.flatMap(function (cp) { var _a, _b; return (_b = (_a = _this.chunkColumns[cp[0]][cp[1]]) === null || _a === void 0 ? void 0 : _a.getChunkMeshes()) !== null && _b !== void 0 ? _b : []; });
+        return this.loadedChunkColumns.flatMap(function (column) { return column.getChunkMeshes(); });
     };
-    ChunkColumnManager.prototype.requestChunkUpdate = function (chunkColumnToAdd) {
-        this.requestedUpdateChunkColumns = __spreadArray(__spreadArray([], this.requestedUpdateChunkColumns.filter(function (chunkColumn) { return chunkColumn != chunkColumnToAdd; }), true), [
-            chunkColumnToAdd,
-        ], false);
-    };
-    ChunkColumnManager.prototype.calculateChunkColumnPriority = function (x, z) {
+    ChunkColumnManager.prototype.calculateChunkColumnTargetState = function (x, z) {
         var absX = Math.abs(x);
         var absZ = Math.abs(z);
         if (absX < this.simulationDistance && absZ < this.simulationDistance) {
-            return _chunk_column__WEBPACK_IMPORTED_MODULE_0__.ChunkColumnPriority.High;
+            return ChunkColumnState.Rendered;
         }
         if (absX < this.renderDistance && absZ < this.renderDistance) {
-            return _chunk_column__WEBPACK_IMPORTED_MODULE_0__.ChunkColumnPriority.Middle;
+            return ChunkColumnState.Rendered;
         }
         if (absX < this.renderDistance + 1 && absZ < this.renderDistance + 1) {
-            return _chunk_column__WEBPACK_IMPORTED_MODULE_0__.ChunkColumnPriority.Low;
+            return ChunkColumnState.Generated;
         }
-        return _chunk_column__WEBPACK_IMPORTED_MODULE_0__.ChunkColumnPriority.Lowest;
-    };
-    ChunkColumnManager.prototype.setChunkColumn = function (x, z, chunkColumn) {
-        if (!this.chunkColumns[x]) {
-            this.chunkColumns[x] = {};
+        if (Math.abs(x) > this.renderDistance + 1 || Math.abs(z) > this.renderDistance + 1) {
+            return ChunkColumnState.Unregistered;
         }
-        if (chunkColumn !== undefined) {
-            this.chunkColumnPositions.push([x, z]);
-        }
-        else {
-            this.chunkColumnPositions = this.chunkColumnPositions.filter(function (_a) {
-                var pX = _a[0], pZ = _a[1];
-                return pX !== x || pZ !== z;
-            });
-        }
-        this.chunkColumns[x][z] = chunkColumn;
+        return ChunkColumnState.Registered;
     };
     ChunkColumnManager.prototype.getChunkColumn = function (x, z) {
-        if (!this.chunkColumns[x]) {
-            return;
-        }
-        return this.chunkColumns[x][z];
+        return this.loadedChunkColumns.find(function (element) { return element.position[0] === x && element.position[1] === z; });
     };
     return ChunkColumnManager;
 }());
@@ -2877,13 +3018,10 @@ var ChunkColumnManager = /** @class */ (function () {
 "use strict";
 __webpack_require__.r(__webpack_exports__);
 /* harmony export */ __webpack_require__.d(__webpack_exports__, {
-/* harmony export */   "ChunkColumnPriority": () => (/* binding */ ChunkColumnPriority),
 /* harmony export */   "ChunkColumn": () => (/* binding */ ChunkColumn)
 /* harmony export */ });
-/* harmony import */ var three__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! three */ "./node_modules/three/build/three.module.js");
-/* harmony import */ var _game__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../game */ "./src/game.ts");
-/* harmony import */ var _chunk__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./chunk */ "./src/world/chunk.ts");
-/* harmony import */ var p_each_series__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! p-each-series */ "./node_modules/p-each-series/index.js");
+/* harmony import */ var three__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! three */ "./node_modules/three/build/three.module.js");
+/* harmony import */ var _chunk__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./chunk */ "./src/world/chunk.ts");
 var __awaiter = (undefined && undefined.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
     return new (P || (P = Promise))(function (resolve, reject) {
@@ -2922,29 +3060,13 @@ var __generator = (undefined && undefined.__generator) || function (thisArg, bod
 };
 
 
-
-
-var ChunkColumnPriority;
-(function (ChunkColumnPriority) {
-    // Render & Tick
-    ChunkColumnPriority[ChunkColumnPriority["High"] = 3] = "High";
-    // Render
-    ChunkColumnPriority[ChunkColumnPriority["Middle"] = 2] = "Middle";
-    // Generate
-    ChunkColumnPriority[ChunkColumnPriority["Low"] = 1] = "Low";
-    // Prepare
-    ChunkColumnPriority[ChunkColumnPriority["Lowest"] = 0] = "Lowest";
-})(ChunkColumnPriority || (ChunkColumnPriority = {}));
 var ChunkColumn = /** @class */ (function () {
     function ChunkColumn(manager, position, height) {
         this.manager = manager;
         this.position = position;
         this.chunks = [];
-        this.chunksBuilt = false;
-        this.chunksGenerated = false;
-        this.priority = ChunkColumnPriority.Lowest;
         for (var i = 0; i < height; i++) {
-            this.chunks.push(new _chunk__WEBPACK_IMPORTED_MODULE_1__.Chunk(this, new three__WEBPACK_IMPORTED_MODULE_3__.Vector3(position[0], i, position[1])));
+            this.chunks.push(new _chunk__WEBPACK_IMPORTED_MODULE_0__.Chunk(this, new three__WEBPACK_IMPORTED_MODULE_1__.Vector3(position[0], i, position[1])));
         }
     }
     ChunkColumn.prototype.register = function (scene) {
@@ -2954,118 +3076,34 @@ var ChunkColumn = /** @class */ (function () {
         this.chunks.forEach(function (chunk) { return chunk.unregister(scene); });
     };
     ChunkColumn.prototype.generatePrototype = function () {
-        return __awaiter(this, void 0, void 0, function () {
-            var _a;
-            return __generator(this, function (_b) {
-                switch (_b.label) {
-                    case 0:
-                        if (this.heightMap) {
-                            return [2 /*return*/];
-                        }
-                        _a = this;
-                        return [4 /*yield*/, _game__WEBPACK_IMPORTED_MODULE_0__.Game.main.chunkGeneratorPool.generateHeightMap(this.position)];
-                    case 1:
-                        _a.heightMap = _b.sent();
-                        return [2 /*return*/];
-                }
-            });
-        });
-    };
-    ChunkColumn.prototype.setPriority = function (priority) {
-        return __awaiter(this, void 0, void 0, function () {
-            var oldPriority;
-            return __generator(this, function (_a) {
-                switch (_a.label) {
-                    case 0:
-                        if (this.priority === priority) {
-                            return [2 /*return*/];
-                        }
-                        oldPriority = this.priority;
-                        this.priority = priority;
-                        if (!(priority >= ChunkColumnPriority.Low && priority > oldPriority)) return [3 /*break*/, 3];
-                        if (!!this.chunksGenerated) return [3 /*break*/, 2];
-                        return [4 /*yield*/, (0,p_each_series__WEBPACK_IMPORTED_MODULE_2__["default"])(this.chunks, function (chunk) { return chunk.generateTerrain(true); })];
-                    case 1:
-                        _a.sent();
-                        this.chunksGenerated = true;
-                        _a.label = 2;
-                    case 2:
-                        this.manager.requestChunkUpdate(this);
-                        _a.label = 3;
-                    case 3: return [2 /*return*/];
-                }
-            });
-        });
-    };
-    ChunkColumn.prototype.requestedUpdate = function () {
-        return __awaiter(this, void 0, void 0, function () {
-            return __generator(this, function (_a) {
-                switch (_a.label) {
-                    case 0:
-                        if (!(this.chunksGenerated
-                            && !this.chunksBuilt
-                            && this.areNeighborsGenerated())) return [3 /*break*/, 2];
-                        return [4 /*yield*/, Promise.all(this.chunks.map(function (chunk) { return chunk.buildMesh(); }))];
-                    case 1:
-                        _a.sent();
-                        this.chunksBuilt = true;
-                        this.requestNeighborColumnsToUpdate();
-                        _a.label = 2;
-                    case 2: return [2 /*return*/];
-                }
-            });
-        });
-    };
-    ChunkColumn.prototype.areNeighborsGenerated = function () {
-        var _this = this;
-        return [[-1, 0], [1, 0], [0, -1], [0, 1]].reduce(function (result, pos) {
-            var _a, _b;
-            if (!result) {
-                return false;
-            }
-            return (_b = (_a = _this.manager.getChunkColumn(_this.position[0] + pos[0], _this.position[1] + pos[1])) === null || _a === void 0 ? void 0 : _a.chunksGenerated) !== null && _b !== void 0 ? _b : false;
-        }, true);
-    };
-    ChunkColumn.prototype.requestNeighborColumnsToUpdate = function () {
-        var _this = this;
-        [[-1, 0], [1, 0], [0, -1], [0, 1]].forEach(function (pos) {
-            var neighbor = _this.manager.getChunkColumn(_this.position[0] + pos[0], _this.position[1] + pos[1]);
-            if (!neighbor) {
-                return;
-            }
-            _this.manager.requestChunkUpdate(neighbor);
-        });
+        return __awaiter(this, void 0, void 0, function () { return __generator(this, function (_a) {
+            return [2 /*return*/];
+        }); });
     };
     ChunkColumn.prototype.onTick = function (deltaTime) {
-        var _this = this;
         this.chunks.forEach(function (chunk) {
             chunk.onTick(deltaTime);
-            if (_this.priority === ChunkColumnPriority.High) {
-                chunk.tickBlocks();
-            }
+            chunk.tickBlocks();
         });
     };
     ChunkColumn.prototype.lateUpdate = function (deltaTime) {
-        if (this.priority <= ChunkColumnPriority.Low) {
-            return;
-        }
         this.chunks.forEach(function (chunk) { return chunk.lateUpdate(deltaTime); });
     };
     ChunkColumn.prototype.setBlockAt = function (_a, block) {
         var x = _a[0], y = _a[1], z = _a[2];
-        var chunkLocalY = Math.floor(y / _chunk__WEBPACK_IMPORTED_MODULE_1__.CHUNK_HEIGHT);
+        var chunkLocalY = Math.floor(y / _chunk__WEBPACK_IMPORTED_MODULE_0__.CHUNK_HEIGHT);
         if (chunkLocalY < 0 || chunkLocalY >= this.chunks.length) {
             return;
         }
-        return this.chunks[chunkLocalY].setBlock([x, y - chunkLocalY * _chunk__WEBPACK_IMPORTED_MODULE_1__.CHUNK_HEIGHT, z], block);
+        return this.chunks[chunkLocalY].setBlock([x, y - chunkLocalY * _chunk__WEBPACK_IMPORTED_MODULE_0__.CHUNK_HEIGHT, z], block);
     };
     ChunkColumn.prototype.getBlockAt = function (_a) {
         var x = _a[0], y = _a[1], z = _a[2];
-        var chunkLocalY = Math.floor(y / _chunk__WEBPACK_IMPORTED_MODULE_1__.CHUNK_HEIGHT);
+        var chunkLocalY = Math.floor(y / _chunk__WEBPACK_IMPORTED_MODULE_0__.CHUNK_HEIGHT);
         if (!this.chunks[chunkLocalY]) {
             return undefined;
         }
-        return this.chunks[chunkLocalY].getBlock([x, y - chunkLocalY * _chunk__WEBPACK_IMPORTED_MODULE_1__.CHUNK_HEIGHT, z]);
+        return this.chunks[chunkLocalY].getBlock([x, y - chunkLocalY * _chunk__WEBPACK_IMPORTED_MODULE_0__.CHUNK_HEIGHT, z]);
     };
     ChunkColumn.prototype.getChunkMeshes = function () {
         return this.chunks.flatMap(function (chunk) { return [chunk.solidMesh, chunk.transparentMesh]; }).filter(function (chunk) { return chunk !== undefined; });
@@ -3150,11 +3188,9 @@ var Chunk = /** @class */ (function () {
     function Chunk(chunkColumn, position) {
         this.chunkColumn = chunkColumn;
         this.position = position;
-        this.isBlockDataDirty = false;
         this.shouldRebuild = false;
         this.blockData = new Uint8Array(CHUNK_WIDTH * CHUNK_WIDTH * CHUNK_HEIGHT);
         this.blockStates = new Map();
-        this.timeSinceFirstRender = -1;
         var _a = _game__WEBPACK_IMPORTED_MODULE_0__.Game.main.blocks.getBlockMaterials(), solid = _a.solid, transparent = _a.transparent, water = _a.water;
         this.solidMesh = new three__WEBPACK_IMPORTED_MODULE_3__.Mesh(undefined, solid);
         this.transparentMesh = new three__WEBPACK_IMPORTED_MODULE_3__.Mesh(undefined, transparent);
@@ -3175,8 +3211,13 @@ var Chunk = /** @class */ (function () {
         scene.remove(this.transparentMesh);
     };
     Chunk.prototype.onTick = function (deltaTime) { };
+    /**
+     * Some blocks are chosen at random and ticked.
+     *
+     * Reference: https://minecraft.fandom.com/wiki/Tick#Random_tick
+     */
     Chunk.prototype.tickBlocks = function () {
-        for (var i = 0; i < 10; i++) {
+        for (var i = 0; i < 3; i++) {
             this.tickRandomBlock();
         }
     };
@@ -3194,37 +3235,28 @@ var Chunk = /** @class */ (function () {
         });
     };
     Chunk.prototype.lateUpdate = function (deltaTime) {
-        if (this.isBlockDataDirty || this.shouldRebuild) {
-            this.isBlockDataDirty = false;
+        if (this.shouldRebuild) {
             this.shouldRebuild = false;
             this.buildMesh();
         }
-        if (this.timeSinceFirstRender >= 0 && !Array.isArray(this.solidMesh.material) && this.solidMesh.material.transparent) {
-            this.timeSinceFirstRender += deltaTime;
-            this.solidMesh.material.opacity = this.timeSinceFirstRender / 1000;
-            this.solidMesh.material.transparent = this.timeSinceFirstRender < 1000;
-        }
     };
-    Chunk.prototype.generateTerrain = function (skipMeshBuild) {
-        if (skipMeshBuild === void 0) { skipMeshBuild = false; }
+    Chunk.prototype.generateTerrain = function () {
         return __awaiter(this, void 0, void 0, function () {
-            var heightMap, _a;
+            var _a;
             return __generator(this, function (_b) {
                 switch (_b.label) {
                     case 0:
-                        heightMap = this.chunkColumn.heightMap;
-                        if (!heightMap) {
-                            return [2 /*return*/];
-                        }
                         _a = this;
-                        return [4 /*yield*/, _game__WEBPACK_IMPORTED_MODULE_0__.Game.main.chunkGeneratorPool.buildBaseTerrain(this.position, heightMap)];
+                        return [4 /*yield*/, _game__WEBPACK_IMPORTED_MODULE_0__.Game.main.chunkGeneratorPool.buildBaseTerrain(this.position)];
                     case 1:
                         _a.blockData = _b.sent();
-                        this.isBlockDataDirty = !skipMeshBuild;
                         return [2 /*return*/];
                 }
             });
         });
+    };
+    Chunk.prototype.requestRebuild = function () {
+        this.shouldRebuild = true;
     };
     Chunk.prototype.buildMesh = function () {
         return __awaiter(this, void 0, void 0, function () {
@@ -3248,9 +3280,6 @@ var Chunk = /** @class */ (function () {
                         this.solidMesh.geometry = geometry.solid;
                         this.waterMesh.geometry = geometry.water;
                         this.transparentMesh.geometry = geometry.transparent;
-                        if (this.timeSinceFirstRender < 0) {
-                            this.timeSinceFirstRender = 0;
-                        }
                         return [2 /*return*/];
                 }
             });
@@ -3269,10 +3298,10 @@ var Chunk = /** @class */ (function () {
     Chunk.prototype.setBlock = function (_a, block) {
         var x = _a[0], y = _a[1], z = _a[2];
         this.blockData[(0,_util_index_to_vector3__WEBPACK_IMPORTED_MODULE_1__.xyzTupelToIndex)(x, y, z, CHUNK_WIDTH, CHUNK_WIDTH)] = _block_blocks__WEBPACK_IMPORTED_MODULE_2__.Blocks.getBlockId(block);
-        this.isBlockDataDirty = true;
+        this.requestRebuild();
         // TODO: Only update the relevant chunk
         if (x <= 0 || y <= 0 || z <= 0 || x >= CHUNK_WIDTH - 1 || y >= CHUNK_HEIGHT - 1 || z >= CHUNK_WIDTH - 1) {
-            this.getNeighborChunks().forEach(function (chunk) { return chunk ? chunk.shouldRebuild = true : null; });
+            this.getNeighborChunks().filter(function (chunk) { return chunk !== undefined; }).forEach(function (chunk) { return chunk.requestRebuild(); });
         }
     };
     Chunk.prototype.getBlock = function (_a) {
@@ -3405,10 +3434,14 @@ var ChunkGeneratorPool = /** @class */ (function () {
             });
         });
     };
-    ChunkGeneratorPool.prototype.buildBaseTerrain = function (chunkPosition, heightMap) {
+    ChunkGeneratorPool.prototype.buildBaseTerrain = function (chunkPosition) {
         return __awaiter(this, void 0, void 0, function () {
             return __generator(this, function (_a) {
-                return [2 /*return*/, this.getWorker().buildTerrain([chunkPosition.x, chunkPosition.y, chunkPosition.z], heightMap.serialize())];
+                return [2 /*return*/, this.getWorker().buildTerrain([
+                        chunkPosition.x,
+                        chunkPosition.y,
+                        chunkPosition.z,
+                    ])];
             });
         });
     };
@@ -3421,19 +3454,6 @@ var ChunkGeneratorPool = /** @class */ (function () {
                     case 1:
                         biomes = _a.sent();
                         return [2 /*return*/, _util_map_2d__WEBPACK_IMPORTED_MODULE_1__.PaletteMap2D.fromArray(biomes, _chunk_constants__WEBPACK_IMPORTED_MODULE_2__.CHUNK_WIDTH)];
-                }
-            });
-        });
-    };
-    ChunkGeneratorPool.prototype.generateHeightMap = function (chunkPosition) {
-        return __awaiter(this, void 0, void 0, function () {
-            var heights;
-            return __generator(this, function (_a) {
-                switch (_a.label) {
-                    case 0: return [4 /*yield*/, this.getWorker().generateHeightMap(chunkPosition)];
-                    case 1:
-                        heights = _a.sent();
-                        return [2 /*return*/, new _util_map_2d__WEBPACK_IMPORTED_MODULE_1__.ArrayMap2D(heights, _chunk_constants__WEBPACK_IMPORTED_MODULE_2__.CHUNK_WIDTH)];
                 }
             });
         });
@@ -3707,7 +3727,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */   "default": () => (/* binding */ Worker_fn)
 /* harmony export */ });
 function Worker_fn() {
-  return new Worker(__webpack_require__.p + "chunk-data-generator.worker.a4219c634c51a9b81e25.worker.js");
+  return new Worker(__webpack_require__.p + "chunk-data-generator.worker.06d2721c970c9ed1e116.worker.js");
 }
 
 
@@ -3725,7 +3745,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */   "default": () => (/* binding */ Worker_fn)
 /* harmony export */ });
 function Worker_fn() {
-  return new Worker(__webpack_require__.p + "chunk-generator.worker.097688d8d70f95457573.worker.js");
+  return new Worker(__webpack_require__.p + "chunk-generator.worker.d776bd13b12f29b338fa.worker.js");
 }
 
 
@@ -3743,7 +3763,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */   "default": () => (/* binding */ Worker_fn)
 /* harmony export */ });
 function Worker_fn() {
-  return new Worker(__webpack_require__.p + "chunk-geometry-builder.worker.16c7b56a974a7291baf5.worker.js");
+  return new Worker(__webpack_require__.p + "chunk-geometry-builder.worker.44d56d910b9e8973135b.worker.js");
 }
 
 
@@ -4284,60 +4304,6 @@ function indentString(string, count = 1, options = {}) {
 
 	return string.replace(regex, indent.repeat(count));
 }
-
-
-/***/ }),
-
-/***/ "./node_modules/p-all/index.js":
-/*!*************************************!*\
-  !*** ./node_modules/p-all/index.js ***!
-  \*************************************/
-/***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __webpack_require__) => {
-
-"use strict";
-__webpack_require__.r(__webpack_exports__);
-/* harmony export */ __webpack_require__.d(__webpack_exports__, {
-/* harmony export */   "default": () => (/* binding */ pAll)
-/* harmony export */ });
-/* harmony import */ var p_map__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! p-map */ "./node_modules/p-map/index.js");
-
-
-async function pAll(iterable, options) {
-	return (0,p_map__WEBPACK_IMPORTED_MODULE_0__["default"])(iterable, element => element(), options);
-}
-
-
-/***/ }),
-
-/***/ "./node_modules/p-each-series/index.js":
-/*!*********************************************!*\
-  !*** ./node_modules/p-each-series/index.js ***!
-  \*********************************************/
-/***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __webpack_require__) => {
-
-"use strict";
-__webpack_require__.r(__webpack_exports__);
-/* harmony export */ __webpack_require__.d(__webpack_exports__, {
-/* harmony export */   "default": () => (__WEBPACK_DEFAULT_EXPORT__)
-/* harmony export */ });
-const pEachSeries = async (iterable, iterator) => {
-	let index = 0;
-
-	for (const value of iterable) {
-		// eslint-disable-next-line no-await-in-loop
-		const returnValue = await iterator(await value, index++);
-
-		if (returnValue === pEachSeries.stop) {
-			break;
-		}
-	}
-
-	return iterable;
-};
-
-pEachSeries.stop = Symbol('pEachSeries.stop');
-
-/* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (pEachSeries);
 
 
 /***/ }),

@@ -1,119 +1,184 @@
 /******/ (() => { // webpackBootstrap
+/******/ 	"use strict";
 /******/ 	var __webpack_modules__ = ({
 
-/***/ "./node_modules/bezier-easing/src/index.js":
-/*!*************************************************!*\
-  !*** ./node_modules/bezier-easing/src/index.js ***!
-  \*************************************************/
-/***/ ((module) => {
+/***/ "./src/block/block-face.ts":
+/*!*********************************!*\
+  !*** ./src/block/block-face.ts ***!
+  \*********************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
 
-/**
- * https://github.com/gre/bezier-easing
- * BezierEasing - use bezier curve for transition easing function
- * by Gaëtan Renaudeau 2014 - 2015 – MIT License
- */
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "BlockFace": () => (/* binding */ BlockFace),
+/* harmony export */   "BlockFaces": () => (/* binding */ BlockFaces)
+/* harmony export */ });
+var BlockFace;
+(function (BlockFace) {
+    BlockFace["TOP"] = "top";
+    BlockFace["BOTTOM"] = "bottom";
+    BlockFace["RIGHT"] = "right";
+    BlockFace["LEFT"] = "left";
+    BlockFace["FRONT"] = "front";
+    BlockFace["BACK"] = "back";
+})(BlockFace || (BlockFace = {}));
+var BlockFaces = [
+    BlockFace.TOP,
+    BlockFace.BOTTOM,
+    BlockFace.RIGHT,
+    BlockFace.LEFT,
+    BlockFace.FRONT,
+    BlockFace.BACK,
+];
 
-// These values are established by empiricism with tests (tradeoff: performance VS precision)
-var NEWTON_ITERATIONS = 4;
-var NEWTON_MIN_SLOPE = 0.001;
-var SUBDIVISION_PRECISION = 0.0000001;
-var SUBDIVISION_MAX_ITERATIONS = 10;
 
-var kSplineTableSize = 11;
-var kSampleStepSize = 1.0 / (kSplineTableSize - 1.0);
+/***/ }),
 
-var float32ArraySupported = typeof Float32Array === 'function';
+/***/ "./src/block/block-model/block-model-renderer.ts":
+/*!*******************************************************!*\
+  !*** ./src/block/block-model/block-model-renderer.ts ***!
+  \*******************************************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
 
-function A (aA1, aA2) { return 1.0 - 3.0 * aA2 + 3.0 * aA1; }
-function B (aA1, aA2) { return 3.0 * aA2 - 6.0 * aA1; }
-function C (aA1)      { return 3.0 * aA1; }
-
-// Returns x(t) given t, x1, and x2, or y(t) given t, y1, and y2.
-function calcBezier (aT, aA1, aA2) { return ((A(aA1, aA2) * aT + B(aA1, aA2)) * aT + C(aA1)) * aT; }
-
-// Returns dx/dt given t, x1, and x2, or dy/dt given t, y1, and y2.
-function getSlope (aT, aA1, aA2) { return 3.0 * A(aA1, aA2) * aT * aT + 2.0 * B(aA1, aA2) * aT + C(aA1); }
-
-function binarySubdivide (aX, aA, aB, mX1, mX2) {
-  var currentX, currentT, i = 0;
-  do {
-    currentT = aA + (aB - aA) / 2.0;
-    currentX = calcBezier(currentT, mX1, mX2) - aX;
-    if (currentX > 0.0) {
-      aB = currentT;
-    } else {
-      aA = currentT;
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "BlockModelRenderer": () => (/* binding */ BlockModelRenderer)
+/* harmony export */ });
+/* harmony import */ var three__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! three */ "./node_modules/three/build/three.module.js");
+/* harmony import */ var three_src_math_MathUtils__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! three/src/math/MathUtils */ "./node_modules/three/src/math/MathUtils.js");
+/* harmony import */ var _block_face__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../block-face */ "./src/block/block-face.ts");
+var __spreadArray = (undefined && undefined.__spreadArray) || function (to, from, pack) {
+    if (pack || arguments.length === 2) for (var i = 0, l = from.length, ar; i < l; i++) {
+        if (ar || !(i in from)) {
+            if (!ar) ar = Array.prototype.slice.call(from, 0, i);
+            ar[i] = from[i];
+        }
     }
-  } while (Math.abs(currentX) > SUBDIVISION_PRECISION && ++i < SUBDIVISION_MAX_ITERATIONS);
-  return currentT;
-}
-
-function newtonRaphsonIterate (aX, aGuessT, mX1, mX2) {
- for (var i = 0; i < NEWTON_ITERATIONS; ++i) {
-   var currentSlope = getSlope(aGuessT, mX1, mX2);
-   if (currentSlope === 0.0) {
-     return aGuessT;
-   }
-   var currentX = calcBezier(aGuessT, mX1, mX2) - aX;
-   aGuessT -= currentX / currentSlope;
- }
- return aGuessT;
-}
-
-function LinearEasing (x) {
-  return x;
-}
-
-module.exports = function bezier (mX1, mY1, mX2, mY2) {
-  if (!(0 <= mX1 && mX1 <= 1 && 0 <= mX2 && mX2 <= 1)) {
-    throw new Error('bezier x values must be in [0, 1] range');
-  }
-
-  if (mX1 === mY1 && mX2 === mY2) {
-    return LinearEasing;
-  }
-
-  // Precompute samples table
-  var sampleValues = float32ArraySupported ? new Float32Array(kSplineTableSize) : new Array(kSplineTableSize);
-  for (var i = 0; i < kSplineTableSize; ++i) {
-    sampleValues[i] = calcBezier(i * kSampleStepSize, mX1, mX2);
-  }
-
-  function getTForX (aX) {
-    var intervalStart = 0.0;
-    var currentSample = 1;
-    var lastSample = kSplineTableSize - 1;
-
-    for (; currentSample !== lastSample && sampleValues[currentSample] <= aX; ++currentSample) {
-      intervalStart += kSampleStepSize;
-    }
-    --currentSample;
-
-    // Interpolate to provide an initial guess for t
-    var dist = (aX - sampleValues[currentSample]) / (sampleValues[currentSample + 1] - sampleValues[currentSample]);
-    var guessForT = intervalStart + dist * kSampleStepSize;
-
-    var initialSlope = getSlope(guessForT, mX1, mX2);
-    if (initialSlope >= NEWTON_MIN_SLOPE) {
-      return newtonRaphsonIterate(aX, guessForT, mX1, mX2);
-    } else if (initialSlope === 0.0) {
-      return guessForT;
-    } else {
-      return binarySubdivide(aX, intervalStart, intervalStart + kSampleStepSize, mX1, mX2);
-    }
-  }
-
-  return function BezierEasing (x) {
-    // Because JavaScript number are imprecise, we should guarantee the extremes are right.
-    if (x === 0) {
-      return 0;
-    }
-    if (x === 1) {
-      return 1;
-    }
-    return calcBezier(getTForX(x), mY1, mY2);
-  };
+    return to.concat(ar || Array.prototype.slice.call(from));
 };
+var _a, _b;
+
+
+
+var FaceNormals = (_a = {},
+    _a[_block_face__WEBPACK_IMPORTED_MODULE_0__.BlockFace.TOP] = [0, 1, 0],
+    _a[_block_face__WEBPACK_IMPORTED_MODULE_0__.BlockFace.BOTTOM] = [0, -1, 0],
+    _a[_block_face__WEBPACK_IMPORTED_MODULE_0__.BlockFace.LEFT] = [1, 0, 0],
+    _a[_block_face__WEBPACK_IMPORTED_MODULE_0__.BlockFace.RIGHT] = [-1, 0, 0],
+    _a[_block_face__WEBPACK_IMPORTED_MODULE_0__.BlockFace.FRONT] = [0, 0, 1],
+    _a[_block_face__WEBPACK_IMPORTED_MODULE_0__.BlockFace.BACK] = [0, 0, -1],
+    _a);
+var FaceTrsMatrices = (_b = {},
+    _b[_block_face__WEBPACK_IMPORTED_MODULE_0__.BlockFace.TOP] = new three__WEBPACK_IMPORTED_MODULE_1__.Matrix4().compose(new three__WEBPACK_IMPORTED_MODULE_1__.Vector3(0, 1, 1), new three__WEBPACK_IMPORTED_MODULE_1__.Quaternion().setFromEuler(new three__WEBPACK_IMPORTED_MODULE_1__.Euler((0,three_src_math_MathUtils__WEBPACK_IMPORTED_MODULE_2__.degToRad)(-90), 0, 0), true), new three__WEBPACK_IMPORTED_MODULE_1__.Vector3(1, 1, 1)),
+    _b[_block_face__WEBPACK_IMPORTED_MODULE_0__.BlockFace.BOTTOM] = new three__WEBPACK_IMPORTED_MODULE_1__.Matrix4().compose(new three__WEBPACK_IMPORTED_MODULE_1__.Vector3(0, 0, 0), new three__WEBPACK_IMPORTED_MODULE_1__.Quaternion().setFromEuler(new three__WEBPACK_IMPORTED_MODULE_1__.Euler((0,three_src_math_MathUtils__WEBPACK_IMPORTED_MODULE_2__.degToRad)(90), 0, 0), true), new three__WEBPACK_IMPORTED_MODULE_1__.Vector3(1, 1, 1)),
+    _b[_block_face__WEBPACK_IMPORTED_MODULE_0__.BlockFace.LEFT] = new three__WEBPACK_IMPORTED_MODULE_1__.Matrix4().compose(new three__WEBPACK_IMPORTED_MODULE_1__.Vector3(1, 0, 1), new three__WEBPACK_IMPORTED_MODULE_1__.Quaternion().setFromEuler(new three__WEBPACK_IMPORTED_MODULE_1__.Euler(0, (0,three_src_math_MathUtils__WEBPACK_IMPORTED_MODULE_2__.degToRad)(90), 0), true), new three__WEBPACK_IMPORTED_MODULE_1__.Vector3(1, 1, 1)),
+    _b[_block_face__WEBPACK_IMPORTED_MODULE_0__.BlockFace.RIGHT] = new three__WEBPACK_IMPORTED_MODULE_1__.Matrix4().compose(new three__WEBPACK_IMPORTED_MODULE_1__.Vector3(0, 0, 0), new three__WEBPACK_IMPORTED_MODULE_1__.Quaternion().setFromEuler(new three__WEBPACK_IMPORTED_MODULE_1__.Euler(0, (0,three_src_math_MathUtils__WEBPACK_IMPORTED_MODULE_2__.degToRad)(-90), 0), true), new three__WEBPACK_IMPORTED_MODULE_1__.Vector3(1, 1, 1)),
+    _b[_block_face__WEBPACK_IMPORTED_MODULE_0__.BlockFace.FRONT] = new three__WEBPACK_IMPORTED_MODULE_1__.Matrix4().compose(new three__WEBPACK_IMPORTED_MODULE_1__.Vector3(0, 0, 1), new three__WEBPACK_IMPORTED_MODULE_1__.Quaternion().identity(), new three__WEBPACK_IMPORTED_MODULE_1__.Vector3(1, 1, 1)),
+    _b[_block_face__WEBPACK_IMPORTED_MODULE_0__.BlockFace.BACK] = new three__WEBPACK_IMPORTED_MODULE_1__.Matrix4().compose(new three__WEBPACK_IMPORTED_MODULE_1__.Vector3(1, 0, 0), new three__WEBPACK_IMPORTED_MODULE_1__.Quaternion().setFromEuler(new three__WEBPACK_IMPORTED_MODULE_1__.Euler(0, (0,three_src_math_MathUtils__WEBPACK_IMPORTED_MODULE_2__.degToRad)(180), 0), true), new three__WEBPACK_IMPORTED_MODULE_1__.Vector3(1, 1, 1)),
+    _b);
+var DefaultElementFromToModifier = function (fromAndTo) { return fromAndTo; };
+var BlockModelRenderer = /** @class */ (function () {
+    function BlockModelRenderer(blockUvs, elementFromToModifier) {
+        if (elementFromToModifier === void 0) { elementFromToModifier = DefaultElementFromToModifier; }
+        this.blockUvs = blockUvs;
+        this.elementFromToModifier = elementFromToModifier;
+    }
+    BlockModelRenderer.prototype.render = function (position, blockModel, solidityMap) {
+        var _this = this;
+        return blockModel.elements.reduce(function (mesh, element) { return _this.renderElement(blockModel, position, element, solidityMap, mesh); }, {
+            normals: [],
+            triangles: [],
+            uv: [],
+            vertices: [],
+        });
+    };
+    BlockModelRenderer.prototype.renderElement = function (blockModel, position, element, solidityMap, mesh) {
+        var _this = this;
+        return _block_face__WEBPACK_IMPORTED_MODULE_0__.BlockFaces.reduce(function (modifiedMesh, blockFace) {
+            var modelFace = element.faces[blockFace];
+            if (modelFace === undefined) {
+                return modifiedMesh;
+            }
+            return _this.renderFace(blockModel, position, element, modelFace, blockFace, solidityMap, modifiedMesh);
+        }, mesh);
+    };
+    BlockModelRenderer.prototype.renderFace = function (blockModel, position, element, modelFace, blockFace, solidityMap, mesh) {
+        var _a, _b, _c, _d, _e, _f;
+        if (modelFace.cull && solidityMap[blockFace] === true) {
+            return mesh;
+        }
+        // Vertices
+        var _g = this.elementFromToModifier(this.normalizeToFrom(element.from, element.to)), _h = _g[0], fromX = _h[0], fromY = _h[1], fromZ = _h[2], _j = _g[1], toX = _j[0], toY = _j[1], toZ = _j[2];
+        var _k = [toX - fromX, toY - fromY, toZ - fromZ], sizeX = _k[0], sizeY = _k[1], sizeZ = _k[2];
+        var modelMatrix = this.makeTrsMatrixFromBlockModelRotation(blockModel.rotation);
+        var elementMatrix = this.makeTrsMatrixFromBlockModelRotation(element.rotation);
+        var faceMatrix = new three__WEBPACK_IMPORTED_MODULE_1__.Matrix4().compose(new three__WEBPACK_IMPORTED_MODULE_1__.Vector3(fromX / 15, fromY / 15, fromZ / 15), new three__WEBPACK_IMPORTED_MODULE_1__.Quaternion().identity(), new three__WEBPACK_IMPORTED_MODULE_1__.Vector3(sizeX / 15, sizeY / 15, sizeZ / 15));
+        var rts = modelMatrix
+            .multiply(elementMatrix)
+            .multiply(faceMatrix)
+            .multiply(FaceTrsMatrices[blockFace]);
+        (_a = mesh.vertices).push.apply(_a, __spreadArray(__spreadArray(__spreadArray(__spreadArray([], new three__WEBPACK_IMPORTED_MODULE_1__.Vector3(0, 0, 0).applyMatrix4(rts).add(position).toArray(), false), new three__WEBPACK_IMPORTED_MODULE_1__.Vector3(1, 0, 0).applyMatrix4(rts).add(position).toArray(), false), new three__WEBPACK_IMPORTED_MODULE_1__.Vector3(0, 1, 0).applyMatrix4(rts).add(position).toArray(), false), new three__WEBPACK_IMPORTED_MODULE_1__.Vector3(1, 1, 0).applyMatrix4(rts).add(position).toArray(), false));
+        // Triangles
+        var triangleOffset = (mesh.vertices.length / 3) - 4;
+        mesh.triangles.push(triangleOffset, triangleOffset + 1, triangleOffset + 2, triangleOffset + 2, triangleOffset + 1, triangleOffset + 3);
+        // Normals
+        for (var i = 0; i < 4; i++) {
+            (_b = mesh.normals).push.apply(_b, FaceNormals[blockFace]);
+        }
+        // UVs
+        var texture = modelFace.texture;
+        var _l = [sizeX / 16, sizeY / 16, sizeZ / 16], uvScaleX = _l[0], uvScaleY = _l[1], uvScaleZ = _l[2];
+        var uvs = this.blockUvs[texture];
+        switch (blockFace) {
+            case _block_face__WEBPACK_IMPORTED_MODULE_0__.BlockFace.FRONT:
+            case _block_face__WEBPACK_IMPORTED_MODULE_0__.BlockFace.BACK:
+                (_c = mesh.uv).push.apply(_c, this.scaleUvs(uvs, [0, 0], [uvScaleX, uvScaleY]));
+                break;
+            case _block_face__WEBPACK_IMPORTED_MODULE_0__.BlockFace.LEFT:
+            case _block_face__WEBPACK_IMPORTED_MODULE_0__.BlockFace.RIGHT:
+                (_d = mesh.uv).push.apply(_d, this.scaleUvs(uvs, [0, 0], [uvScaleZ, uvScaleY]));
+                break;
+            case _block_face__WEBPACK_IMPORTED_MODULE_0__.BlockFace.TOP:
+            case _block_face__WEBPACK_IMPORTED_MODULE_0__.BlockFace.BOTTOM:
+                (_e = mesh.uv).push.apply(_e, this.scaleUvs(uvs, [0, 0], [uvScaleX, uvScaleZ]));
+                break;
+            default:
+                (_f = mesh.uv).push.apply(_f, uvs);
+                break;
+        }
+        return mesh;
+    };
+    // TODO: This method sucks. It's hard to understand. Make it better.
+    BlockModelRenderer.prototype.scaleUvs = function (uvs, offset, scale) {
+        return [
+            offset[0] + uvs[0], offset[1] + uvs[1],
+            offset[0] + uvs[2] - (1 / 16) * (1 - scale[0]), offset[1] + uvs[3],
+            offset[0] + uvs[4], offset[1] + uvs[5] - (1 / 16) * (1 - scale[1]),
+            offset[0] + uvs[6] - (1 / 16) * (1 - scale[0]), offset[1] + uvs[7] - (1 / 16) * (1 - scale[1]),
+        ];
+    };
+    BlockModelRenderer.prototype.makeTrsMatrixFromBlockModelRotation = function (rotation) {
+        if (rotation === undefined) {
+            return new three__WEBPACK_IMPORTED_MODULE_1__.Matrix4().identity();
+        }
+        var rotationMatrix = new three__WEBPACK_IMPORTED_MODULE_1__.Matrix4().makeRotationAxis(new three__WEBPACK_IMPORTED_MODULE_1__.Vector3(rotation.axis === 'x' ? 1 : 0, rotation.axis === 'y' ? 1 : 0, rotation.axis === 'z' ? 1 : 0), (0,three_src_math_MathUtils__WEBPACK_IMPORTED_MODULE_2__.degToRad)(rotation.angle));
+        if (rotation.origin === undefined) {
+            return rotationMatrix;
+        }
+        var _a = rotation.origin, originX = _a[0], originY = _a[1], originZ = _a[2];
+        var shiftMatrix = new three__WEBPACK_IMPORTED_MODULE_1__.Matrix4().makeTranslation(originX, originY, originZ);
+        var deShiftMatrix = new three__WEBPACK_IMPORTED_MODULE_1__.Matrix4().makeTranslation(-originX, -originY, -originZ);
+        return shiftMatrix.multiply(rotationMatrix).multiply(deShiftMatrix);
+    };
+    BlockModelRenderer.prototype.normalizeToFrom = function (from, to) {
+        return [
+            [Math.min(from[0], to[0]), Math.min(from[1], to[1]), Math.min(from[2], to[2])],
+            [Math.max(from[0], to[0]), Math.max(from[1], to[1]), Math.max(from[2], to[2])],
+        ];
+    };
+    return BlockModelRenderer;
+}());
+
 
 
 /***/ }),
@@ -124,7 +189,6 @@ module.exports = function bezier (mX1, mY1, mX2, mY2) {
   \**************************************/
 /***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
 
-"use strict";
 __webpack_require__.r(__webpack_exports__);
 /* harmony export */ __webpack_require__.d(__webpack_exports__, {
 /* harmony export */   "indexToXZY": () => (/* binding */ indexToXZY),
@@ -149,507 +213,496 @@ function xyzTupelToIndex(x, y, z, xSize, zSize) {
 
 /***/ }),
 
-/***/ "./node_modules/simplex-noise/dist/esm/simplex-noise.js":
-/*!**************************************************************!*\
-  !*** ./node_modules/simplex-noise/dist/esm/simplex-noise.js ***!
-  \**************************************************************/
-/***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __webpack_require__) => {
+/***/ "./src/util/mod.ts":
+/*!*************************!*\
+  !*** ./src/util/mod.ts ***!
+  \*************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
 
-"use strict";
 __webpack_require__.r(__webpack_exports__);
 /* harmony export */ __webpack_require__.d(__webpack_exports__, {
-/* harmony export */   "SimplexNoise": () => (/* binding */ SimplexNoise),
-/* harmony export */   "default": () => (__WEBPACK_DEFAULT_EXPORT__),
-/* harmony export */   "buildPermutationTable": () => (/* binding */ buildPermutationTable)
+/* harmony export */   "mod": () => (/* binding */ mod)
 /* harmony export */ });
-/*
- * A fast javascript implementation of simplex noise by Jonas Wagner
-
-Based on a speed-improved simplex noise algorithm for 2D, 3D and 4D in Java.
-Which is based on example code by Stefan Gustavson (stegu@itn.liu.se).
-With Optimisations by Peter Eastman (peastman@drizzle.stanford.edu).
-Better rank ordering method by Stefan Gustavson in 2012.
-
- Copyright (c) 2021 Jonas Wagner
-
- Permission is hereby granted, free of charge, to any person obtaining a copy
- of this software and associated documentation files (the "Software"), to deal
- in the Software without restriction, including without limitation the rights
- to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- copies of the Software, and to permit persons to whom the Software is
- furnished to do so, subject to the following conditions:
-
- The above copyright notice and this permission notice shall be included in all
- copies or substantial portions of the Software.
-
- THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
- SOFTWARE.
- */
-const F2 = 0.5 * (Math.sqrt(3.0) - 1.0);
-const G2 = (3.0 - Math.sqrt(3.0)) / 6.0;
-const F3 = 1.0 / 3.0;
-const G3 = 1.0 / 6.0;
-const F4 = (Math.sqrt(5.0) - 1.0) / 4.0;
-const G4 = (5.0 - Math.sqrt(5.0)) / 20.0;
-const grad3 = new Float32Array([1, 1, 0,
-    -1, 1, 0,
-    1, -1, 0,
-    -1, -1, 0,
-    1, 0, 1,
-    -1, 0, 1,
-    1, 0, -1,
-    -1, 0, -1,
-    0, 1, 1,
-    0, -1, 1,
-    0, 1, -1,
-    0, -1, -1]);
-const grad4 = new Float32Array([0, 1, 1, 1, 0, 1, 1, -1, 0, 1, -1, 1, 0, 1, -1, -1,
-    0, -1, 1, 1, 0, -1, 1, -1, 0, -1, -1, 1, 0, -1, -1, -1,
-    1, 0, 1, 1, 1, 0, 1, -1, 1, 0, -1, 1, 1, 0, -1, -1,
-    -1, 0, 1, 1, -1, 0, 1, -1, -1, 0, -1, 1, -1, 0, -1, -1,
-    1, 1, 0, 1, 1, 1, 0, -1, 1, -1, 0, 1, 1, -1, 0, -1,
-    -1, 1, 0, 1, -1, 1, 0, -1, -1, -1, 0, 1, -1, -1, 0, -1,
-    1, 1, 1, 0, 1, 1, -1, 0, 1, -1, 1, 0, 1, -1, -1, 0,
-    -1, 1, 1, 0, -1, 1, -1, 0, -1, -1, 1, 0, -1, -1, -1, 0]);
-/** Deterministic simplex noise generator suitable for 2D, 3D and 4D spaces. */
-class SimplexNoise {
-    /**
-     * Creates a new `SimplexNoise` instance.
-     * This involves some setup. You can save a few cpu cycles by reusing the same instance.
-     * @param randomOrSeed A random number generator or a seed (string|number).
-     * Defaults to Math.random (random irreproducible initialization).
-     */
-    constructor(randomOrSeed = Math.random) {
-        const random = typeof randomOrSeed == 'function' ? randomOrSeed : alea(randomOrSeed);
-        this.p = buildPermutationTable(random);
-        this.perm = new Uint8Array(512);
-        this.permMod12 = new Uint8Array(512);
-        for (let i = 0; i < 512; i++) {
-            this.perm[i] = this.p[i & 255];
-            this.permMod12[i] = this.perm[i] % 12;
-        }
-    }
-    /**
-     * Samples the noise field in 2 dimensions
-     * @param x
-     * @param y
-     * @returns a number in the interval [-1, 1]
-     */
-    noise2D(x, y) {
-        const permMod12 = this.permMod12;
-        const perm = this.perm;
-        let n0 = 0; // Noise contributions from the three corners
-        let n1 = 0;
-        let n2 = 0;
-        // Skew the input space to determine which simplex cell we're in
-        const s = (x + y) * F2; // Hairy factor for 2D
-        const i = Math.floor(x + s);
-        const j = Math.floor(y + s);
-        const t = (i + j) * G2;
-        const X0 = i - t; // Unskew the cell origin back to (x,y) space
-        const Y0 = j - t;
-        const x0 = x - X0; // The x,y distances from the cell origin
-        const y0 = y - Y0;
-        // For the 2D case, the simplex shape is an equilateral triangle.
-        // Determine which simplex we are in.
-        let i1, j1; // Offsets for second (middle) corner of simplex in (i,j) coords
-        if (x0 > y0) {
-            i1 = 1;
-            j1 = 0;
-        } // lower triangle, XY order: (0,0)->(1,0)->(1,1)
-        else {
-            i1 = 0;
-            j1 = 1;
-        } // upper triangle, YX order: (0,0)->(0,1)->(1,1)
-        // A step of (1,0) in (i,j) means a step of (1-c,-c) in (x,y), and
-        // a step of (0,1) in (i,j) means a step of (-c,1-c) in (x,y), where
-        // c = (3-sqrt(3))/6
-        const x1 = x0 - i1 + G2; // Offsets for middle corner in (x,y) unskewed coords
-        const y1 = y0 - j1 + G2;
-        const x2 = x0 - 1.0 + 2.0 * G2; // Offsets for last corner in (x,y) unskewed coords
-        const y2 = y0 - 1.0 + 2.0 * G2;
-        // Work out the hashed gradient indices of the three simplex corners
-        const ii = i & 255;
-        const jj = j & 255;
-        // Calculate the contribution from the three corners
-        let t0 = 0.5 - x0 * x0 - y0 * y0;
-        if (t0 >= 0) {
-            const gi0 = permMod12[ii + perm[jj]] * 3;
-            t0 *= t0;
-            n0 = t0 * t0 * (grad3[gi0] * x0 + grad3[gi0 + 1] * y0); // (x,y) of grad3 used for 2D gradient
-        }
-        let t1 = 0.5 - x1 * x1 - y1 * y1;
-        if (t1 >= 0) {
-            const gi1 = permMod12[ii + i1 + perm[jj + j1]] * 3;
-            t1 *= t1;
-            n1 = t1 * t1 * (grad3[gi1] * x1 + grad3[gi1 + 1] * y1);
-        }
-        let t2 = 0.5 - x2 * x2 - y2 * y2;
-        if (t2 >= 0) {
-            const gi2 = permMod12[ii + 1 + perm[jj + 1]] * 3;
-            t2 *= t2;
-            n2 = t2 * t2 * (grad3[gi2] * x2 + grad3[gi2 + 1] * y2);
-        }
-        // Add contributions from each corner to get the final noise value.
-        // The result is scaled to return values in the interval [-1,1].
-        return 70.0 * (n0 + n1 + n2);
-    }
-    /**
-     * Samples the noise field in 3 dimensions
-     * @param x
-     * @param y
-     * @param z
-     * @returns a number in the interval [-1, 1]
-     */
-    noise3D(x, y, z) {
-        const permMod12 = this.permMod12;
-        const perm = this.perm;
-        let n0, n1, n2, n3; // Noise contributions from the four corners
-        // Skew the input space to determine which simplex cell we're in
-        const s = (x + y + z) * F3; // Very nice and simple skew factor for 3D
-        const i = Math.floor(x + s);
-        const j = Math.floor(y + s);
-        const k = Math.floor(z + s);
-        const t = (i + j + k) * G3;
-        const X0 = i - t; // Unskew the cell origin back to (x,y,z) space
-        const Y0 = j - t;
-        const Z0 = k - t;
-        const x0 = x - X0; // The x,y,z distances from the cell origin
-        const y0 = y - Y0;
-        const z0 = z - Z0;
-        // For the 3D case, the simplex shape is a slightly irregular tetrahedron.
-        // Determine which simplex we are in.
-        let i1, j1, k1; // Offsets for second corner of simplex in (i,j,k) coords
-        let i2, j2, k2; // Offsets for third corner of simplex in (i,j,k) coords
-        if (x0 >= y0) {
-            if (y0 >= z0) {
-                i1 = 1;
-                j1 = 0;
-                k1 = 0;
-                i2 = 1;
-                j2 = 1;
-                k2 = 0;
-            } // X Y Z order
-            else if (x0 >= z0) {
-                i1 = 1;
-                j1 = 0;
-                k1 = 0;
-                i2 = 1;
-                j2 = 0;
-                k2 = 1;
-            } // X Z Y order
-            else {
-                i1 = 0;
-                j1 = 0;
-                k1 = 1;
-                i2 = 1;
-                j2 = 0;
-                k2 = 1;
-            } // Z X Y order
-        }
-        else { // x0<y0
-            if (y0 < z0) {
-                i1 = 0;
-                j1 = 0;
-                k1 = 1;
-                i2 = 0;
-                j2 = 1;
-                k2 = 1;
-            } // Z Y X order
-            else if (x0 < z0) {
-                i1 = 0;
-                j1 = 1;
-                k1 = 0;
-                i2 = 0;
-                j2 = 1;
-                k2 = 1;
-            } // Y Z X order
-            else {
-                i1 = 0;
-                j1 = 1;
-                k1 = 0;
-                i2 = 1;
-                j2 = 1;
-                k2 = 0;
-            } // Y X Z order
-        }
-        // A step of (1,0,0) in (i,j,k) means a step of (1-c,-c,-c) in (x,y,z),
-        // a step of (0,1,0) in (i,j,k) means a step of (-c,1-c,-c) in (x,y,z), and
-        // a step of (0,0,1) in (i,j,k) means a step of (-c,-c,1-c) in (x,y,z), where
-        // c = 1/6.
-        const x1 = x0 - i1 + G3; // Offsets for second corner in (x,y,z) coords
-        const y1 = y0 - j1 + G3;
-        const z1 = z0 - k1 + G3;
-        const x2 = x0 - i2 + 2.0 * G3; // Offsets for third corner in (x,y,z) coords
-        const y2 = y0 - j2 + 2.0 * G3;
-        const z2 = z0 - k2 + 2.0 * G3;
-        const x3 = x0 - 1.0 + 3.0 * G3; // Offsets for last corner in (x,y,z) coords
-        const y3 = y0 - 1.0 + 3.0 * G3;
-        const z3 = z0 - 1.0 + 3.0 * G3;
-        // Work out the hashed gradient indices of the four simplex corners
-        const ii = i & 255;
-        const jj = j & 255;
-        const kk = k & 255;
-        // Calculate the contribution from the four corners
-        let t0 = 0.6 - x0 * x0 - y0 * y0 - z0 * z0;
-        if (t0 < 0)
-            n0 = 0.0;
-        else {
-            const gi0 = permMod12[ii + perm[jj + perm[kk]]] * 3;
-            t0 *= t0;
-            n0 = t0 * t0 * (grad3[gi0] * x0 + grad3[gi0 + 1] * y0 + grad3[gi0 + 2] * z0);
-        }
-        let t1 = 0.6 - x1 * x1 - y1 * y1 - z1 * z1;
-        if (t1 < 0)
-            n1 = 0.0;
-        else {
-            const gi1 = permMod12[ii + i1 + perm[jj + j1 + perm[kk + k1]]] * 3;
-            t1 *= t1;
-            n1 = t1 * t1 * (grad3[gi1] * x1 + grad3[gi1 + 1] * y1 + grad3[gi1 + 2] * z1);
-        }
-        let t2 = 0.6 - x2 * x2 - y2 * y2 - z2 * z2;
-        if (t2 < 0)
-            n2 = 0.0;
-        else {
-            const gi2 = permMod12[ii + i2 + perm[jj + j2 + perm[kk + k2]]] * 3;
-            t2 *= t2;
-            n2 = t2 * t2 * (grad3[gi2] * x2 + grad3[gi2 + 1] * y2 + grad3[gi2 + 2] * z2);
-        }
-        let t3 = 0.6 - x3 * x3 - y3 * y3 - z3 * z3;
-        if (t3 < 0)
-            n3 = 0.0;
-        else {
-            const gi3 = permMod12[ii + 1 + perm[jj + 1 + perm[kk + 1]]] * 3;
-            t3 *= t3;
-            n3 = t3 * t3 * (grad3[gi3] * x3 + grad3[gi3 + 1] * y3 + grad3[gi3 + 2] * z3);
-        }
-        // Add contributions from each corner to get the final noise value.
-        // The result is scaled to stay just inside [-1,1]
-        return 32.0 * (n0 + n1 + n2 + n3);
-    }
-    /**
-     * Samples the noise field in 4 dimensions
-     * @param x
-     * @param y
-     * @param z
-     * @returns a number in the interval [-1, 1]
-     */
-    noise4D(x, y, z, w) {
-        const perm = this.perm;
-        let n0, n1, n2, n3, n4; // Noise contributions from the five corners
-        // Skew the (x,y,z,w) space to determine which cell of 24 simplices we're in
-        const s = (x + y + z + w) * F4; // Factor for 4D skewing
-        const i = Math.floor(x + s);
-        const j = Math.floor(y + s);
-        const k = Math.floor(z + s);
-        const l = Math.floor(w + s);
-        const t = (i + j + k + l) * G4; // Factor for 4D unskewing
-        const X0 = i - t; // Unskew the cell origin back to (x,y,z,w) space
-        const Y0 = j - t;
-        const Z0 = k - t;
-        const W0 = l - t;
-        const x0 = x - X0; // The x,y,z,w distances from the cell origin
-        const y0 = y - Y0;
-        const z0 = z - Z0;
-        const w0 = w - W0;
-        // For the 4D case, the simplex is a 4D shape I won't even try to describe.
-        // To find out which of the 24 possible simplices we're in, we need to
-        // determine the magnitude ordering of x0, y0, z0 and w0.
-        // Six pair-wise comparisons are performed between each possible pair
-        // of the four coordinates, and the results are used to rank the numbers.
-        let rankx = 0;
-        let ranky = 0;
-        let rankz = 0;
-        let rankw = 0;
-        if (x0 > y0)
-            rankx++;
-        else
-            ranky++;
-        if (x0 > z0)
-            rankx++;
-        else
-            rankz++;
-        if (x0 > w0)
-            rankx++;
-        else
-            rankw++;
-        if (y0 > z0)
-            ranky++;
-        else
-            rankz++;
-        if (y0 > w0)
-            ranky++;
-        else
-            rankw++;
-        if (z0 > w0)
-            rankz++;
-        else
-            rankw++;
-        // simplex[c] is a 4-vector with the numbers 0, 1, 2 and 3 in some order.
-        // Many values of c will never occur, since e.g. x>y>z>w makes x<z, y<w and x<w
-        // impossible. Only the 24 indices which have non-zero entries make any sense.
-        // We use a thresholding to set the coordinates in turn from the largest magnitude.
-        // Rank 3 denotes the largest coordinate.
-        // Rank 2 denotes the second largest coordinate.
-        // Rank 1 denotes the second smallest coordinate.
-        // The integer offsets for the second simplex corner
-        const i1 = rankx >= 3 ? 1 : 0;
-        const j1 = ranky >= 3 ? 1 : 0;
-        const k1 = rankz >= 3 ? 1 : 0;
-        const l1 = rankw >= 3 ? 1 : 0;
-        // The integer offsets for the third simplex corner
-        const i2 = rankx >= 2 ? 1 : 0;
-        const j2 = ranky >= 2 ? 1 : 0;
-        const k2 = rankz >= 2 ? 1 : 0;
-        const l2 = rankw >= 2 ? 1 : 0;
-        // The integer offsets for the fourth simplex corner
-        const i3 = rankx >= 1 ? 1 : 0;
-        const j3 = ranky >= 1 ? 1 : 0;
-        const k3 = rankz >= 1 ? 1 : 0;
-        const l3 = rankw >= 1 ? 1 : 0;
-        // The fifth corner has all coordinate offsets = 1, so no need to compute that.
-        const x1 = x0 - i1 + G4; // Offsets for second corner in (x,y,z,w) coords
-        const y1 = y0 - j1 + G4;
-        const z1 = z0 - k1 + G4;
-        const w1 = w0 - l1 + G4;
-        const x2 = x0 - i2 + 2.0 * G4; // Offsets for third corner in (x,y,z,w) coords
-        const y2 = y0 - j2 + 2.0 * G4;
-        const z2 = z0 - k2 + 2.0 * G4;
-        const w2 = w0 - l2 + 2.0 * G4;
-        const x3 = x0 - i3 + 3.0 * G4; // Offsets for fourth corner in (x,y,z,w) coords
-        const y3 = y0 - j3 + 3.0 * G4;
-        const z3 = z0 - k3 + 3.0 * G4;
-        const w3 = w0 - l3 + 3.0 * G4;
-        const x4 = x0 - 1.0 + 4.0 * G4; // Offsets for last corner in (x,y,z,w) coords
-        const y4 = y0 - 1.0 + 4.0 * G4;
-        const z4 = z0 - 1.0 + 4.0 * G4;
-        const w4 = w0 - 1.0 + 4.0 * G4;
-        // Work out the hashed gradient indices of the five simplex corners
-        const ii = i & 255;
-        const jj = j & 255;
-        const kk = k & 255;
-        const ll = l & 255;
-        // Calculate the contribution from the five corners
-        let t0 = 0.6 - x0 * x0 - y0 * y0 - z0 * z0 - w0 * w0;
-        if (t0 < 0)
-            n0 = 0.0;
-        else {
-            const gi0 = (perm[ii + perm[jj + perm[kk + perm[ll]]]] % 32) * 4;
-            t0 *= t0;
-            n0 = t0 * t0 * (grad4[gi0] * x0 + grad4[gi0 + 1] * y0 + grad4[gi0 + 2] * z0 + grad4[gi0 + 3] * w0);
-        }
-        let t1 = 0.6 - x1 * x1 - y1 * y1 - z1 * z1 - w1 * w1;
-        if (t1 < 0)
-            n1 = 0.0;
-        else {
-            const gi1 = (perm[ii + i1 + perm[jj + j1 + perm[kk + k1 + perm[ll + l1]]]] % 32) * 4;
-            t1 *= t1;
-            n1 = t1 * t1 * (grad4[gi1] * x1 + grad4[gi1 + 1] * y1 + grad4[gi1 + 2] * z1 + grad4[gi1 + 3] * w1);
-        }
-        let t2 = 0.6 - x2 * x2 - y2 * y2 - z2 * z2 - w2 * w2;
-        if (t2 < 0)
-            n2 = 0.0;
-        else {
-            const gi2 = (perm[ii + i2 + perm[jj + j2 + perm[kk + k2 + perm[ll + l2]]]] % 32) * 4;
-            t2 *= t2;
-            n2 = t2 * t2 * (grad4[gi2] * x2 + grad4[gi2 + 1] * y2 + grad4[gi2 + 2] * z2 + grad4[gi2 + 3] * w2);
-        }
-        let t3 = 0.6 - x3 * x3 - y3 * y3 - z3 * z3 - w3 * w3;
-        if (t3 < 0)
-            n3 = 0.0;
-        else {
-            const gi3 = (perm[ii + i3 + perm[jj + j3 + perm[kk + k3 + perm[ll + l3]]]] % 32) * 4;
-            t3 *= t3;
-            n3 = t3 * t3 * (grad4[gi3] * x3 + grad4[gi3 + 1] * y3 + grad4[gi3 + 2] * z3 + grad4[gi3 + 3] * w3);
-        }
-        let t4 = 0.6 - x4 * x4 - y4 * y4 - z4 * z4 - w4 * w4;
-        if (t4 < 0)
-            n4 = 0.0;
-        else {
-            const gi4 = (perm[ii + 1 + perm[jj + 1 + perm[kk + 1 + perm[ll + 1]]]] % 32) * 4;
-            t4 *= t4;
-            n4 = t4 * t4 * (grad4[gi4] * x4 + grad4[gi4 + 1] * y4 + grad4[gi4 + 2] * z4 + grad4[gi4 + 3] * w4);
-        }
-        // Sum up and scale the result to cover the range [-1,1]
-        return 27.0 * (n0 + n1 + n2 + n3 + n4);
-    }
+function mod(n, d) {
+    return (n % d + d) % d;
 }
-/* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (SimplexNoise);
+
+
+/***/ }),
+
+/***/ "./src/world/chunk-renderer.ts":
+/*!*************************************!*\
+  !*** ./src/world/chunk-renderer.ts ***!
+  \*************************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "ChunkRenderer": () => (/* binding */ ChunkRenderer)
+/* harmony export */ });
+/* harmony import */ var three__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! three */ "./node_modules/three/build/three.module.js");
+/* harmony import */ var _block_block_face__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../block/block-face */ "./src/block/block-face.ts");
+/* harmony import */ var _block_block_model_block_model_renderer__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../block/block-model/block-model-renderer */ "./src/block/block-model/block-model-renderer.ts");
+/* harmony import */ var _util_index_to_vector3__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../util/index-to-vector3 */ "./src/util/index-to-vector3.ts");
+/* harmony import */ var _util_mod__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../util/mod */ "./src/util/mod.ts");
+var _a;
+
+
+
+
+
+var CHUNK_HEIGHT = 16;
+var CHUNK_WIDTH = 16;
+var BLOCK_FACE_NORMAL = (_a = {},
+    _a[_block_block_face__WEBPACK_IMPORTED_MODULE_0__.BlockFace.TOP] = new three__WEBPACK_IMPORTED_MODULE_4__.Vector3(0, 1, 0),
+    _a[_block_block_face__WEBPACK_IMPORTED_MODULE_0__.BlockFace.BOTTOM] = new three__WEBPACK_IMPORTED_MODULE_4__.Vector3(0, -1, 0),
+    _a[_block_block_face__WEBPACK_IMPORTED_MODULE_0__.BlockFace.LEFT] = new three__WEBPACK_IMPORTED_MODULE_4__.Vector3(1, 0, 0),
+    _a[_block_block_face__WEBPACK_IMPORTED_MODULE_0__.BlockFace.RIGHT] = new three__WEBPACK_IMPORTED_MODULE_4__.Vector3(-1, 0, 0),
+    _a[_block_block_face__WEBPACK_IMPORTED_MODULE_0__.BlockFace.FRONT] = new three__WEBPACK_IMPORTED_MODULE_4__.Vector3(0, 0, 1),
+    _a[_block_block_face__WEBPACK_IMPORTED_MODULE_0__.BlockFace.BACK] = new three__WEBPACK_IMPORTED_MODULE_4__.Vector3(0, 0, -1),
+    _a);
+var ChunkRenderer = /** @class */ (function () {
+    function ChunkRenderer(blockModels) {
+        this.blockModels = blockModels;
+    }
+    /**
+     * blockData
+     * center
+     * top
+     * bottom
+     * north
+     * east
+     * south
+     * west
+     */
+    ChunkRenderer.prototype.buildGeometry = function (blockData) {
+        // TODO: Don't hard-code visibility of blocks but define it in the block model.
+        // TODO: Can the solid & transparent meshes be merged into one mesh?
+        // TODO: Is there a need for block models being included in two meshes? E.g. solid cauldron with water?
+        return {
+            solid: this.buildGeometryWithOptions(blockData, function (blockId) { return [1, 2, 3, 4, 5].includes(blockId); }),
+            water: this.buildGeometryWithOptions(
+            // There currently is no water.
+            blockData, function (blockId) { return blockId === 7; }),
+            transparent: this.buildGeometryWithOptions(
+            // There currently are no transparent blocks.
+            blockData, function (blockId) { return [6, 8].includes(blockId); }),
+        };
+    };
+    ChunkRenderer.prototype.buildGeometryWithOptions = function (blockData, isVisible) {
+        var partialChunkMeshData = {
+            normals: [],
+            triangles: [],
+            uv: [],
+            vertices: [],
+        };
+        for (var i = 0; i < blockData.blocks.length; i += 1) {
+            var pos = (0,_util_index_to_vector3__WEBPACK_IMPORTED_MODULE_2__.indexToXZY)(i, CHUNK_WIDTH, CHUNK_WIDTH);
+            if (!isVisible(blockData.blocks[i])) {
+                continue;
+            }
+            this.renderBlock(blockData, pos, partialChunkMeshData, isVisible);
+        }
+        return {
+            vertices: new Float32Array(partialChunkMeshData.vertices),
+            triangles: partialChunkMeshData.triangles,
+            normals: new Float32Array(partialChunkMeshData.normals),
+            uv: new Float32Array(partialChunkMeshData.uv),
+        };
+    };
+    ChunkRenderer.prototype.renderBlock = function (blockData, position, partialChunkMeshData, isVisible) {
+        var _a, _b, _c, _d;
+        var _e;
+        var blockDataBlocksIndex = (0,_util_index_to_vector3__WEBPACK_IMPORTED_MODULE_2__.xzyToIndex)(position, CHUNK_WIDTH, CHUNK_WIDTH);
+        var blockId = blockData.blocks[blockDataBlocksIndex];
+        // TODO: Don't recreate the block model renderer for each block.
+        var modelRenderer = new _block_block_model_block_model_renderer__WEBPACK_IMPORTED_MODULE_1__.BlockModelRenderer(this.blockModels.textureUvs);
+        var solidityMap = (_a = {},
+            _a[_block_block_face__WEBPACK_IMPORTED_MODULE_0__.BlockFace.TOP] = !this.isFaceVisible(blockData, position, _block_block_face__WEBPACK_IMPORTED_MODULE_0__.BlockFace.TOP, isVisible),
+            _a[_block_block_face__WEBPACK_IMPORTED_MODULE_0__.BlockFace.BOTTOM] = !this.isFaceVisible(blockData, position, _block_block_face__WEBPACK_IMPORTED_MODULE_0__.BlockFace.BOTTOM, isVisible),
+            _a[_block_block_face__WEBPACK_IMPORTED_MODULE_0__.BlockFace.LEFT] = !this.isFaceVisible(blockData, position, _block_block_face__WEBPACK_IMPORTED_MODULE_0__.BlockFace.LEFT, isVisible),
+            _a[_block_block_face__WEBPACK_IMPORTED_MODULE_0__.BlockFace.RIGHT] = !this.isFaceVisible(blockData, position, _block_block_face__WEBPACK_IMPORTED_MODULE_0__.BlockFace.RIGHT, isVisible),
+            _a[_block_block_face__WEBPACK_IMPORTED_MODULE_0__.BlockFace.FRONT] = !this.isFaceVisible(blockData, position, _block_block_face__WEBPACK_IMPORTED_MODULE_0__.BlockFace.FRONT, isVisible),
+            _a[_block_block_face__WEBPACK_IMPORTED_MODULE_0__.BlockFace.BACK] = !this.isFaceVisible(blockData, position, _block_block_face__WEBPACK_IMPORTED_MODULE_0__.BlockFace.BACK, isVisible),
+            _a);
+        // TODO: Only render block models once and translate the vertices to the correct position.
+        var modelIndex = (_e = blockData.blockModelIndices[blockDataBlocksIndex]) !== null && _e !== void 0 ? _e : 0;
+        var modelMesh = modelRenderer.render(position, this.blockModels.blockModels[blockId][modelIndex], solidityMap);
+        (_b = partialChunkMeshData.normals).push.apply(_b, modelMesh.normals);
+        (_c = partialChunkMeshData.uv).push.apply(_c, modelMesh.uv);
+        // This is probably not the nicest way to do this, but it works for now. Its purpose is to preserve
+        // the correct triangle numbering for small meshes being merged into a big one while the small meshes
+        // base the triangle index on 0.
+        var numberOfVertices = (partialChunkMeshData.vertices.length / 3);
+        for (var i = 0; i < modelMesh.triangles.length / 6; i++) {
+            for (var j = 0; j < 6; j++) {
+                partialChunkMeshData.triangles.push(modelMesh.triangles[i * 6 + j] + numberOfVertices);
+            }
+        }
+        (_d = partialChunkMeshData.vertices).push.apply(_d, modelMesh.vertices);
+    };
+    ChunkRenderer.prototype.isFaceVisible = function (blockData, position, face, isVisible) {
+        var neighbor = this.getBlock(blockData, position.clone().add(BLOCK_FACE_NORMAL[face]));
+        // TODO: Take into account which block is currently rendered to determine if the face is visible. Otherwise
+        // transparent blocks wouldn't render adjacent faces despite them being different block types.
+        return !isVisible(neighbor);
+    };
+    ChunkRenderer.prototype.getBlock = function (_a, position) {
+        var blocks = _a.blocks, neighborBlocks = _a.neighborBlocks;
+        // Above
+        if (position.y >= CHUNK_HEIGHT) {
+            return neighborBlocks[0][(0,_util_index_to_vector3__WEBPACK_IMPORTED_MODULE_2__.xzyToIndex)(new three__WEBPACK_IMPORTED_MODULE_4__.Vector3(position.x, (0,_util_mod__WEBPACK_IMPORTED_MODULE_3__.mod)(position.y, CHUNK_HEIGHT), position.z), CHUNK_WIDTH, CHUNK_WIDTH)];
+        }
+        // Below
+        if (position.y < 0) {
+            return neighborBlocks[1][(0,_util_index_to_vector3__WEBPACK_IMPORTED_MODULE_2__.xzyToIndex)(new three__WEBPACK_IMPORTED_MODULE_4__.Vector3(position.x, (0,_util_mod__WEBPACK_IMPORTED_MODULE_3__.mod)(position.y, CHUNK_HEIGHT), position.z), CHUNK_WIDTH, CHUNK_WIDTH)];
+        }
+        // Left
+        if (position.x < 0) {
+            return neighborBlocks[2][(0,_util_index_to_vector3__WEBPACK_IMPORTED_MODULE_2__.xzyToIndex)(new three__WEBPACK_IMPORTED_MODULE_4__.Vector3((0,_util_mod__WEBPACK_IMPORTED_MODULE_3__.mod)(position.x, CHUNK_WIDTH), position.y, position.z), CHUNK_WIDTH, CHUNK_WIDTH)];
+        }
+        // Right
+        if (position.x >= CHUNK_WIDTH) {
+            return neighborBlocks[3][(0,_util_index_to_vector3__WEBPACK_IMPORTED_MODULE_2__.xzyToIndex)(new three__WEBPACK_IMPORTED_MODULE_4__.Vector3((0,_util_mod__WEBPACK_IMPORTED_MODULE_3__.mod)(position.x, CHUNK_WIDTH), position.y, position.z), CHUNK_WIDTH, CHUNK_WIDTH)];
+        }
+        // Back
+        if (position.z < 0) {
+            return neighborBlocks[4][(0,_util_index_to_vector3__WEBPACK_IMPORTED_MODULE_2__.xzyToIndex)(new three__WEBPACK_IMPORTED_MODULE_4__.Vector3(position.x, position.y, (0,_util_mod__WEBPACK_IMPORTED_MODULE_3__.mod)(position.z, CHUNK_WIDTH)), CHUNK_WIDTH, CHUNK_WIDTH)];
+        }
+        // Front
+        if (position.z >= CHUNK_WIDTH) {
+            return neighborBlocks[5][(0,_util_index_to_vector3__WEBPACK_IMPORTED_MODULE_2__.xzyToIndex)(new three__WEBPACK_IMPORTED_MODULE_4__.Vector3(position.x, position.y, (0,_util_mod__WEBPACK_IMPORTED_MODULE_3__.mod)(position.z, CHUNK_WIDTH)), CHUNK_WIDTH, CHUNK_WIDTH)];
+        }
+        // Within
+        return blocks[(0,_util_index_to_vector3__WEBPACK_IMPORTED_MODULE_2__.xzyToIndex)(position, CHUNK_WIDTH, CHUNK_WIDTH)];
+    };
+    return ChunkRenderer;
+}());
+
+
+
+/***/ }),
+
+/***/ "./node_modules/comlink/dist/esm/comlink.mjs":
+/*!***************************************************!*\
+  !*** ./node_modules/comlink/dist/esm/comlink.mjs ***!
+  \***************************************************/
+/***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __webpack_require__) => {
+
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "createEndpoint": () => (/* binding */ createEndpoint),
+/* harmony export */   "expose": () => (/* binding */ expose),
+/* harmony export */   "proxy": () => (/* binding */ proxy),
+/* harmony export */   "proxyMarker": () => (/* binding */ proxyMarker),
+/* harmony export */   "releaseProxy": () => (/* binding */ releaseProxy),
+/* harmony export */   "transfer": () => (/* binding */ transfer),
+/* harmony export */   "transferHandlers": () => (/* binding */ transferHandlers),
+/* harmony export */   "windowEndpoint": () => (/* binding */ windowEndpoint),
+/* harmony export */   "wrap": () => (/* binding */ wrap)
+/* harmony export */ });
 /**
- * Builds a random permutation table.
- * This is exported only for (internal) testing purposes.
- * Do not rely on this export.
- * @private
+ * Copyright 2019 Google Inc. All Rights Reserved.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
-function buildPermutationTable(random) {
-    const p = new Uint8Array(256);
-    for (let i = 0; i < 256; i++) {
-        p[i] = i;
-    }
-    for (let i = 0; i < 255; i++) {
-        const r = i + ~~(random() * (256 - i));
-        const aux = p[i];
-        p[i] = p[r];
-        p[r] = aux;
-    }
-    return p;
-}
-/*
-The ALEA PRNG and masher code used by simplex-noise.js
-is based on code by Johannes Baagøe, modified by Jonas Wagner.
-See alea.md for the full license.
-*/
-function alea(seed) {
-    let s0 = 0;
-    let s1 = 0;
-    let s2 = 0;
-    let c = 1;
-    const mash = masher();
-    s0 = mash(' ');
-    s1 = mash(' ');
-    s2 = mash(' ');
-    s0 -= mash(seed);
-    if (s0 < 0) {
-        s0 += 1;
-    }
-    s1 -= mash(seed);
-    if (s1 < 0) {
-        s1 += 1;
-    }
-    s2 -= mash(seed);
-    if (s2 < 0) {
-        s2 += 1;
-    }
-    return function () {
-        const t = 2091639 * s0 + c * 2.3283064365386963e-10; // 2^-32
-        s0 = s1;
-        s1 = s2;
-        return s2 = t - (c = t | 0);
-    };
-}
-function masher() {
-    let n = 0xefc8249d;
-    return function (data) {
-        data = data.toString();
-        for (let i = 0; i < data.length; i++) {
-            n += data.charCodeAt(i);
-            let h = 0.02519603282416938 * n;
-            n = h >>> 0;
-            h -= n;
-            h *= n;
-            n = h >>> 0;
-            h -= n;
-            n += h * 0x100000000; // 2^32
+const proxyMarker = Symbol("Comlink.proxy");
+const createEndpoint = Symbol("Comlink.endpoint");
+const releaseProxy = Symbol("Comlink.releaseProxy");
+const throwMarker = Symbol("Comlink.thrown");
+const isObject = (val) => (typeof val === "object" && val !== null) || typeof val === "function";
+/**
+ * Internal transfer handle to handle objects marked to proxy.
+ */
+const proxyTransferHandler = {
+    canHandle: (val) => isObject(val) && val[proxyMarker],
+    serialize(obj) {
+        const { port1, port2 } = new MessageChannel();
+        expose(obj, port1);
+        return [port2, [port2]];
+    },
+    deserialize(port) {
+        port.start();
+        return wrap(port);
+    },
+};
+/**
+ * Internal transfer handler to handle thrown exceptions.
+ */
+const throwTransferHandler = {
+    canHandle: (value) => isObject(value) && throwMarker in value,
+    serialize({ value }) {
+        let serialized;
+        if (value instanceof Error) {
+            serialized = {
+                isError: true,
+                value: {
+                    message: value.message,
+                    name: value.name,
+                    stack: value.stack,
+                },
+            };
         }
-        return (n >>> 0) * 2.3283064365386963e-10; // 2^-32
+        else {
+            serialized = { isError: false, value };
+        }
+        return [serialized, []];
+    },
+    deserialize(serialized) {
+        if (serialized.isError) {
+            throw Object.assign(new Error(serialized.value.message), serialized.value);
+        }
+        throw serialized.value;
+    },
+};
+/**
+ * Allows customizing the serialization of certain values.
+ */
+const transferHandlers = new Map([
+    ["proxy", proxyTransferHandler],
+    ["throw", throwTransferHandler],
+]);
+function expose(obj, ep = self) {
+    ep.addEventListener("message", function callback(ev) {
+        if (!ev || !ev.data) {
+            return;
+        }
+        const { id, type, path } = Object.assign({ path: [] }, ev.data);
+        const argumentList = (ev.data.argumentList || []).map(fromWireValue);
+        let returnValue;
+        try {
+            const parent = path.slice(0, -1).reduce((obj, prop) => obj[prop], obj);
+            const rawValue = path.reduce((obj, prop) => obj[prop], obj);
+            switch (type) {
+                case "GET" /* GET */:
+                    {
+                        returnValue = rawValue;
+                    }
+                    break;
+                case "SET" /* SET */:
+                    {
+                        parent[path.slice(-1)[0]] = fromWireValue(ev.data.value);
+                        returnValue = true;
+                    }
+                    break;
+                case "APPLY" /* APPLY */:
+                    {
+                        returnValue = rawValue.apply(parent, argumentList);
+                    }
+                    break;
+                case "CONSTRUCT" /* CONSTRUCT */:
+                    {
+                        const value = new rawValue(...argumentList);
+                        returnValue = proxy(value);
+                    }
+                    break;
+                case "ENDPOINT" /* ENDPOINT */:
+                    {
+                        const { port1, port2 } = new MessageChannel();
+                        expose(obj, port2);
+                        returnValue = transfer(port1, [port1]);
+                    }
+                    break;
+                case "RELEASE" /* RELEASE */:
+                    {
+                        returnValue = undefined;
+                    }
+                    break;
+                default:
+                    return;
+            }
+        }
+        catch (value) {
+            returnValue = { value, [throwMarker]: 0 };
+        }
+        Promise.resolve(returnValue)
+            .catch((value) => {
+            return { value, [throwMarker]: 0 };
+        })
+            .then((returnValue) => {
+            const [wireValue, transferables] = toWireValue(returnValue);
+            ep.postMessage(Object.assign(Object.assign({}, wireValue), { id }), transferables);
+            if (type === "RELEASE" /* RELEASE */) {
+                // detach and deactive after sending release response above.
+                ep.removeEventListener("message", callback);
+                closeEndPoint(ep);
+            }
+        });
+    });
+    if (ep.start) {
+        ep.start();
+    }
+}
+function isMessagePort(endpoint) {
+    return endpoint.constructor.name === "MessagePort";
+}
+function closeEndPoint(endpoint) {
+    if (isMessagePort(endpoint))
+        endpoint.close();
+}
+function wrap(ep, target) {
+    return createProxy(ep, [], target);
+}
+function throwIfProxyReleased(isReleased) {
+    if (isReleased) {
+        throw new Error("Proxy has been released and is not useable");
+    }
+}
+function createProxy(ep, path = [], target = function () { }) {
+    let isProxyReleased = false;
+    const proxy = new Proxy(target, {
+        get(_target, prop) {
+            throwIfProxyReleased(isProxyReleased);
+            if (prop === releaseProxy) {
+                return () => {
+                    return requestResponseMessage(ep, {
+                        type: "RELEASE" /* RELEASE */,
+                        path: path.map((p) => p.toString()),
+                    }).then(() => {
+                        closeEndPoint(ep);
+                        isProxyReleased = true;
+                    });
+                };
+            }
+            if (prop === "then") {
+                if (path.length === 0) {
+                    return { then: () => proxy };
+                }
+                const r = requestResponseMessage(ep, {
+                    type: "GET" /* GET */,
+                    path: path.map((p) => p.toString()),
+                }).then(fromWireValue);
+                return r.then.bind(r);
+            }
+            return createProxy(ep, [...path, prop]);
+        },
+        set(_target, prop, rawValue) {
+            throwIfProxyReleased(isProxyReleased);
+            // FIXME: ES6 Proxy Handler `set` methods are supposed to return a
+            // boolean. To show good will, we return true asynchronously ¯\_(ツ)_/¯
+            const [value, transferables] = toWireValue(rawValue);
+            return requestResponseMessage(ep, {
+                type: "SET" /* SET */,
+                path: [...path, prop].map((p) => p.toString()),
+                value,
+            }, transferables).then(fromWireValue);
+        },
+        apply(_target, _thisArg, rawArgumentList) {
+            throwIfProxyReleased(isProxyReleased);
+            const last = path[path.length - 1];
+            if (last === createEndpoint) {
+                return requestResponseMessage(ep, {
+                    type: "ENDPOINT" /* ENDPOINT */,
+                }).then(fromWireValue);
+            }
+            // We just pretend that `bind()` didn’t happen.
+            if (last === "bind") {
+                return createProxy(ep, path.slice(0, -1));
+            }
+            const [argumentList, transferables] = processArguments(rawArgumentList);
+            return requestResponseMessage(ep, {
+                type: "APPLY" /* APPLY */,
+                path: path.map((p) => p.toString()),
+                argumentList,
+            }, transferables).then(fromWireValue);
+        },
+        construct(_target, rawArgumentList) {
+            throwIfProxyReleased(isProxyReleased);
+            const [argumentList, transferables] = processArguments(rawArgumentList);
+            return requestResponseMessage(ep, {
+                type: "CONSTRUCT" /* CONSTRUCT */,
+                path: path.map((p) => p.toString()),
+                argumentList,
+            }, transferables).then(fromWireValue);
+        },
+    });
+    return proxy;
+}
+function myFlat(arr) {
+    return Array.prototype.concat.apply([], arr);
+}
+function processArguments(argumentList) {
+    const processed = argumentList.map(toWireValue);
+    return [processed.map((v) => v[0]), myFlat(processed.map((v) => v[1]))];
+}
+const transferCache = new WeakMap();
+function transfer(obj, transfers) {
+    transferCache.set(obj, transfers);
+    return obj;
+}
+function proxy(obj) {
+    return Object.assign(obj, { [proxyMarker]: true });
+}
+function windowEndpoint(w, context = self, targetOrigin = "*") {
+    return {
+        postMessage: (msg, transferables) => w.postMessage(msg, targetOrigin, transferables),
+        addEventListener: context.addEventListener.bind(context),
+        removeEventListener: context.removeEventListener.bind(context),
     };
 }
-//# sourceMappingURL=simplex-noise.js.map
+function toWireValue(value) {
+    for (const [name, handler] of transferHandlers) {
+        if (handler.canHandle(value)) {
+            const [serializedValue, transferables] = handler.serialize(value);
+            return [
+                {
+                    type: "HANDLER" /* HANDLER */,
+                    name,
+                    value: serializedValue,
+                },
+                transferables,
+            ];
+        }
+    }
+    return [
+        {
+            type: "RAW" /* RAW */,
+            value,
+        },
+        transferCache.get(value) || [],
+    ];
+}
+function fromWireValue(value) {
+    switch (value.type) {
+        case "HANDLER" /* HANDLER */:
+            return transferHandlers.get(value.name).deserialize(value.value);
+        case "RAW" /* RAW */:
+            return value.value;
+    }
+}
+function requestResponseMessage(ep, msg, transfers) {
+    return new Promise((resolve) => {
+        const id = generateUUID();
+        ep.addEventListener("message", function l(ev) {
+            if (!ev.data || !ev.data.id || ev.data.id !== id) {
+                return;
+            }
+            ep.removeEventListener("message", l);
+            resolve(ev.data);
+        });
+        if (ep.start) {
+            ep.start();
+        }
+        ep.postMessage(Object.assign({ id }, msg), transfers);
+    });
+}
+function generateUUID() {
+    return new Array(4)
+        .fill(0)
+        .map(() => Math.floor(Math.random() * Number.MAX_SAFE_INTEGER).toString(16))
+        .join("-");
+}
+
+
+//# sourceMappingURL=comlink.mjs.map
+
 
 /***/ }),
 
@@ -659,7 +712,6 @@ function masher() {
   \**************************************************/
 /***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __webpack_require__) => {
 
-"use strict";
 __webpack_require__.r(__webpack_exports__);
 /* harmony export */ __webpack_require__.d(__webpack_exports__, {
 /* harmony export */   "ACESFilmicToneMapping": () => (/* binding */ ACESFilmicToneMapping),
@@ -51549,6 +51601,276 @@ if ( typeof window !== 'undefined' ) {
 
 
 
+/***/ }),
+
+/***/ "./node_modules/three/src/math/MathUtils.js":
+/*!**************************************************!*\
+  !*** ./node_modules/three/src/math/MathUtils.js ***!
+  \**************************************************/
+/***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __webpack_require__) => {
+
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "DEG2RAD": () => (/* binding */ DEG2RAD),
+/* harmony export */   "RAD2DEG": () => (/* binding */ RAD2DEG),
+/* harmony export */   "generateUUID": () => (/* binding */ generateUUID),
+/* harmony export */   "clamp": () => (/* binding */ clamp),
+/* harmony export */   "euclideanModulo": () => (/* binding */ euclideanModulo),
+/* harmony export */   "mapLinear": () => (/* binding */ mapLinear),
+/* harmony export */   "inverseLerp": () => (/* binding */ inverseLerp),
+/* harmony export */   "lerp": () => (/* binding */ lerp),
+/* harmony export */   "damp": () => (/* binding */ damp),
+/* harmony export */   "pingpong": () => (/* binding */ pingpong),
+/* harmony export */   "smoothstep": () => (/* binding */ smoothstep),
+/* harmony export */   "smootherstep": () => (/* binding */ smootherstep),
+/* harmony export */   "randInt": () => (/* binding */ randInt),
+/* harmony export */   "randFloat": () => (/* binding */ randFloat),
+/* harmony export */   "randFloatSpread": () => (/* binding */ randFloatSpread),
+/* harmony export */   "seededRandom": () => (/* binding */ seededRandom),
+/* harmony export */   "degToRad": () => (/* binding */ degToRad),
+/* harmony export */   "radToDeg": () => (/* binding */ radToDeg),
+/* harmony export */   "isPowerOfTwo": () => (/* binding */ isPowerOfTwo),
+/* harmony export */   "ceilPowerOfTwo": () => (/* binding */ ceilPowerOfTwo),
+/* harmony export */   "floorPowerOfTwo": () => (/* binding */ floorPowerOfTwo),
+/* harmony export */   "setQuaternionFromProperEuler": () => (/* binding */ setQuaternionFromProperEuler)
+/* harmony export */ });
+const _lut = [];
+
+for ( let i = 0; i < 256; i ++ ) {
+
+	_lut[ i ] = ( i < 16 ? '0' : '' ) + ( i ).toString( 16 );
+
+}
+
+let _seed = 1234567;
+
+
+const DEG2RAD = Math.PI / 180;
+const RAD2DEG = 180 / Math.PI;
+
+// http://stackoverflow.com/questions/105034/how-to-create-a-guid-uuid-in-javascript/21963136#21963136
+function generateUUID() {
+
+	const d0 = Math.random() * 0xffffffff | 0;
+	const d1 = Math.random() * 0xffffffff | 0;
+	const d2 = Math.random() * 0xffffffff | 0;
+	const d3 = Math.random() * 0xffffffff | 0;
+	const uuid = _lut[ d0 & 0xff ] + _lut[ d0 >> 8 & 0xff ] + _lut[ d0 >> 16 & 0xff ] + _lut[ d0 >> 24 & 0xff ] + '-' +
+			_lut[ d1 & 0xff ] + _lut[ d1 >> 8 & 0xff ] + '-' + _lut[ d1 >> 16 & 0x0f | 0x40 ] + _lut[ d1 >> 24 & 0xff ] + '-' +
+			_lut[ d2 & 0x3f | 0x80 ] + _lut[ d2 >> 8 & 0xff ] + '-' + _lut[ d2 >> 16 & 0xff ] + _lut[ d2 >> 24 & 0xff ] +
+			_lut[ d3 & 0xff ] + _lut[ d3 >> 8 & 0xff ] + _lut[ d3 >> 16 & 0xff ] + _lut[ d3 >> 24 & 0xff ];
+
+	// .toUpperCase() here flattens concatenated strings to save heap memory space.
+	return uuid.toUpperCase();
+
+}
+
+function clamp( value, min, max ) {
+
+	return Math.max( min, Math.min( max, value ) );
+
+}
+
+// compute euclidian modulo of m % n
+// https://en.wikipedia.org/wiki/Modulo_operation
+function euclideanModulo( n, m ) {
+
+	return ( ( n % m ) + m ) % m;
+
+}
+
+// Linear mapping from range <a1, a2> to range <b1, b2>
+function mapLinear( x, a1, a2, b1, b2 ) {
+
+	return b1 + ( x - a1 ) * ( b2 - b1 ) / ( a2 - a1 );
+
+}
+
+// https://www.gamedev.net/tutorials/programming/general-and-gameplay-programming/inverse-lerp-a-super-useful-yet-often-overlooked-function-r5230/
+function inverseLerp( x, y, value ) {
+
+	if ( x !== y ) {
+
+		return ( value - x ) / ( y - x );
+
+	} else {
+
+		return 0;
+
+	}
+
+}
+
+// https://en.wikipedia.org/wiki/Linear_interpolation
+function lerp( x, y, t ) {
+
+	return ( 1 - t ) * x + t * y;
+
+}
+
+// http://www.rorydriscoll.com/2016/03/07/frame-rate-independent-damping-using-lerp/
+function damp( x, y, lambda, dt ) {
+
+	return lerp( x, y, 1 - Math.exp( - lambda * dt ) );
+
+}
+
+// https://www.desmos.com/calculator/vcsjnyz7x4
+function pingpong( x, length = 1 ) {
+
+	return length - Math.abs( euclideanModulo( x, length * 2 ) - length );
+
+}
+
+// http://en.wikipedia.org/wiki/Smoothstep
+function smoothstep( x, min, max ) {
+
+	if ( x <= min ) return 0;
+	if ( x >= max ) return 1;
+
+	x = ( x - min ) / ( max - min );
+
+	return x * x * ( 3 - 2 * x );
+
+}
+
+function smootherstep( x, min, max ) {
+
+	if ( x <= min ) return 0;
+	if ( x >= max ) return 1;
+
+	x = ( x - min ) / ( max - min );
+
+	return x * x * x * ( x * ( x * 6 - 15 ) + 10 );
+
+}
+
+// Random integer from <low, high> interval
+function randInt( low, high ) {
+
+	return low + Math.floor( Math.random() * ( high - low + 1 ) );
+
+}
+
+// Random float from <low, high> interval
+function randFloat( low, high ) {
+
+	return low + Math.random() * ( high - low );
+
+}
+
+// Random float from <-range/2, range/2> interval
+function randFloatSpread( range ) {
+
+	return range * ( 0.5 - Math.random() );
+
+}
+
+// Deterministic pseudo-random float in the interval [ 0, 1 ]
+function seededRandom( s ) {
+
+	if ( s !== undefined ) _seed = s % 2147483647;
+
+	// Park-Miller algorithm
+
+	_seed = _seed * 16807 % 2147483647;
+
+	return ( _seed - 1 ) / 2147483646;
+
+}
+
+function degToRad( degrees ) {
+
+	return degrees * DEG2RAD;
+
+}
+
+function radToDeg( radians ) {
+
+	return radians * RAD2DEG;
+
+}
+
+function isPowerOfTwo( value ) {
+
+	return ( value & ( value - 1 ) ) === 0 && value !== 0;
+
+}
+
+function ceilPowerOfTwo( value ) {
+
+	return Math.pow( 2, Math.ceil( Math.log( value ) / Math.LN2 ) );
+
+}
+
+function floorPowerOfTwo( value ) {
+
+	return Math.pow( 2, Math.floor( Math.log( value ) / Math.LN2 ) );
+
+}
+
+function setQuaternionFromProperEuler( q, a, b, c, order ) {
+
+	// Intrinsic Proper Euler Angles - see https://en.wikipedia.org/wiki/Euler_angles
+
+	// rotations are applied to the axes in the order specified by 'order'
+	// rotation by angle 'a' is applied first, then by angle 'b', then by angle 'c'
+	// angles are in radians
+
+	const cos = Math.cos;
+	const sin = Math.sin;
+
+	const c2 = cos( b / 2 );
+	const s2 = sin( b / 2 );
+
+	const c13 = cos( ( a + c ) / 2 );
+	const s13 = sin( ( a + c ) / 2 );
+
+	const c1_3 = cos( ( a - c ) / 2 );
+	const s1_3 = sin( ( a - c ) / 2 );
+
+	const c3_1 = cos( ( c - a ) / 2 );
+	const s3_1 = sin( ( c - a ) / 2 );
+
+	switch ( order ) {
+
+		case 'XYX':
+			q.set( c2 * s13, s2 * c1_3, s2 * s1_3, c2 * c13 );
+			break;
+
+		case 'YZY':
+			q.set( s2 * s1_3, c2 * s13, s2 * c1_3, c2 * c13 );
+			break;
+
+		case 'ZXZ':
+			q.set( s2 * c1_3, s2 * s1_3, c2 * s13, c2 * c13 );
+			break;
+
+		case 'XZX':
+			q.set( c2 * s13, s2 * s3_1, s2 * c3_1, c2 * c13 );
+			break;
+
+		case 'YXY':
+			q.set( s2 * c3_1, c2 * s13, s2 * s3_1, c2 * c13 );
+			break;
+
+		case 'ZYZ':
+			q.set( s2 * s3_1, s2 * c3_1, c2 * s13, c2 * c13 );
+			break;
+
+		default:
+			console.warn( 'THREE.MathUtils: .setQuaternionFromProperEuler() encountered an unknown order: ' + order );
+
+	}
+
+}
+
+
+
+
+
+
+
 /***/ })
 
 /******/ 	});
@@ -51578,18 +51900,6 @@ if ( typeof window !== 'undefined' ) {
 /******/ 	}
 /******/ 	
 /************************************************************************/
-/******/ 	/* webpack/runtime/compat get default export */
-/******/ 	(() => {
-/******/ 		// getDefaultExport function for compatibility with non-harmony modules
-/******/ 		__webpack_require__.n = (module) => {
-/******/ 			var getter = module && module.__esModule ?
-/******/ 				() => (module['default']) :
-/******/ 				() => (module);
-/******/ 			__webpack_require__.d(getter, { a: getter });
-/******/ 			return getter;
-/******/ 		};
-/******/ 	})();
-/******/ 	
 /******/ 	/* webpack/runtime/define property getters */
 /******/ 	(() => {
 /******/ 		// define getter functions for harmony exports
@@ -51620,102 +51930,34 @@ if ( typeof window !== 'undefined' ) {
 /******/ 	
 /************************************************************************/
 var __webpack_exports__ = {};
-// This entry need to be wrapped in an IIFE because it need to be in strict mode.
+// This entry need to be wrapped in an IIFE because it need to be isolated against other modules in the chunk.
 (() => {
-"use strict";
-/*!************************************************************************************!*\
-  !*** ./node_modules/ts-loader/index.js!./src/world/chunk-data-generator.worker.ts ***!
-  \************************************************************************************/
+/*!********************************************************************************************!*\
+  !*** ./node_modules/ts-loader/index.js!./src/world/chunk/chunk-geometry-builder.worker.ts ***!
+  \********************************************************************************************/
 __webpack_require__.r(__webpack_exports__);
-/* harmony import */ var simplex_noise__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! simplex-noise */ "./node_modules/simplex-noise/dist/esm/simplex-noise.js");
-/* harmony import */ var three__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! three */ "./node_modules/three/build/three.module.js");
-/* harmony import */ var _util_index_to_vector3__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../util/index-to-vector3 */ "./src/util/index-to-vector3.ts");
-/* harmony import */ var bezier_easing__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! bezier-easing */ "./node_modules/bezier-easing/src/index.js");
-/* harmony import */ var bezier_easing__WEBPACK_IMPORTED_MODULE_2___default = /*#__PURE__*/__webpack_require__.n(bezier_easing__WEBPACK_IMPORTED_MODULE_2__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "ChunkGeometryBuilder": () => (/* binding */ ChunkGeometryBuilder)
+/* harmony export */ });
+/* harmony import */ var comlink__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! comlink */ "./node_modules/comlink/dist/esm/comlink.mjs");
+/* harmony import */ var _chunk_renderer__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../chunk-renderer */ "./src/world/chunk-renderer.ts");
 
 
-
-
-var CHUNK_WIDTH = 16;
-var CHUNK_HEIGHT = 16;
-var LandToSeaEasing = bezier_easing__WEBPACK_IMPORTED_MODULE_2___default()(0.02, 0.88, 0.63, 1);
-var CliffnessEasing = bezier_easing__WEBPACK_IMPORTED_MODULE_2___default()(1, -0.34, 0.86, 0.78);
-function generateChunkData(position, simplexNoise) {
-    var noise2 = function (x, z) { return (simplexNoise.noise2D(x, z) + 1) / 2; };
-    var noise3 = function (x, y, z) { return (simplexNoise.noise3D(x, y, z) + 1) / 2; };
-    var blockData = new Uint8Array(CHUNK_WIDTH * CHUNK_HEIGHT * CHUNK_WIDTH);
-    for (var x = 0; x < CHUNK_WIDTH; x++) {
-        for (var z = 0; z < CHUNK_WIDTH; z++) {
-            var worldX = x + position.x * CHUNK_WIDTH;
-            var worldZ = z + position.z * CHUNK_WIDTH;
-            var landmassNoise = noise2(worldX * 0.0005, worldZ * 0.0005) * 0.95 + noise2(worldX * 0.005, worldZ * 0.005) * 0.05;
-            landmassNoise = landmassNoise * 0.9 + noise2(worldX * 0.01, worldZ * 0.01) * 0.1;
-            landmassNoise = landmassNoise * 0.97 + noise2(worldX * 0.05, worldZ * 0.05) * 0.03;
-            var isLandmass = landmassNoise > 0.4;
-            if (!isLandmass) {
-                if (position.y === 0) {
-                    blockData[(0,_util_index_to_vector3__WEBPACK_IMPORTED_MODULE_1__.xyzTupelToIndex)(x, 0, z, CHUNK_WIDTH, CHUNK_WIDTH)] = 4;
-                }
-                continue;
-            }
-            var beachNoise = noise2(worldX * 0.003, worldZ * 0.003);
-            var isBeach = beachNoise < 0.5;
-            var cliffness = Math.max(CliffnessEasing(beachNoise), 0);
-            var isCliff = cliffness > 0.5;
-            var waterNearness = LandToSeaEasing((landmassNoise - 0.4) / 0.6);
-            var landToSeaBlend = (1 - cliffness) * waterNearness + cliffness * 2;
-            var isNearWater = waterNearness < 0.25;
-            var baseHeight = (4 + noise2(worldX * 0.01, worldZ * 0.01) * 32);
-            var height = (baseHeight + (noise2(worldX * 0.05, worldZ * 0.05) - 0.5) * 8 + (noise2(worldX * 0.005, worldZ * 0.005) - 0.5) * 16) * landToSeaBlend;
-            for (var y = 0; y < CHUNK_HEIGHT; y++) {
-                var worldY = y + position.y * CHUNK_HEIGHT;
-                var index = (0,_util_index_to_vector3__WEBPACK_IMPORTED_MODULE_1__.xyzTupelToIndex)(x, y, z, CHUNK_WIDTH, CHUNK_WIDTH);
-                if (height <= 0) {
-                    blockData[index] = worldY === 0 ? 4 : 0;
-                    continue;
-                }
-                if (isNearWater && isBeach) {
-                    blockData[index] = worldY <= height ? 5 : 0;
-                }
-                else if (waterNearness < 0.3 && isCliff) {
-                    if (worldY === 0) {
-                        blockData[index] = 4;
-                        continue;
-                    }
-                    var cliffFragmentationNoiseAmplitude = 0.07;
-                    var cliffFragmentationNoise = noise3(worldX * cliffFragmentationNoiseAmplitude, worldY * cliffFragmentationNoiseAmplitude, worldZ * cliffFragmentationNoiseAmplitude);
-                    blockData[index] = (worldY <= height) && (cliffFragmentationNoise > 0.25) ? 1 : 0;
-                }
-                else {
-                    blockData[index] = worldY > height ? 0 : (worldY > height - 3 ? (worldY > height - 1 ? 2 : 3) : 1);
-                }
-            }
-        }
+var ChunkGeometryBuilder = /** @class */ (function () {
+    function ChunkGeometryBuilder(blockModels) {
+        this.blockModels = blockModels;
+        this.chunkRenderer = new _chunk_renderer__WEBPACK_IMPORTED_MODULE_0__.ChunkRenderer(blockModels);
     }
-    return blockData;
-}
-var ctx = self;
-function main() {
-    var simplexNoise;
-    onmessage = function (_a) {
-        var data = _a.data;
-        var type = data.type;
-        switch (type) {
-            case 'seed':
-                simplexNoise = new simplex_noise__WEBPACK_IMPORTED_MODULE_0__["default"](data.seed);
-                break;
-            case 'generate': {
-                var result = generateChunkData(new three__WEBPACK_IMPORTED_MODULE_3__.Vector3().fromArray(data.position), simplexNoise);
-                ctx.postMessage({ type: 'generate--complete', position: data.position, result: result });
-                break;
-            }
-        }
+    ChunkGeometryBuilder.prototype.buildGeometry = function (blockData) {
+        return this.chunkRenderer.buildGeometry(blockData);
     };
-}
-main();
+    return ChunkGeometryBuilder;
+}());
+
+(0,comlink__WEBPACK_IMPORTED_MODULE_1__.expose)(ChunkGeometryBuilder);
 
 })();
 
 /******/ })()
 ;
-//# sourceMappingURL=chunk-data-generator.worker.a4219c634c51a9b81e25.worker.js.map
+//# sourceMappingURL=chunk-geometry-builder.worker.44d56d910b9e8973135b.worker.js.map

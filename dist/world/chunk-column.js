@@ -34,29 +34,13 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
         if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
     }
 };
-import { Vector3 } from "three";
-import { Game } from "../game";
-import { Chunk, CHUNK_HEIGHT } from "./chunk";
-import pEachSeries from "p-each-series";
-export var ChunkColumnPriority;
-(function (ChunkColumnPriority) {
-    // Render & Tick
-    ChunkColumnPriority[ChunkColumnPriority["High"] = 3] = "High";
-    // Render
-    ChunkColumnPriority[ChunkColumnPriority["Middle"] = 2] = "Middle";
-    // Generate
-    ChunkColumnPriority[ChunkColumnPriority["Low"] = 1] = "Low";
-    // Prepare
-    ChunkColumnPriority[ChunkColumnPriority["Lowest"] = 0] = "Lowest";
-})(ChunkColumnPriority || (ChunkColumnPriority = {}));
+import { Vector3 } from 'three';
+import { Chunk, CHUNK_HEIGHT } from './chunk';
 var ChunkColumn = /** @class */ (function () {
     function ChunkColumn(manager, position, height) {
         this.manager = manager;
         this.position = position;
         this.chunks = [];
-        this.chunksBuilt = false;
-        this.chunksGenerated = false;
-        this.priority = ChunkColumnPriority.Lowest;
         for (var i = 0; i < height; i++) {
             this.chunks.push(new Chunk(this, new Vector3(position[0], i, position[1])));
         }
@@ -68,101 +52,17 @@ var ChunkColumn = /** @class */ (function () {
         this.chunks.forEach(function (chunk) { return chunk.unregister(scene); });
     };
     ChunkColumn.prototype.generatePrototype = function () {
-        return __awaiter(this, void 0, void 0, function () {
-            var _a;
-            return __generator(this, function (_b) {
-                switch (_b.label) {
-                    case 0:
-                        if (this.heightMap) {
-                            return [2 /*return*/];
-                        }
-                        _a = this;
-                        return [4 /*yield*/, Game.main.chunkGeneratorPool.generateHeightMap(this.position)];
-                    case 1:
-                        _a.heightMap = _b.sent();
-                        return [2 /*return*/];
-                }
-            });
-        });
-    };
-    ChunkColumn.prototype.setPriority = function (priority) {
-        return __awaiter(this, void 0, void 0, function () {
-            var oldPriority;
-            return __generator(this, function (_a) {
-                switch (_a.label) {
-                    case 0:
-                        if (this.priority === priority) {
-                            return [2 /*return*/];
-                        }
-                        oldPriority = this.priority;
-                        this.priority = priority;
-                        if (!(priority >= ChunkColumnPriority.Low && priority > oldPriority)) return [3 /*break*/, 3];
-                        if (!!this.chunksGenerated) return [3 /*break*/, 2];
-                        return [4 /*yield*/, pEachSeries(this.chunks, function (chunk) { return chunk.generateTerrain(true); })];
-                    case 1:
-                        _a.sent();
-                        this.chunksGenerated = true;
-                        _a.label = 2;
-                    case 2:
-                        this.manager.requestChunkUpdate(this);
-                        _a.label = 3;
-                    case 3: return [2 /*return*/];
-                }
-            });
-        });
-    };
-    ChunkColumn.prototype.requestedUpdate = function () {
-        return __awaiter(this, void 0, void 0, function () {
-            return __generator(this, function (_a) {
-                switch (_a.label) {
-                    case 0:
-                        if (!(this.chunksGenerated
-                            && !this.chunksBuilt
-                            && this.areNeighborsGenerated())) return [3 /*break*/, 2];
-                        return [4 /*yield*/, Promise.all(this.chunks.map(function (chunk) { return chunk.buildMesh(); }))];
-                    case 1:
-                        _a.sent();
-                        this.chunksBuilt = true;
-                        this.requestNeighborColumnsToUpdate();
-                        _a.label = 2;
-                    case 2: return [2 /*return*/];
-                }
-            });
-        });
-    };
-    ChunkColumn.prototype.areNeighborsGenerated = function () {
-        var _this = this;
-        return [[-1, 0], [1, 0], [0, -1], [0, 1]].reduce(function (result, pos) {
-            var _a, _b;
-            if (!result) {
-                return false;
-            }
-            return (_b = (_a = _this.manager.getChunkColumn(_this.position[0] + pos[0], _this.position[1] + pos[1])) === null || _a === void 0 ? void 0 : _a.chunksGenerated) !== null && _b !== void 0 ? _b : false;
-        }, true);
-    };
-    ChunkColumn.prototype.requestNeighborColumnsToUpdate = function () {
-        var _this = this;
-        [[-1, 0], [1, 0], [0, -1], [0, 1]].forEach(function (pos) {
-            var neighbor = _this.manager.getChunkColumn(_this.position[0] + pos[0], _this.position[1] + pos[1]);
-            if (!neighbor) {
-                return;
-            }
-            _this.manager.requestChunkUpdate(neighbor);
-        });
+        return __awaiter(this, void 0, void 0, function () { return __generator(this, function (_a) {
+            return [2 /*return*/];
+        }); });
     };
     ChunkColumn.prototype.onTick = function (deltaTime) {
-        var _this = this;
         this.chunks.forEach(function (chunk) {
             chunk.onTick(deltaTime);
-            if (_this.priority === ChunkColumnPriority.High) {
-                chunk.tickBlocks();
-            }
+            chunk.tickBlocks();
         });
     };
     ChunkColumn.prototype.lateUpdate = function (deltaTime) {
-        if (this.priority <= ChunkColumnPriority.Low) {
-            return;
-        }
         this.chunks.forEach(function (chunk) { return chunk.lateUpdate(deltaTime); });
     };
     ChunkColumn.prototype.setBlockAt = function (_a, block) {

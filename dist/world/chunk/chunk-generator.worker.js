@@ -20,7 +20,7 @@ var ChunkGenerator = /** @class */ (function () {
         this.biomeGenerator = new BiomeGenerator(smoothNoise);
         this.worldNoise = new WorldNoise(noiseSeed);
     }
-    ChunkGenerator.prototype.buildTerrain = function (chunkPosition, heightMap) {
+    ChunkGenerator.prototype.buildTerrain = function (chunkPosition) {
         var blocks = this.buildBaseTerrain(chunkPosition);
         // const decoratedBlocks = this.decorateTerrain(blocks);
         return Uint8Array.from(blocks.map(function (block) { return Blocks.getBlockId(block); }));

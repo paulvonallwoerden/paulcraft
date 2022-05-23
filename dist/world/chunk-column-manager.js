@@ -1,152 +1,113 @@
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
-var __generator = (this && this.__generator) || function (thisArg, body) {
-    var _ = { label: 0, sent: function() { if (t[0] & 1) throw t[1]; return t[1]; }, trys: [], ops: [] }, f, y, t, g;
-    return g = { next: verb(0), "throw": verb(1), "return": verb(2) }, typeof Symbol === "function" && (g[Symbol.iterator] = function() { return this; }), g;
-    function verb(n) { return function (v) { return step([n, v]); }; }
-    function step(op) {
-        if (f) throw new TypeError("Generator is already executing.");
-        while (_) try {
-            if (f = 1, y && (t = op[0] & 2 ? y["return"] : op[0] ? y["throw"] || ((t = y["return"]) && t.call(y), 0) : y.next) && !(t = t.call(y, op[1])).done) return t;
-            if (y = 0, t) op = [op[0] & 2, t.value];
-            switch (op[0]) {
-                case 0: case 1: t = op; break;
-                case 4: _.label++; return { value: op[1], done: false };
-                case 5: _.label++; y = op[1]; op = [0]; continue;
-                case 7: op = _.ops.pop(); _.trys.pop(); continue;
-                default:
-                    if (!(t = _.trys, t = t.length > 0 && t[t.length - 1]) && (op[0] === 6 || op[0] === 2)) { _ = 0; continue; }
-                    if (op[0] === 3 && (!t || (op[1] > t[0] && op[1] < t[3]))) { _.label = op[1]; break; }
-                    if (op[0] === 6 && _.label < t[1]) { _.label = t[1]; t = op; break; }
-                    if (t && _.label < t[2]) { _.label = t[2]; _.ops.push(op); break; }
-                    if (t[2]) _.ops.pop();
-                    _.trys.pop(); continue;
-            }
-            op = body.call(thisArg, _);
-        } catch (e) { op = [6, e]; y = 0; } finally { f = t = 0; }
-        if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
-    }
-};
-var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
-    if (pack || arguments.length === 2) for (var i = 0, l = from.length, ar; i < l; i++) {
-        if (ar || !(i in from)) {
-            if (!ar) ar = Array.prototype.slice.call(from, 0, i);
-            ar[i] = from[i];
-        }
-    }
-    return to.concat(ar || Array.prototype.slice.call(from));
-};
-import { ChunkColumn, ChunkColumnPriority } from "./chunk-column";
-import pAll from 'p-all';
+import { Vector2 } from 'three';
+import { ChunkColumn } from './chunk-column';
+var ChunkColumnState;
+(function (ChunkColumnState) {
+    ChunkColumnState[ChunkColumnState["Unregistered"] = -1] = "Unregistered";
+    ChunkColumnState[ChunkColumnState["Registered"] = 0] = "Registered";
+    ChunkColumnState[ChunkColumnState["Generating"] = 1] = "Generating";
+    ChunkColumnState[ChunkColumnState["Generated"] = 2] = "Generated";
+    ChunkColumnState[ChunkColumnState["Rendering"] = 3] = "Rendering";
+    ChunkColumnState[ChunkColumnState["Rendered"] = 4] = "Rendered";
+})(ChunkColumnState || (ChunkColumnState = {}));
 var ChunkColumnManager = /** @class */ (function () {
     function ChunkColumnManager(scene, renderDistance, simulationDistance, chunkUpdateConcurrency) {
         this.scene = scene;
         this.renderDistance = renderDistance;
         this.simulationDistance = simulationDistance;
         this.chunkUpdateConcurrency = chunkUpdateConcurrency;
-        this.chunkColumns = {};
-        this.chunkColumnPositions = [];
-        this.requestedUpdateChunkColumns = [];
-        this.numberOfCurrentlyRunningRequestedChunkUpdates = 0;
+        this.loadedChunkColumns = [];
+        this.chunkColumnStates = new Map();
     }
     ChunkColumnManager.prototype.setCenter = function (centerX, centerZ) {
-        var _this = this;
-        var candidateRange = Math.max(this.renderDistance, this.simulationDistance) + 2;
-        var candidates = [];
-        for (var x = -candidateRange; x <= candidateRange; x += 1) {
-            for (var z = -candidateRange; z <= candidateRange; z += 1) {
-                candidates.push({
-                    x: x + centerX,
-                    z: z + centerZ,
-                    priority: this.calculateChunkColumnPriority(x, z),
-                });
-            }
-        }
-        // Load new columns
-        pAll(candidates.map(function (candidate) { return function () { return __awaiter(_this, void 0, void 0, function () {
-            var chunkColumn;
-            return __generator(this, function (_a) {
-                switch (_a.label) {
-                    case 0:
-                        chunkColumn = this.getChunkColumn(candidate.x, candidate.z);
-                        if (!!chunkColumn) return [3 /*break*/, 2];
-                        chunkColumn = new ChunkColumn(this, [candidate.x, candidate.z], 8);
-                        chunkColumn.register(this.scene);
-                        this.setChunkColumn(candidate.x, candidate.z, chunkColumn);
-                        return [4 /*yield*/, chunkColumn.generatePrototype()];
-                    case 1:
-                        _a.sent();
-                        _a.label = 2;
-                    case 2: return [4 /*yield*/, chunkColumn.setPriority(candidate.priority)];
-                    case 3:
-                        _a.sent();
-                        return [2 /*return*/];
+        var range = Math.max(this.renderDistance, this.simulationDistance) + 2;
+        for (var offsetX = -range; offsetX <= range; offsetX += 1) {
+            for (var offsetZ = -range; offsetZ <= range; offsetZ += 1) {
+                var x = centerX + offsetX;
+                var z = centerZ + offsetZ;
+                var targetState = this.calculateChunkColumnTargetState(offsetX, offsetZ);
+                var maybeExistingColumn = this.getChunkColumn(x, z);
+                if (maybeExistingColumn) {
+                    var currentState = this.chunkColumnStates.get(maybeExistingColumn);
+                    this.chunkColumnStates.set(maybeExistingColumn, {
+                        is: currentState.is,
+                        target: targetState,
+                    });
                 }
-            });
-        }); }; }), { concurrency: this.chunkUpdateConcurrency });
-        // Unload old columns
-        for (var _i = 0, _a = this.chunkColumnPositions; _i < _a.length; _i++) {
-            var _b = _a[_i], x = _b[0], z = _b[1];
-            var remove = Math.abs(x - centerX) > this.renderDistance + 1 || Math.abs(z - centerZ) > this.renderDistance + 1;
-            var chunkColumn = this.getChunkColumn(x, z);
-            if (remove && chunkColumn) {
-                chunkColumn.unregister(this.scene);
-                this.setChunkColumn(x, z, undefined);
+                else {
+                    var newColumn = new ChunkColumn(this, [x, z], 8);
+                    this.loadedChunkColumns.push(newColumn);
+                    newColumn.register(this.scene);
+                    this.chunkColumnStates.set(newColumn, {
+                        is: ChunkColumnState.Registered,
+                        target: targetState,
+                    });
+                }
             }
         }
+        this.loadedChunkColumns.sort(function (a, b) {
+            var aDist = new Vector2().fromArray(a.position).distanceTo(new Vector2(centerX, centerZ));
+            var bDist = new Vector2().fromArray(b.position).distanceTo(new Vector2(centerX, centerZ));
+            return aDist - bDist;
+        });
     };
     ChunkColumnManager.prototype.update = function (deltaTime) {
-        this.handleRequestedChunkUpdates();
+        var _this = this;
+        var _loop_1 = function (i) {
+            var chunkColumn = this_1.loadedChunkColumns[i];
+            var state = this_1.chunkColumnStates.get(chunkColumn);
+            if (state.is === state.target) {
+                return out_i_1 = i, "continue";
+            }
+            if (state.is > state.target && state.target === ChunkColumnState.Unregistered) {
+                this_1.loadedChunkColumns.splice(i, 1);
+                chunkColumn.unregister(this_1.scene);
+                this_1.chunkColumnStates.delete(chunkColumn);
+                i--;
+                return out_i_1 = i, "continue";
+            }
+            if (state.is === ChunkColumnState.Registered) {
+                this_1.chunkColumnStates.set(chunkColumn, { is: ChunkColumnState.Generating, target: state.target });
+                Promise.all(chunkColumn.chunks.map(function (chunk) { return chunk.generateTerrain(); })).then(function () {
+                    var currentState = _this.chunkColumnStates.get(chunkColumn);
+                    _this.chunkColumnStates.set(chunkColumn, { is: ChunkColumnState.Generated, target: currentState.target });
+                });
+                return { value: void 0 };
+            }
+            if (state.is === ChunkColumnState.Generated && this_1.areNeighborColumnsGenerated(chunkColumn)) {
+                this_1.chunkColumnStates.set(chunkColumn, { is: ChunkColumnState.Rendering, target: state.target });
+                Promise.all(chunkColumn.chunks.map(function (chunk) { return chunk.buildMesh(); })).then(function () {
+                    var currentState = _this.chunkColumnStates.get(chunkColumn);
+                    _this.chunkColumnStates.set(chunkColumn, { is: ChunkColumnState.Rendered, target: currentState.target });
+                });
+                return { value: void 0 };
+            }
+            out_i_1 = i;
+        };
+        var this_1 = this, out_i_1;
+        for (var i = 0; i < this.loadedChunkColumns.length; i++) {
+            var state_1 = _loop_1(i);
+            i = out_i_1;
+            if (typeof state_1 === "object")
+                return state_1.value;
+        }
     };
-    ChunkColumnManager.prototype.handleRequestedChunkUpdates = function () {
-        return __awaiter(this, void 0, void 0, function () {
-            var chunkColumnToUpdate;
-            return __generator(this, function (_a) {
-                switch (_a.label) {
-                    case 0:
-                        if (this.numberOfCurrentlyRunningRequestedChunkUpdates > 100) {
-                            return [2 /*return*/];
-                        }
-                        chunkColumnToUpdate = this.requestedUpdateChunkColumns.pop();
-                        if (!chunkColumnToUpdate) {
-                            return [2 /*return*/];
-                        }
-                        this.numberOfCurrentlyRunningRequestedChunkUpdates += 1;
-                        return [4 /*yield*/, chunkColumnToUpdate.requestedUpdate()];
-                    case 1:
-                        _a.sent();
-                        this.numberOfCurrentlyRunningRequestedChunkUpdates -= 1;
-                        return [2 /*return*/];
-                }
-            });
+    ChunkColumnManager.prototype.areNeighborColumnsGenerated = function (chunkColumn) {
+        var _this = this;
+        return ![[-1, 0], [1, 0], [0, -1], [0, 1]].some(function (offset) {
+            var position = [chunkColumn.position[0] + offset[0], chunkColumn.position[1] + offset[1]];
+            var neighbor = _this.getChunkColumn(position[0], position[1]);
+            if (!neighbor) {
+                return true;
+            }
+            var state = _this.chunkColumnStates.get(neighbor);
+            return state === undefined || state.is < ChunkColumnState.Generated;
         });
     };
     ChunkColumnManager.prototype.lateUpdate = function (deltaTime) {
-        var _this = this;
-        this.chunkColumnPositions.forEach(function (_a) {
-            var x = _a[0], z = _a[1];
-            var chunkColumn = _this.getChunkColumn(x, z);
-            if (chunkColumn) {
-                chunkColumn.lateUpdate(deltaTime);
-            }
-        });
+        this.loadedChunkColumns.forEach(function (chunkColumn) { return chunkColumn.lateUpdate(deltaTime); });
     };
     ChunkColumnManager.prototype.tick = function (deltaTime) {
-        var _this = this;
-        this.chunkColumnPositions.forEach(function (_a) {
-            var x = _a[0], z = _a[1];
-            var chunkColumn = _this.getChunkColumn(x, z);
-            if (chunkColumn) {
-                chunkColumn.onTick(deltaTime);
-            }
-        });
+        this.loadedChunkColumns.forEach(function (chunkColumn) { return chunkColumn.onTick(deltaTime); });
     };
     ChunkColumnManager.prototype.getChunkByBlockPos = function (pos) {
         var x = Math.floor(pos.x / 16);
@@ -159,48 +120,27 @@ var ChunkColumnManager = /** @class */ (function () {
         return column.chunks[y];
     };
     ChunkColumnManager.prototype.__tempGetChunkMeshes = function () {
-        var _this = this;
-        return this.chunkColumnPositions.flatMap(function (cp) { var _a, _b; return (_b = (_a = _this.chunkColumns[cp[0]][cp[1]]) === null || _a === void 0 ? void 0 : _a.getChunkMeshes()) !== null && _b !== void 0 ? _b : []; });
+        return this.loadedChunkColumns.flatMap(function (column) { return column.getChunkMeshes(); });
     };
-    ChunkColumnManager.prototype.requestChunkUpdate = function (chunkColumnToAdd) {
-        this.requestedUpdateChunkColumns = __spreadArray(__spreadArray([], this.requestedUpdateChunkColumns.filter(function (chunkColumn) { return chunkColumn != chunkColumnToAdd; }), true), [
-            chunkColumnToAdd,
-        ], false);
-    };
-    ChunkColumnManager.prototype.calculateChunkColumnPriority = function (x, z) {
+    ChunkColumnManager.prototype.calculateChunkColumnTargetState = function (x, z) {
         var absX = Math.abs(x);
         var absZ = Math.abs(z);
         if (absX < this.simulationDistance && absZ < this.simulationDistance) {
-            return ChunkColumnPriority.High;
+            return ChunkColumnState.Rendered;
         }
         if (absX < this.renderDistance && absZ < this.renderDistance) {
-            return ChunkColumnPriority.Middle;
+            return ChunkColumnState.Rendered;
         }
         if (absX < this.renderDistance + 1 && absZ < this.renderDistance + 1) {
-            return ChunkColumnPriority.Low;
+            return ChunkColumnState.Generated;
         }
-        return ChunkColumnPriority.Lowest;
-    };
-    ChunkColumnManager.prototype.setChunkColumn = function (x, z, chunkColumn) {
-        if (!this.chunkColumns[x]) {
-            this.chunkColumns[x] = {};
+        if (Math.abs(x) > this.renderDistance + 1 || Math.abs(z) > this.renderDistance + 1) {
+            return ChunkColumnState.Unregistered;
         }
-        if (chunkColumn !== undefined) {
-            this.chunkColumnPositions.push([x, z]);
-        }
-        else {
-            this.chunkColumnPositions = this.chunkColumnPositions.filter(function (_a) {
-                var pX = _a[0], pZ = _a[1];
-                return pX !== x || pZ !== z;
-            });
-        }
-        this.chunkColumns[x][z] = chunkColumn;
+        return ChunkColumnState.Registered;
     };
     ChunkColumnManager.prototype.getChunkColumn = function (x, z) {
-        if (!this.chunkColumns[x]) {
-            return;
-        }
-        return this.chunkColumns[x][z];
+        return this.loadedChunkColumns.find(function (element) { return element.position[0] === x && element.position[1] === z; });
     };
     return ChunkColumnManager;
 }());

@@ -36,13 +36,14 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
 };
 import pMap from "p-map";
 import { Audio, AudioLoader, Box3, MathUtils, Raycaster, Vector2, Vector3 } from "three";
-import { degToRad } from "three/src/math/MathUtils";
+import { degToRad, radToDeg } from "three/src/math/MathUtils";
 import { Game } from "../game";
 import { LeftMouseButton, RightMouseButton } from "../input/input";
 import { xyzTupelToIndex } from "../util/index-to-vector3";
 import { randomElement } from "../util/random-element";
 import { Blocks } from "../block/blocks";
 import { WorldCursor } from "./world-cursor";
+import { mod } from "../util/mod";
 // TODO: Re-factor to:
 // - don't use createTerrainCollisionBoxes as it's stupid.
 // - use block-based ray-casting and not mesh-based ray-casting.
@@ -68,7 +69,7 @@ var Player = /** @class */ (function () {
         this.placeBlockSounds = [];
         this.digBlockSounds = [];
         this.selectedBlockId = Blocks.getBlockId(Blocks.CAULDRON);
-        this.worldCursor = new WorldCursor();
+        this.worldCursor = new WorldCursor(Game.main.blocks);
         this.audio = new Audio(Game.main.audioListener);
         this.updateMovement(0, 0);
         this.updateCamera(0);
@@ -140,21 +141,21 @@ var Player = /** @class */ (function () {
                 if (this.input.isKeyDowned(RightMouseButton)) {
                     var hitBlock = world.getBlock(hitBlockPos);
                     var interactionResult = hitBlock === null || hitBlock === void 0 ? void 0 : hitBlock.onInteract(world, hitBlockPos);
-                    if (interactionResult === false) {
+                    var samplePoint = intersection.point.clone().add(normalOffset);
+                    var _a = [
+                        Math.floor(samplePoint.x),
+                        Math.floor(samplePoint.y),
+                        Math.floor(samplePoint.z),
+                    ], hitX = _a[0], hitY = _a[1], hitZ = _a[2];
+                    var blockPos = new Vector3(hitX, hitY, hitZ);
+                    if (interactionResult === false && [Blocks.AIR, Blocks.WATER].includes(world.getBlock(blockPos))) {
                         if (this.audio.isPlaying)
                             this.audio.stop();
                         this.audio.setBuffer(randomElement(this.placeBlockSounds));
                         this.audio.play();
-                        var samplePoint = intersection.point.clone().add(normalOffset);
-                        var _a = [
-                            Math.floor(samplePoint.x),
-                            Math.floor(samplePoint.y),
-                            Math.floor(samplePoint.z),
-                        ], hitX = _a[0], hitY = _a[1], hitZ = _a[2];
-                        var blockPos = new Vector3(hitX, hitY, hitZ);
                         var blockToPlace = Blocks.getBlockById(this.selectedBlockId);
                         Game.main.level.setBlockAt(blockPos, blockToPlace);
-                        blockToPlace.onPlace(world, blockPos);
+                        blockToPlace.onPlace(this, world, blockPos);
                     }
                 }
             }
@@ -286,6 +287,9 @@ var Player = /** @class */ (function () {
         var theta = this.rotation.y;
         var target = new Vector3().setFromSphericalCoords(1, phi, theta).add(this.camera.position);
         this.camera.lookAt(target);
+    };
+    Player.prototype.getFacingDirection = function () {
+        return mod(Math.round(radToDeg(this.rotation.y) / 90), 4);
     };
     return Player;
 }());

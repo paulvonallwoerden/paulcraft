@@ -36,7 +36,7 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
 };
 import { wrap } from "comlink";
 import ChunkGeneratorWorker from "./chunk-generator.worker.ts";
-import { ArrayMap2D, PaletteMap2D } from "../../util/map-2d";
+import { PaletteMap2D } from "../../util/map-2d";
 import { CHUNK_WIDTH } from "./chunk-constants";
 import { randomElement } from "../../util/random-element";
 var ChunkGeneratorPool = /** @class */ (function () {
@@ -67,10 +67,14 @@ var ChunkGeneratorPool = /** @class */ (function () {
             });
         });
     };
-    ChunkGeneratorPool.prototype.buildBaseTerrain = function (chunkPosition, heightMap) {
+    ChunkGeneratorPool.prototype.buildBaseTerrain = function (chunkPosition) {
         return __awaiter(this, void 0, void 0, function () {
             return __generator(this, function (_a) {
-                return [2 /*return*/, this.getWorker().buildTerrain([chunkPosition.x, chunkPosition.y, chunkPosition.z], heightMap.serialize())];
+                return [2 /*return*/, this.getWorker().buildTerrain([
+                        chunkPosition.x,
+                        chunkPosition.y,
+                        chunkPosition.z,
+                    ])];
             });
         });
     };
@@ -83,19 +87,6 @@ var ChunkGeneratorPool = /** @class */ (function () {
                     case 1:
                         biomes = _a.sent();
                         return [2 /*return*/, PaletteMap2D.fromArray(biomes, CHUNK_WIDTH)];
-                }
-            });
-        });
-    };
-    ChunkGeneratorPool.prototype.generateHeightMap = function (chunkPosition) {
-        return __awaiter(this, void 0, void 0, function () {
-            var heights;
-            return __generator(this, function (_a) {
-                switch (_a.label) {
-                    case 0: return [4 /*yield*/, this.getWorker().generateHeightMap(chunkPosition)];
-                    case 1:
-                        heights = _a.sent();
-                        return [2 /*return*/, new ArrayMap2D(heights, CHUNK_WIDTH)];
                 }
             });
         });
