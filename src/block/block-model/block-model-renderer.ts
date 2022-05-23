@@ -55,9 +55,13 @@ const FaceTrsMatrices: Record<BlockFace, Matrix4> = {
     ),
 } as const;
 
+const DefaultElementFromToModifier = (fromAndTo: [Vector3Tuple, Vector3Tuple]) => fromAndTo;
+export type ElementFromToModifier = typeof DefaultElementFromToModifier;
+
 export class BlockModelRenderer {
     public constructor(
         private readonly blockUvs: SerializedBlockModels['textureUvs'],
+        private readonly elementFromToModifier = DefaultElementFromToModifier,
     ) {}
 
     public render(position: Vector3, blockModel: BlockModel, solidityMap: SolidityMap): BlockModelMesh {
@@ -111,7 +115,7 @@ export class BlockModelRenderer {
         }
 
         // Vertices
-        const [[fromX, fromY, fromZ], [toX, toY, toZ]] = this.normalizeToFrom(element.from, element.to);
+        const [[fromX, fromY, fromZ], [toX, toY, toZ]] = this.elementFromToModifier(this.normalizeToFrom(element.from, element.to));
         const [sizeX, sizeY, sizeZ] = [toX - fromX, toY - fromY, toZ - fromZ];
         const modelMatrix = this.makeTrsMatrixFromBlockModelRotation(blockModel.rotation);
         const elementMatrix = this.makeTrsMatrixFromBlockModelRotation(element.rotation);
@@ -125,12 +129,6 @@ export class BlockModelRenderer {
             .multiply(elementMatrix)
             .multiply(faceMatrix)
             .multiply(FaceTrsMatrices[blockFace]);
-
-        // const rts = this.makeTrsMatrixFromBlockModelRotation(blockModel.rotation).multiply(new Matrix4().compose(
-        //     new Vector3(fromX / 15, fromY / 15, fromZ / 15),
-        //     new Quaternion().identity(),
-        //     new Vector3(sizeX / 15, sizeY / 15, sizeZ / 15),
-        // ).multiply(FaceTrsMatrices[blockFace]));
 
         mesh.vertices.push(
             ...new Vector3(0, 0, 0).applyMatrix4(rts).add(position).toArray(),

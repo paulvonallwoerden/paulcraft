@@ -3,6 +3,7 @@ import { BlockPos } from './block-pos';
 import { BlockState } from './block-state/block-state';
 import { Level } from '../level';
 import { World } from '../world/world';
+import { Player } from '../player/player';
 
 export abstract class Block {
     public constructor(
@@ -15,7 +16,7 @@ export abstract class Block {
 
     public onSetBlock(world: World, pos: BlockPos): void {}
 
-    public onPlace(world: World, pos: BlockPos): boolean { return true; }
+    public onPlace(player: Player, world: World, pos: BlockPos): boolean { return true; }
     public onBreak(world: World, pos: BlockPos): void {}
     public onInteract(world: World, pos: BlockPos): boolean { return false; }
 

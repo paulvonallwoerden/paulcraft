@@ -1,13 +1,36 @@
-import { BoxGeometry, BufferGeometry, Mesh, Object3D, Scene, Vector3Tuple, WireframeGeometry } from "three";
-import { BlockModel } from "../block/block-model/block-model";
-import { BlockPos } from "../block/block-pos";
-import { World } from "../world/world";
-import { createWorldCursorMaterial } from "./world-cursor-material";
+import { BoxGeometry, Mesh, Object3D, Scene, Vector3, Vector3Tuple } from 'three';
+import { BlockFace } from '../block/block-face';
+import { BlockModelRenderer, ElementFromToModifier, SolidityMap } from '../block/block-model/block-model-renderer';
+import { BlockPos } from '../block/block-pos';
+import { Blocks } from '../block/blocks';
+import { computeBoundingBox } from '../util/bounding-box';
+import { createWorldCursorMaterial } from './world-cursor-material';
+import { World } from '../world/world';
+
+const BLOCK_CURSOR_SOLIDITY_MAP: SolidityMap = {
+    [BlockFace.TOP]: false,
+    [BlockFace.BOTTOM]: false,
+    [BlockFace.LEFT]: false,
+    [BlockFace.RIGHT]: false,
+    [BlockFace.FRONT]: false,
+    [BlockFace.BACK]: false,
+}
+
+const BlockCursorOverlap = 0.05;
 
 export class WorldCursor {
-    private readonly overlap = 0.001;
     private readonly material = createWorldCursorMaterial();
     private readonly parent = new Object3D();
+
+    private readonly blockModelRenderer: BlockModelRenderer;
+
+    public constructor(blocks: Blocks) {
+        const elementFromToModifier: ElementFromToModifier = ([from, to]) => [
+            from.map((value) => value - BlockCursorOverlap) as Vector3Tuple,
+            to.map((value) => value + BlockCursorOverlap) as Vector3Tuple,
+        ];
+        this.blockModelRenderer = new BlockModelRenderer(blocks.serializeBlockModels().textureUvs, elementFromToModifier);
+    }
 
     public register(scene: Scene) {
         scene.add(this.parent);
@@ -24,37 +47,29 @@ export class WorldCursor {
 
         const modelIndex = state ? block.getBlockModel(state) : 0;
         const model = block.blockModels[modelIndex];
-        const meshes = this.buildMeshes(model, pos);
-        this.parent.add(...meshes);
+        const modelMesh = this.blockModelRenderer.render(new Vector3(pos.x, pos.y, pos.z), model, BLOCK_CURSOR_SOLIDITY_MAP);
+
+        const points = [];
+        for (let i = 0; i < modelMesh.vertices.length; i += 3) {
+            points.push(new Vector3(
+                modelMesh.vertices[i],
+                modelMesh.vertices[i + 1],
+                modelMesh.vertices[i + 2],
+            ));
+        }
+
+        const boundingBox = computeBoundingBox(points);
+        const [width, height, depth] = boundingBox.getSize(new Vector3()).toArray();
+        const boundingBoxGeometry = new BoxGeometry(width, height, depth);
+
+        const mesh = new Mesh(boundingBoxGeometry, this.material);
+        mesh.position.x = boundingBox.min.x + width / 2;
+        mesh.position.y = boundingBox.min.y + height / 2;
+        mesh.position.z = boundingBox.min.z + depth / 2;
+        this.parent.add(mesh);
     }
 
     private hide() {
         this.parent.clear();
-    }
-
-    private buildMeshes(model: BlockModel, pos: BlockPos): Mesh[] {
-        return model.elements.map((element) => {
-            const [from, to] = this.normalizeToFrom(element.from, element.to);
-            const [width, height, depth] = [
-                (to[0] - from[0]) / 15 + this.overlap * 2,
-                (to[1] - from[1]) / 15 + this.overlap * 2,
-                (to[2] - from[2]) / 15 + this.overlap * 2,
-            ];
-            const newGeometry = new BoxGeometry(width, height, depth);
-            newGeometry.translate(
-                (pos.x + width / 2) + from[0] / 15 - this.overlap,
-                (pos.y + height / 2) + from[1] / 15 - this.overlap,
-                (pos.z + depth / 2) + from[2] / 15 - this.overlap,
-            );
-
-            return new Mesh(newGeometry, this.material);
-        });
-    }
-
-    protected normalizeToFrom(from: Vector3Tuple, to: Vector3Tuple): [Vector3Tuple, Vector3Tuple] {
-        return [
-            [Math.min(from[0], to[0]), Math.min(from[1], to[1]), Math.min(from[2], to[2])],
-            [Math.max(from[0], to[0]), Math.max(from[1], to[1]), Math.max(from[2], to[2])],
-        ];
     }
 }
