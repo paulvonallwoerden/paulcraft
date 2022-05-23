@@ -1,23 +1,20 @@
-import { Mesh, Scene, Vector3, Vector3Tuple } from "three";
-import { Game } from "../game";
-import { xyzTupelToIndex, xzyToIndex } from "../util/index-to-vector3";
-import { ITickable } from "../tickable";
-import { ChunkColumn } from "./chunk-column";
-import { Blocks } from "../block/blocks";
-import { Block } from "../block/block";
-import { BlockState } from "../block/block-state/block-state";
+import { Mesh, Scene, Vector3, Vector3Tuple } from 'three';
+import { Game } from '../game';
+import { xyzTupelToIndex, xzyToIndex } from '../util/index-to-vector3';
+import { ITickable } from '../tickable';
+import { ChunkColumn } from './chunk-column';
+import { Blocks } from '../block/blocks';
+import { Block } from '../block/block';
+import { BlockState } from '../block/block-state/block-state';
 
 export const CHUNK_WIDTH = 16;
 export const CHUNK_HEIGHT = 16;
 
 export class Chunk implements ITickable {
-    public isBlockDataDirty = false;
-    public shouldRebuild = false;
+    private shouldRebuild = false;
 
     private blockData: Uint8Array = new Uint8Array(CHUNK_WIDTH * CHUNK_WIDTH * CHUNK_HEIGHT);
     private blockStates: Map<number, BlockState> = new Map();
-
-    private timeSinceFirstRender = -1;
 
     public readonly solidMesh: Mesh;
     public readonly waterMesh: Mesh;
@@ -51,8 +48,13 @@ export class Chunk implements ITickable {
 
     public onTick(deltaTime: number): void {}
 
+    /**
+     * Some blocks are chosen at random and ticked.
+     *
+     * Reference: https://minecraft.fandom.com/wiki/Tick#Random_tick
+     */
     public tickBlocks() {
-        for (let i = 0; i < 10; i++) {
+        for (let i = 0; i < 3; i++) {
             this.tickRandomBlock();
         }
     }
@@ -77,30 +79,18 @@ export class Chunk implements ITickable {
     }
 
     public lateUpdate(deltaTime: number) {
-        if (this.isBlockDataDirty || this.shouldRebuild) {
-            this.isBlockDataDirty = false;
+        if (this.shouldRebuild) {
             this.shouldRebuild = false;
             this.buildMesh();
         }
-
-        if (this.timeSinceFirstRender >= 0 && !Array.isArray(this.solidMesh.material) && this.solidMesh.material.transparent) {
-            this.timeSinceFirstRender += deltaTime;
-            this.solidMesh.material.opacity = this.timeSinceFirstRender / 1000;
-            this.solidMesh.material.transparent = this.timeSinceFirstRender < 1000;
-        }
     }
 
-    public async generateTerrain(skipMeshBuild = false) {
-        const { heightMap } = this.chunkColumn;
-        if (!heightMap) {
-            return;
-        }
+    public async generateTerrain() {
+        this.blockData = await Game.main.chunkGeneratorPool.buildBaseTerrain(this.position);
+    }
 
-        this.blockData = await Game.main.chunkGeneratorPool.buildBaseTerrain(
-            this.position,
-            heightMap,
-        );
-        this.isBlockDataDirty = !skipMeshBuild;
+    public requestRebuild() {
+        this.shouldRebuild = true;
     }
 
     public async buildMesh() {
@@ -118,10 +108,6 @@ export class Chunk implements ITickable {
         this.solidMesh.geometry = geometry.solid;
         this.waterMesh.geometry = geometry.water;
         this.transparentMesh.geometry = geometry.transparent;
-
-        if (this.timeSinceFirstRender < 0) {
-            this.timeSinceFirstRender = 0;
-        }
     }
 
     private getNeighborChunks() {
@@ -137,11 +123,12 @@ export class Chunk implements ITickable {
 
     public setBlock([x, y, z]: Vector3Tuple, block: Block): void {
         this.blockData[xyzTupelToIndex(x, y, z, CHUNK_WIDTH, CHUNK_WIDTH)] = Blocks.getBlockId(block);
-        this.isBlockDataDirty = true;
+
+        this.requestRebuild();
 
         // TODO: Only update the relevant chunk
         if (x <= 0 || y <= 0 || z <= 0 || x >= CHUNK_WIDTH - 1 || y >= CHUNK_HEIGHT - 1 || z >= CHUNK_WIDTH - 1) {
-            this.getNeighborChunks().forEach((chunk) => chunk ? chunk.shouldRebuild = true : null);
+            this.getNeighborChunks().filter((chunk): chunk is Chunk => chunk !== undefined).forEach((chunk) => chunk.requestRebuild());
         }
     }
 

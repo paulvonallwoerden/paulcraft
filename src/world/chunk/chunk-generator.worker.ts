@@ -31,7 +31,7 @@ export class ChunkGenerator {
         this.worldNoise = new WorldNoise(noiseSeed);
     }
 
-    public buildTerrain(chunkPosition: Vector3Tuple, heightMap: SerializedMap2D<number>): Uint8Array {
+    public buildTerrain(chunkPosition: Vector3Tuple): Uint8Array {
         const blocks = this.buildBaseTerrain(chunkPosition);
         // const decoratedBlocks = this.decorateTerrain(blocks);
 

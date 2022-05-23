@@ -1,16 +1,20 @@
-import pEachSeries from "p-each-series";
-import { Scene, Vector2 } from "three";
-import { GRASS_BLOCK_ID } from "../block/block-ids";
-import { BlockPos } from "../block/block-pos";
-import { Chunk } from "./chunk";
-import { ChunkColumn, ChunkColumnPriority } from "./chunk-column";
-import pAll from 'p-all';
+import { Scene, Vector2 } from 'three';
+import { BlockPos } from '../block/block-pos';
+import { Chunk } from './chunk';
+import { ChunkColumn } from './chunk-column';
+
+enum ChunkColumnState {
+    Unregistered = -1,
+    Registered = 0,
+    Generating = 1,
+    Generated = 2,
+    Rendering = 3,
+    Rendered = 4,
+}
 
 export class ChunkColumnManager {
-    private readonly chunkColumns: Record<number, Record<number, ChunkColumn | undefined>> = {};
-    private chunkColumnPositions: Array<[number, number]> = [];
-    private requestedUpdateChunkColumns: ChunkColumn[] = [];
-    private numberOfCurrentlyRunningRequestedChunkUpdates = 0;
+    private loadedChunkColumns: ChunkColumn[] = [];
+    private chunkColumnStates: Map<ChunkColumn, { target: ChunkColumnState, is: ChunkColumnState }> = new Map();
 
     public constructor(
         private readonly scene: Scene,
@@ -20,78 +24,101 @@ export class ChunkColumnManager {
     ) {}
 
     public setCenter(centerX: number, centerZ: number) {
-        const candidateRange = Math.max(this.renderDistance, this.simulationDistance) + 2;
-        const candidates: { x: number, z: number, priority: ChunkColumnPriority }[] = [];
-        for (let x = -candidateRange; x <= candidateRange; x += 1) {
-            for (let z = -candidateRange; z <= candidateRange; z += 1) {
-                candidates.push({
-                    x: x + centerX,
-                    z: z + centerZ,
-                    priority: this.calculateChunkColumnPriority(x, z),
-                });
+        const range = Math.max(this.renderDistance, this.simulationDistance) + 2;
+        for (let offsetX = -range; offsetX <= range; offsetX += 1) {
+            for (let offsetZ = -range; offsetZ <= range; offsetZ += 1) {
+                const x = centerX + offsetX;
+                const z = centerZ + offsetZ;
+                const targetState = this.calculateChunkColumnTargetState(offsetX, offsetZ);
+
+                const maybeExistingColumn = this.getChunkColumn(x, z);
+                if (maybeExistingColumn) {
+                    const currentState = this.chunkColumnStates.get(maybeExistingColumn)!;
+                    this.chunkColumnStates.set(maybeExistingColumn, {
+                        is: currentState.is,
+                        target: targetState,
+                    });
+                } else {
+                    const newColumn = new ChunkColumn(this, [x, z], 8);
+                    this.loadedChunkColumns.push(newColumn);
+                    newColumn.register(this.scene);
+
+                    this.chunkColumnStates.set(newColumn, {
+                        is: ChunkColumnState.Registered,
+                        target: targetState,
+                    });
+                }
             }
         }
 
-        // Load new columns
-        pAll(candidates.map((candidate) => async () => {
-            let chunkColumn = this.getChunkColumn(candidate.x, candidate.z);
-            if (!chunkColumn) {
-                chunkColumn = new ChunkColumn(this, [candidate.x, candidate.z], 8);
-                chunkColumn.register(this.scene);
-                this.setChunkColumn(candidate.x, candidate.z, chunkColumn);
+        this.loadedChunkColumns.sort((a, b) => {
+            const aDist = new Vector2().fromArray(a.position).distanceTo(new Vector2(centerX, centerZ));
+            const bDist = new Vector2().fromArray(b.position).distanceTo(new Vector2(centerX, centerZ));
 
-                await chunkColumn.generatePrototype();
-            }
-
-            await chunkColumn.setPriority(candidate.priority);
-        }), { concurrency: this.chunkUpdateConcurrency });
-
-        // Unload old columns
-        for (const [x, z] of this.chunkColumnPositions) {
-            const remove = Math.abs(x - centerX) > this.renderDistance + 1 || Math.abs(z - centerZ) > this.renderDistance + 1;
-            const chunkColumn = this.getChunkColumn(x, z);
-            if (remove && chunkColumn) {
-                chunkColumn.unregister(this.scene);
-                this.setChunkColumn(x, z, undefined);
-            }
-        }
+            return aDist - bDist;
+        });
     }
 
     public update(deltaTime: number) {
-        this.handleRequestedChunkUpdates();
+        for (let i = 0; i < this.loadedChunkColumns.length; i++) {
+            const chunkColumn = this.loadedChunkColumns[i];
+            const state = this.chunkColumnStates.get(chunkColumn)!;
+            if (state.is === state.target) {
+                continue;
+            }
+
+            if (state.is > state.target && state.target === ChunkColumnState.Unregistered) {
+                this.loadedChunkColumns.splice(i, 1);
+                chunkColumn.unregister(this.scene);
+                this.chunkColumnStates.delete(chunkColumn);
+
+                i--;
+
+                continue;
+            }
+
+            if (state.is === ChunkColumnState.Registered) {
+                this.chunkColumnStates.set(chunkColumn, { is: ChunkColumnState.Generating, target: state.target });
+                Promise.all(chunkColumn.chunks.map((chunk) => chunk.generateTerrain())).then(() => {
+                    const currentState = this.chunkColumnStates.get(chunkColumn)!;
+                    this.chunkColumnStates.set(chunkColumn, { is: ChunkColumnState.Generated, target: currentState.target });
+                });
+
+                return;
+            }
+
+            if (state.is === ChunkColumnState.Generated && this.areNeighborColumnsGenerated(chunkColumn)) {
+                this.chunkColumnStates.set(chunkColumn, { is: ChunkColumnState.Rendering, target: state.target });
+                Promise.all(chunkColumn.chunks.map((chunk) => chunk.buildMesh())).then(() => {
+                    const currentState = this.chunkColumnStates.get(chunkColumn)!;
+                    this.chunkColumnStates.set(chunkColumn, { is: ChunkColumnState.Rendered, target: currentState.target });
+                });
+
+                return;
+            }
+        }
     }
 
-    private async handleRequestedChunkUpdates() {
-        if (this.numberOfCurrentlyRunningRequestedChunkUpdates > 100) {
-            return;
-        }
+    private areNeighborColumnsGenerated(chunkColumn: ChunkColumn): boolean {
+        return ![[-1, 0], [1, 0], [0, -1], [0, 1]].some((offset) => {
+            const position = [chunkColumn.position[0] + offset[0], chunkColumn.position[1] + offset[1]];
+            const neighbor = this.getChunkColumn(position[0], position[1]); 
+            if (!neighbor) {
+                return true;
+            }
 
-        const chunkColumnToUpdate = this.requestedUpdateChunkColumns.pop();
-        if (!chunkColumnToUpdate) {
-            return;
-        }
+            const state = this.chunkColumnStates.get(neighbor);
 
-        this.numberOfCurrentlyRunningRequestedChunkUpdates += 1;
-        await chunkColumnToUpdate.requestedUpdate();
-        this.numberOfCurrentlyRunningRequestedChunkUpdates -= 1;
+            return state === undefined || state.is < ChunkColumnState.Generated;
+        });
     }
 
     public lateUpdate(deltaTime: number) {
-        this.chunkColumnPositions.forEach(([x, z]) => {
-            const chunkColumn = this.getChunkColumn(x, z);
-            if (chunkColumn) {
-                chunkColumn.lateUpdate(deltaTime);
-            }
-        });
+        this.loadedChunkColumns.forEach((chunkColumn) => chunkColumn.lateUpdate(deltaTime));
     }
 
     public tick(deltaTime: number) {
-        this.chunkColumnPositions.forEach(([x, z]) => {
-            const chunkColumn = this.getChunkColumn(x, z);
-            if (chunkColumn) {
-                chunkColumn.onTick(deltaTime);
-            }
-        });
+        this.loadedChunkColumns.forEach((chunkColumn) => chunkColumn.onTick(deltaTime));
     }
 
     public getChunkByBlockPos(pos: BlockPos): Chunk | undefined {
@@ -108,55 +135,32 @@ export class ChunkColumnManager {
     }
 
     public __tempGetChunkMeshes() {
-        return this.chunkColumnPositions.flatMap((cp) => this.chunkColumns[cp[0]][cp[1]]?.getChunkMeshes() ?? []);
+        return this.loadedChunkColumns.flatMap((column) => column.getChunkMeshes());
     }
 
-    public requestChunkUpdate(chunkColumnToAdd: ChunkColumn) {
-        this.requestedUpdateChunkColumns = [
-            ...this.requestedUpdateChunkColumns.filter(
-                (chunkColumn) => chunkColumn != chunkColumnToAdd,
-            ),
-            chunkColumnToAdd,
-        ];
-    }
-
-    private calculateChunkColumnPriority(x: number, z: number): ChunkColumnPriority {
+    private calculateChunkColumnTargetState(x: number, z: number): ChunkColumnState {
         const absX = Math.abs(x);
         const absZ = Math.abs(z);
         if (absX < this.simulationDistance && absZ < this.simulationDistance) {
-            return ChunkColumnPriority.High;
+            return ChunkColumnState.Rendered;
         }
 
         if (absX < this.renderDistance && absZ < this.renderDistance) {
-            return ChunkColumnPriority.Middle;
+            return ChunkColumnState.Rendered;
         }
 
         if (absX < this.renderDistance + 1 && absZ < this.renderDistance + 1) {
-            return ChunkColumnPriority.Low;
+            return ChunkColumnState.Generated;
         }
 
-        return ChunkColumnPriority.Lowest;
-    }
-
-    private setChunkColumn(x: number, z: number, chunkColumn: ChunkColumn | undefined): void {
-        if (!this.chunkColumns[x]) {
-            this.chunkColumns[x] = {};
+        if (Math.abs(x) > this.renderDistance + 1 || Math.abs(z) > this.renderDistance + 1) {
+            return ChunkColumnState.Unregistered;
         }
 
-        if (chunkColumn !== undefined) {
-            this.chunkColumnPositions.push([x, z]);
-        } else {
-            this.chunkColumnPositions = this.chunkColumnPositions.filter(([pX, pZ]) => pX !== x || pZ !== z);
-        }
-
-        this.chunkColumns[x][z] = chunkColumn;
+        return ChunkColumnState.Registered;
     }
 
     public getChunkColumn(x: number, z: number): ChunkColumn | undefined {
-        if (!this.chunkColumns[x]) {
-            return;
-        }
-
-        return this.chunkColumns[x][z];
+        return this.loadedChunkColumns.find((element) => element.position[0] === x && element.position[1] === z);
     }
 }

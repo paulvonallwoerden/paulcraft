@@ -21,23 +21,18 @@ export class ChunkGeneratorPool {
         }
     }
 
-    public async buildBaseTerrain(chunkPosition: BlockPos, heightMap: Map2D<number>): Promise<Uint8Array> {
-        return this.getWorker().buildTerrain(
-            [chunkPosition.x, chunkPosition.y, chunkPosition.z],
-            heightMap.serialize(),
-        );
+    public async buildBaseTerrain(chunkPosition: BlockPos): Promise<Uint8Array> {
+        return this.getWorker().buildTerrain([
+            chunkPosition.x,
+            chunkPosition.y,
+            chunkPosition.z,
+        ]);
     }
 
     public async generateBiomeMap(chunkPosition: Vector2): Promise<Map2D<Biome>> {
         const biomes = await this.getWorker().generateBiomeMap(chunkPosition);
 
         return PaletteMap2D.fromArray(biomes, CHUNK_WIDTH);
-    }
-
-    public async generateHeightMap(chunkPosition: [number, number]): Promise<Map2D<number>> {
-        const heights = await this.getWorker().generateHeightMap(chunkPosition);
-
-        return new ArrayMap2D(heights, CHUNK_WIDTH);
     }
 
     private getWorker() {
