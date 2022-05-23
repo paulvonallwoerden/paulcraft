@@ -1,6 +1,6 @@
 import pMap from "p-map";
 import { Audio, AudioLoader, Box3, Camera, Intersection, MathUtils, Raycaster, Vector2, Vector3, Vector3Tuple } from "three";
-import { degToRad } from "three/src/math/MathUtils";
+import { degToRad, radToDeg } from "three/src/math/MathUtils";
 import { Game } from "../game";
 import { Input, LeftMouseButton, RightMouseButton } from "../input/input";
 import { xyzTupelToIndex } from "../util/index-to-vector3";
@@ -8,6 +8,7 @@ import { randomElement } from "../util/random-element";
 import { Blocks } from "../block/blocks";
 import { BlockPos } from "../block/block-pos";
 import { WorldCursor } from "./world-cursor";
+import { mod } from "../util/mod";
 
 // TODO: Re-factor to:
 // - don't use createTerrainCollisionBoxes as it's stupid.
@@ -37,7 +38,7 @@ export class Player {
 
     private selectedBlockId: number = Blocks.getBlockId(Blocks.CAULDRON);
 
-    private readonly worldCursor: WorldCursor = new WorldCursor();
+    private readonly worldCursor: WorldCursor;
 
     public constructor(
         private readonly camera: Camera,
@@ -45,6 +46,8 @@ export class Player {
         private position: Vector3,
         private rotation: Vector2,
     ) {
+        this.worldCursor = new WorldCursor(Game.main.blocks);
+
         this.audio = new Audio(Game.main.audioListener);
 
         this.updateMovement(0, 0);
@@ -112,22 +115,24 @@ export class Player {
 
                 if (this.input.isKeyDowned(RightMouseButton)) {
                     const hitBlock = world.getBlock(hitBlockPos);
-                    const interactionResult = hitBlock?.onInteract(world, hitBlockPos)
-                    if (interactionResult === false) {
+                    const interactionResult = hitBlock?.onInteract(world, hitBlockPos);
+
+                    const samplePoint = intersection.point.clone().add(normalOffset);
+                    const [hitX, hitY, hitZ] = [
+                        Math.floor(samplePoint.x),
+                        Math.floor(samplePoint.y),
+                        Math.floor(samplePoint.z),
+                    ];
+                    const blockPos = new Vector3(hitX, hitY, hitZ);
+
+                    if (interactionResult === false && ([Blocks.AIR, Blocks.WATER] as any).includes(world.getBlock(blockPos))) {
                         if (this.audio.isPlaying) this.audio.stop();
                         this.audio.setBuffer(randomElement(this.placeBlockSounds));
                         this.audio.play();
-
-                        const samplePoint = intersection.point.clone().add(normalOffset);
-                        const [hitX, hitY, hitZ] = [
-                            Math.floor(samplePoint.x),
-                            Math.floor(samplePoint.y),
-                            Math.floor(samplePoint.z),
-                        ];
-                        const blockPos = new Vector3(hitX, hitY, hitZ);
+                        
                         const blockToPlace = Blocks.getBlockById(this.selectedBlockId);
                         Game.main.level.setBlockAt(blockPos, blockToPlace);
-                        blockToPlace.onPlace(world, blockPos);
+                        blockToPlace.onPlace(this, world, blockPos);
                     }
                 }
             }
@@ -298,5 +303,9 @@ export class Player {
         const theta = this.rotation.y;
         const target = new Vector3().setFromSphericalCoords(1, phi, theta).add(this.camera.position);
         this.camera.lookAt(target)
+    }
+
+    public getFacingDirection(): number {
+        return mod(Math.round(radToDeg(this.rotation.y) / 90), 4);
     }
 }
