@@ -153,8 +153,8 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */   "ListOfSounds": () => (/* binding */ ListOfSounds)
 /* harmony export */ });
 var ListOfSounds = {
-    'block.door.open': '/audio/door-open.mp3',
-    'block.door.close': '/audio/door-close.mp3',
+    'block.door.open': 'audio/door-open.mp3',
+    'block.door.close': 'audio/door-close.mp3',
 };
 
 
