@@ -38,7 +38,7 @@ export class ChunkColumnManager {
                         is: currentState.is,
                         target: targetState,
                     });
-                } else {
+                } else if(targetState !== ChunkColumnState.Unregistered) {
                     const newColumn = new ChunkColumn(this, [x, z], 8);
                     this.loadedChunkColumns.push(newColumn);
                     newColumn.register(this.scene);
@@ -52,6 +52,15 @@ export class ChunkColumnManager {
         }
 
         this.loadedChunkColumns.sort((a, b) => {
+            const aState = this.chunkColumnStates.get(a)!;
+            const bState = this.chunkColumnStates.get(b)!;
+            if (aState.target === ChunkColumnState.Unregistered && bState.target !== ChunkColumnState.Unregistered) {
+                return Number.MIN_SAFE_INTEGER;
+            }
+            if (bState.target === ChunkColumnState.Unregistered && aState.target !== ChunkColumnState.Unregistered) {
+                return Number.MAX_SAFE_INTEGER;
+            }
+
             const aDist = new Vector2().fromArray(a.position).distanceTo(new Vector2(centerX, centerZ));
             const bDist = new Vector2().fromArray(b.position).distanceTo(new Vector2(centerX, centerZ));
 
