@@ -46,6 +46,10 @@ A clone of Minecraft that runs in the browser. **[Play it now!](https://paulvona
 
 ## Impressions
 
+![Light](docs/media/light.png)
+![Door open](docs/media/door-open.png)
+![Door close](docs/media/door-close.png)
+![Sky](docs/media/sky.png)
 ![3D Cliffs](docs/media/cliffs.png)
 ![Block states](docs/media/block-states.png)
 ![Block ticks](docs/media/block-ticks.png)

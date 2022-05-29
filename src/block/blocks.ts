@@ -1,5 +1,8 @@
-import { Material, MeshStandardMaterial } from "three";
+import { Material, MeshStandardMaterial, MultiplyBlending, ShaderMaterial } from "three";
+import { makeOpaqueBlockMaterial } from "../shader/opaque-block-shader";
+
 import { removeDuplicates } from "../util/remove-duplicates";
+import { createFoliageMaterial } from "../world/foliage-material";
 import { AirBlock } from "./air-block";
 import { Block } from "./block";
 import { BlockModel, getBlockModelTextures } from "./block-model/block-model";
@@ -7,10 +10,13 @@ import { CauldronBlock } from "./cauldron-block";
 import { DirtBlock } from "./dirt-block";
 import { DoorBlock } from "./door-block";
 import { GrassBlock } from "./grass-block";
+import { LeavesBlock } from "./leaves-block";
+import { OakLogBlock } from "./log-block";
 import { SandBlock } from "./sand-block";
 import { StoneBlock } from "./stone-block";
 import { SugarCaneBlock } from "./sugar-cane-block";
 import { TextureAtlas } from "./texture-atlas";
+import { TorchBlock } from "./torch-block";
 import { WaterBlock } from "./water-block";
 
 export type BlockTextureToUvMap = Record<string, number[]>;
@@ -30,6 +36,9 @@ export class Blocks {
     public static readonly DOOR = new DoorBlock();
     public static readonly WATER = new WaterBlock();
     public static readonly SUGAR_CANE = new SugarCaneBlock();
+    public static readonly LEAVES = new LeavesBlock();
+    public static readonly OAK_LOG = new OakLogBlock();
+    public static readonly TORCH = new TorchBlock();
 
     private static readonly blocks: Block[] = [
         Blocks.AIR,
@@ -41,14 +50,19 @@ export class Blocks {
         Blocks.DOOR,
         Blocks.WATER,
         Blocks.SUGAR_CANE,
+        Blocks.LEAVES,
+        Blocks.OAK_LOG,
+        Blocks.TORCH,
     ];
 
     private textureAtlas: TextureAtlas;
     private blockTextureSources: string[];
 
-    private solidMaterial = new MeshStandardMaterial({ opacity: 1, transparent: false });
+    private solidMaterial?: ShaderMaterial; // =   / new MeshStandardMaterial({ opacity: 1, transparent: false });
     private waterMaterial = new MeshStandardMaterial({ opacity: 0.8, transparent: true });
-    private transparentMaterial = new MeshStandardMaterial({ alphaTest: 0.5 });
+    private transparentMaterial?: Material;
+    // private foliageMaterial = new MeshStandardMaterial({ alphaTest: 0.5, color: '#62a63a' });
+    private foliageMaterial?: ReturnType<typeof createFoliageMaterial>;
 
     public constructor() {
         const blockTextures = Blocks.blocks.flatMap(
@@ -61,9 +75,15 @@ export class Blocks {
 
     public async init() {
         const atlas = await this.textureAtlas.buildAtlas();
-        this.solidMaterial.map = atlas;
-        this.transparentMaterial.map = atlas;
+        this.solidMaterial = makeOpaqueBlockMaterial(atlas);
+        this.transparentMaterial = makeOpaqueBlockMaterial(atlas);
+        // this.transparentMaterial.map = atlas;
         this.waterMaterial.map = atlas;
+        this.foliageMaterial = createFoliageMaterial(atlas);
+    }
+
+    public update(deltaTime: number) {
+        if (this.foliageMaterial) this.foliageMaterial.update(deltaTime);
     }
 
     public static getBlockId(block: Block): number {
@@ -74,11 +94,16 @@ export class Blocks {
         return Blocks.blocks[id];
     }
 
-    public getBlockMaterials(): { solid: Material, transparent: Material, water: Material } {
+    public getBlockMaterials(): { solid: ShaderMaterial, transparent: Material, water: Material, foliage: Material } {
+        if (!this.foliageMaterial) {
+            throw new Error('Foliage material not initialized');
+        }
+
         return {
-            solid: this.solidMaterial,
-            transparent: this.transparentMaterial,
+            solid: this.solidMaterial!,
+            transparent: this.transparentMaterial!,
             water: this.waterMaterial,
+            foliage: this.foliageMaterial.shader,
         };
     }
 

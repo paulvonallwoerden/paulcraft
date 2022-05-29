@@ -6,6 +6,8 @@ export const AirBlockModel: BlockModel = {
 }
 
 export class AirBlock extends Block {
+    public readonly blocksLight = false;
+
     public constructor() {
         super('air', [AirBlockModel]);
     }

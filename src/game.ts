@@ -1,4 +1,4 @@
-import { AmbientLight, Audio, AudioListener, AudioLoader, Camera, Fog, PerspectiveCamera, Scene, Vector3, WebGLRenderer } from 'three';
+import { AmbientLight, Audio, AudioListener, AudioLoader, Camera, Fog, PerspectiveCamera, Renderer, Scene, Vector3, WebGLRenderer } from 'three';
 import { Blocks } from './block/blocks';
 import { Input } from './input/input';
 import { Level } from './level';
@@ -23,14 +23,10 @@ export class Game {
 
     public readonly scene: Scene;
     public readonly renderer: WebGLRenderer;
-    public readonly camera: Camera;
+    public readonly camera!: Camera;
 
     public blocks: Blocks = new Blocks();
     public level!: Level;
-
-    private chunkDataGeneratorWorkerPool: ChunkDataGeneratorWorker[] = [];
-    private chunkDataGenerationResults: Record<string, Uint8Array | undefined> = {};
-    private chunkGeometryResults: Record<string, BuildGeometryResult> = {};
 
     public readonly input: Input;
 
@@ -52,7 +48,7 @@ export class Game {
         Game.main = this;
 
         this.scene = new Scene();
-        this.scene.fog = new Fog(0xe6fcff, 90, 110)
+        // this.scene.fog = new Fog(0xe6fcff, 90, 110)
         const { clientWidth: width, clientHeight: height } = root;
 
         const ambientLight = new AmbientLight(0x888888);
@@ -60,7 +56,7 @@ export class Game {
 
         this.renderer = new WebGLRenderer();
         this.renderer.setSize(width, height);
-        this.renderer.setClearColor(0xe6fcff)
+        this.renderer.setClearColor(0xe6fcff);
         const canvas = root.appendChild(this.renderer.domElement);
         canvas.addEventListener('click', () => canvas.requestPointerLock());
 
@@ -96,25 +92,25 @@ export class Game {
         await this.chunkGeneratorPool.addWorkers(1);
 
         // Legacy
-        for (let i = 0; i < 4; i++) {
-            const worker = new ChunkDataGeneratorWorker();
-            worker.postMessage({
-                type: 'seed',
-                seed: this.seed,
-            });
+        // for (let i = 0; i < 4; i++) {
+        //     const worker = new ChunkDataGeneratorWorker();
+        //     worker.postMessage({
+        //         type: 'seed',
+        //         seed: this.seed,
+        //     });
 
-            worker.addEventListener('message', ({ data }) => {
-                if (data.type === 'generate--complete') {
-                    this.chunkDataGenerationResults[JSON.stringify(data.position)] = data.result;
-                }
+        //     worker.addEventListener('message', ({ data }) => {
+        //         if (data.type === 'generate--complete') {
+        //             this.chunkDataGenerationResults[JSON.stringify(data.position)] = data.result;
+        //         }
 
-                if (data.type === 'build-mesh--complete') {
-                    this.chunkGeometryResults[JSON.stringify(data.position)] = data.result;
-                }
-            });
+        //         if (data.type === 'build-mesh--complete') {
+        //             this.chunkGeometryResults[JSON.stringify(data.position)] = data.result;
+        //         }
+        //     });
 
-            this.chunkDataGeneratorWorkerPool.push(worker);
-        }
+        //     this.chunkDataGeneratorWorkerPool.push(worker);
+        // }
 
         // Level
         console.log("Leveling...");
@@ -164,7 +160,9 @@ export class Game {
             this.timeSinceLastTick -= 1000 / this.ticksPerSecond;
         }
 
+        this.blocks.update(deltaTime);
         this.level.update(deltaTime);
+
         this.renderer.render(this.scene, this.camera);
 
         this.level.lateUpdate(deltaTime);

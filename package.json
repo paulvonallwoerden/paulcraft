@@ -21,6 +21,7 @@
     },
     "dependencies": {
         "@babel/runtime": "^7.17.2",
+        "alea": "^1.0.1",
         "bezier-easing": "^2.1.0",
         "comlink": "^4.3.1",
         "curve-interpolator": "^2.0.8",

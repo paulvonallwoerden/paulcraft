@@ -34,6 +34,8 @@ const SugarCaneBlockModel: BlockModel = {
 }
 
 export class SugarCaneBlock extends Block {
+    public readonly blocksLight = false;
+
     public constructor() {
         super('sugar_cane', [SugarCaneBlockModel]);
     }

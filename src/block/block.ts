@@ -6,6 +6,9 @@ import { World } from '../world/world';
 import { Player } from '../player/player';
 
 export abstract class Block {
+    public readonly blocksLight: boolean = true;
+    public readonly occludesNeighborBlocks: boolean = true;
+
     public constructor(
         public readonly name: string,
         public readonly blockModels: BlockModel[],
@@ -13,6 +16,7 @@ export abstract class Block {
 
     public onRandomTick(level: Level, pos: BlockPos): void {}
     public getBlockModel(blockState: BlockState): number { return 0; }
+    public getLightLevel(): number { return 0; }
 
     public onSetBlock(world: World, pos: BlockPos): void {}
 

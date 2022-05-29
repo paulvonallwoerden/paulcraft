@@ -6,9 +6,10 @@ import { Input, LeftMouseButton, RightMouseButton } from "../input/input";
 import { xyzTupelToIndex } from "../util/index-to-vector3";
 import { randomElement } from "../util/random-element";
 import { Blocks } from "../block/blocks";
-import { BlockPos } from "../block/block-pos";
+import { BlockPos, floorBlockPos, modifyBlockPosValues } from "../block/block-pos";
 import { WorldCursor } from "./world-cursor";
 import { mod } from "../util/mod";
+import { floodFillBlockLight } from "../light/flood-fill";
 
 // TODO: Re-factor to:
 // - don't use createTerrainCollisionBoxes as it's stupid.
@@ -36,7 +37,7 @@ export class Player {
     private digBlockSounds: AudioBuffer[] = [];
     private readonly audio: Audio;
 
-    private selectedBlockId: number = Blocks.getBlockId(Blocks.CAULDRON);
+    private selectedBlockId: number = Blocks.getBlockId(Blocks.TORCH);
 
     private readonly worldCursor: WorldCursor;
 
@@ -111,7 +112,7 @@ export class Player {
 
             { 
                 const world = Game.main.level.getWorld();
-                this.worldCursor.set(world, hitBlockPos);
+                // this.worldCursor.set(world, hitBlockPos);
 
                 if (this.input.isKeyDowned(RightMouseButton)) {
                     const hitBlock = world.getBlock(hitBlockPos);
@@ -163,6 +164,25 @@ export class Player {
 
             if (this.input.isKeyDowned('N')) {
                 this.noclip = !this.noclip;
+            }
+
+            if (this.input.isKeyDowned('P')) {
+                console.log(`The current player position is ${this.position.toArray()}`);
+            }
+
+            if (this.input.isKeyDowned('L')) {
+                const playerPos = floorBlockPos(this.position);
+                const chunk = Game.main.level.getWorld().chunkColumnManager.getChunkByBlockPos(playerPos);
+                if (chunk) {
+                    chunk.calculateLight(playerPos);
+                    console.log('Calculated light map at!');
+                }
+            }
+
+            if (this.input.isKeyDowned('Z')) {
+                Game.main.level.getWorld().chunkColumnManager.drop();
+                const chunkPosition = floorBlockPos(modifyBlockPosValues(this.position, (v) => v / 16));
+                Game.main.level.getWorld().chunkColumnManager.setCenter(chunkPosition.x, chunkPosition.z);
             }
 
             const x = Math.cos(this.rotation.y);

@@ -115,6 +115,8 @@ const DefaultCauldronBlockStateValues: CauldronBlockStateValues = {
 };
 
 export class CauldronBlock extends Block {
+    public readonly occludesNeighborBlocks = false;
+
     public constructor() {
         super('cauldron', [
             makeCauldronBlockModel(0),

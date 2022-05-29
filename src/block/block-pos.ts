@@ -23,3 +23,7 @@ export function floorBlockPos(pos: BlockPos): BlockPos {
 export function modifyBlockPosValues(pos: BlockPos, modify: (v: number) => number): BlockPos {
     return { x: modify(pos.x), y: modify(pos.y), z: modify(pos.z) };
 }
+
+export function isBlockPosIn(pos: BlockPos, from: BlockPos, to: BlockPos): boolean {
+    return pos.x >= from.x && pos.x <= to.x && pos.y >= from.y && pos.y <= to.y && pos.z >= from.z && pos.z <= to.z;
+}
