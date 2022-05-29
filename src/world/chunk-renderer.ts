@@ -1,9 +1,10 @@
 import { Vector3 } from "three";
 import { BlockFace } from "../block/block-face";
 import { BlockModelRenderer, SolidityMap } from "../block/block-model/block-model-renderer";
-import { BlockPos } from "../block/block-pos";
+import { BlockPos, isBlockPosIn, modifyBlockPosValues } from "../block/block-pos";
 import { Blocks, SerializedBlockModels } from "../block/blocks";
-import { indexToXZY, posToIndex, xyzTupelToIndex, xzyToIndex } from "../util/index-to-vector3";
+import { floodFillBlockLightAdditive } from "../light/flood-fill";
+import { indexToPos, indexToXZY, posToIndex, xyzTupelToIndex, xzyToIndex } from "../util/index-to-vector3";
 import { mod } from "../util/mod";
 
 const CHUNK_HEIGHT = 16;
@@ -14,8 +15,10 @@ interface PartialChunkMeshData {
     triangles: number[];
     normals: number[];
     uv: number[];
+
     skyLight: number[];
     blockLight: number[];
+    foliage: number[];
 }
 
 export interface ChunkMeshData {
@@ -23,15 +26,16 @@ export interface ChunkMeshData {
     triangles: number[];
     normals: Float32Array;
     uv: Float32Array;
+
     skyLight: Uint8Array;
     blockLight: Uint8Array;
+    foliage: Uint8Array;
 }
 
 export interface BuildGeometryResult {
     solid: ChunkMeshData;
     water: ChunkMeshData;
     transparent: ChunkMeshData;
-    foliage: ChunkMeshData;
 }
 
 export interface ChunkBlockData {
@@ -39,6 +43,9 @@ export interface ChunkBlockData {
     neighborBlocks: Uint8Array[];
     blockModelIndices: Record<number, number | undefined>;
     skyLight: Uint8Array;
+}
+
+export interface ChunkBlockDataWithLight extends ChunkBlockData {
     blockLight: Uint8Array;
 }
 
@@ -70,33 +77,49 @@ export class ChunkRenderer {
         // TODO: Don't hard-code visibility of blocks but define it in the block model.
         // TODO: Can the solid & transparent meshes be merged into one mesh?
         // TODO: Is there a need for block models being included in two meshes? E.g. solid cauldron with water?
+        const blockLight = this.calculateBlockLight(blockData);
+        const chunkBlockDataWithLight = { ...blockData, blockLight };
+
         return {
             solid: this.buildGeometryWithOptions(
                 chunkPosition,
-                blockData,
+                chunkBlockDataWithLight,
                 (blockId) => [1, 2, 3, 4, 5, 10, 11].includes(blockId),
             ),
             water: this.buildGeometryWithOptions(
                 chunkPosition,
                 // There currently is no water.
-                blockData,
+                chunkBlockDataWithLight,
                 (blockId) => blockId === 7,
             ),
             transparent: this.buildGeometryWithOptions(
                 chunkPosition,
                 // There currently are no transparent blocks.
-                blockData,
-                (blockId) => [6, 8].includes(blockId),
-            ),
-            foliage: this.buildGeometryWithOptions(
-                chunkPosition,
-                blockData,
-                (blockId) => [9].includes(blockId),
+                chunkBlockDataWithLight,
+                (blockId) => [6, 8, 9].includes(blockId),
             ),
         };
     }
 
-    private buildGeometryWithOptions(chunkPosition: BlockPos, blockData: ChunkBlockData, isVisible: IsVisible): ChunkMeshData {
+    private calculateBlockLight(blockData: ChunkBlockData) {
+        const blockLight = new Uint8Array(blockData.blocks.length);
+        for (let i = 0; i < (16 * 3) * (16 * 3) * (16 * 3); i++) {
+            const pos: BlockPos = modifyBlockPosValues(indexToPos(i, 16 * 3), (v) => v - 16);
+            const block = Blocks.getBlockById(getBlockFromChunkBlockData(blockData, pos));
+            const lightLevel = block.getLightLevel();
+            if (lightLevel <= 0) {
+                continue;
+            }
+
+            floodFillBlockLightAdditive(blockLight, pos, lightLevel, (pos) => (
+                Blocks.getBlockById(getBlockFromChunkBlockData(blockData, pos)).blocksLight
+            ));
+        }
+
+        return blockLight;
+    }
+
+    private buildGeometryWithOptions(chunkPosition: BlockPos, blockData: ChunkBlockDataWithLight, isVisible: IsVisible): ChunkMeshData {
         const partialChunkMeshData: PartialChunkMeshData = {
             vertices: [],
             normals: [],
@@ -104,6 +127,7 @@ export class ChunkRenderer {
             uv: [],
             skyLight: [],
             blockLight: [],
+            foliage: [],
         };
         for (let i = 0; i < blockData.blocks.length; i += 1) {
             const pos = indexToXZY(i, CHUNK_WIDTH, CHUNK_WIDTH);
@@ -127,12 +151,13 @@ export class ChunkRenderer {
             uv: new Float32Array(partialChunkMeshData.uv),
             skyLight: new Uint8Array(partialChunkMeshData.skyLight),
             blockLight: new Uint8Array(partialChunkMeshData.blockLight),
+            foliage: new Uint8Array(partialChunkMeshData.foliage),
         };
     }
 
     private renderBlock(
         chunkPosition: BlockPos,
-        blockData: ChunkBlockData,
+        blockData: ChunkBlockDataWithLight,
         position: Vector3,
         partialChunkMeshData: PartialChunkMeshData,
         isVisible: IsVisible,
@@ -199,6 +224,14 @@ export class ChunkRenderer {
                 partialChunkMeshData.skyLight.push(0, 0, 0, 0);
             }
         }
+
+        /**
+         * Foliage
+         */
+        const block = Blocks.getBlockById(blockId);
+        for (let i = 0; i < modelMesh.vertices.length; i += 3) {
+            partialChunkMeshData.foliage.push(block.isFoliage ? 1 : 0);
+        }
     }
 
     private isFaceVisible(blockData: ChunkBlockData, position: Vector3, face: BlockFace, isVisible: IsVisible): boolean {
@@ -210,61 +243,17 @@ export class ChunkRenderer {
     }
 }
 
-export function getBlockFromChunkBlockData({ blocks, neighborBlocks }: Omit<ChunkBlockData, 'blockModelIndices'>, position: Vector3): number {
-    // Above
-    if (position.y >= CHUNK_HEIGHT) {
-        return neighborBlocks[0][xzyToIndex(
-            new Vector3(position.x, mod(position.y, CHUNK_HEIGHT), position.z),
-            CHUNK_WIDTH,
-            CHUNK_WIDTH,
-        )];
+export function getBlockFromChunkBlockData({ blocks, neighborBlocks }: ChunkBlockData, pos: BlockPos): number {
+    const blockIndex = posToIndex(modifyBlockPosValues(pos, (v) => mod(v, CHUNK_WIDTH)));
+    if (isBlockPosIn(pos, { x: 0, y: 0, z: 0 }, { x: CHUNK_WIDTH - 1, y: CHUNK_WIDTH - 1, z: CHUNK_WIDTH - 1 })) {
+        return blocks[blockIndex];
     }
 
-    // Below
-    if (position.y < 0) {
-        return neighborBlocks[1][xzyToIndex(
-            new Vector3(position.x, mod(position.y, CHUNK_HEIGHT), position.z),
-            CHUNK_WIDTH,
-            CHUNK_WIDTH,
-        )];
+    const neighborPos = modifyBlockPosValues(pos, (v) => Math.floor((v + CHUNK_WIDTH) / CHUNK_WIDTH));
+    const neighborIndex = posToIndex(neighborPos, 3);
+    if (neighborBlocks[neighborIndex] === undefined || neighborBlocks[neighborIndex].length === 0) {
+        return 0; // No block data available? Guess that air would make most sense.
     }
 
-    // Left
-    if (position.x < 0) {
-        return neighborBlocks[2][xzyToIndex(
-            new Vector3(mod(position.x, CHUNK_WIDTH), position.y, position.z),
-            CHUNK_WIDTH,
-            CHUNK_WIDTH,
-        )];
-    }
-
-    // Right
-    if (position.x >= CHUNK_WIDTH) {
-        return neighborBlocks[3][xzyToIndex(
-            new Vector3(mod(position.x, CHUNK_WIDTH), position.y, position.z),
-            CHUNK_WIDTH,
-            CHUNK_WIDTH,
-        )];
-    }
-
-    // Back
-    if (position.z < 0) {
-        return neighborBlocks[4][xzyToIndex(
-            new Vector3(position.x, position.y, mod(position.z, CHUNK_WIDTH)),
-            CHUNK_WIDTH,
-            CHUNK_WIDTH,
-        )];
-    }
-
-    // Front
-    if (position.z >= CHUNK_WIDTH) {
-        return neighborBlocks[5][xzyToIndex(
-            new Vector3(position.x, position.y, mod(position.z, CHUNK_WIDTH)),
-            CHUNK_WIDTH,
-            CHUNK_WIDTH,
-        )];
-    }
-
-    // Within
-    return blocks[xzyToIndex(position, CHUNK_WIDTH, CHUNK_WIDTH)];
+    return neighborBlocks[neighborIndex][blockIndex];
 }

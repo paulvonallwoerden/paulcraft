@@ -18,6 +18,7 @@ export const LeavesBlockModel: BlockModel = {
 }
 
 export class LeavesBlock extends Block {
+    public readonly isFoliage = true;
     public readonly blocksLight = false;
 
     public constructor() {

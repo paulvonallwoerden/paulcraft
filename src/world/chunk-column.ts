@@ -80,7 +80,7 @@ export class ChunkColumn implements ITickable {
     }
 
     public getChunkMeshes(): Mesh[] {
-        return this.chunks.flatMap((chunk) => [chunk.solidMesh, chunk.transparentMesh, chunk.foliageMesh]).filter((chunk) => chunk !== undefined);
+        return this.chunks.flatMap((chunk) => [chunk.solidMesh, chunk.transparentMesh]).filter((chunk) => chunk !== undefined);
     }
 
     public getChunk(absolutePos: [number, number, number]): Chunk | undefined {

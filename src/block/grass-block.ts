@@ -48,7 +48,7 @@ export class GrassBlock extends Block {
 
     public onRandomTick(level: Level, pos: BlockPos): void {
         const blockAbove = level.getBlockAt(new Vector3(pos.x, pos.y + 1, pos.z));
-        if (blockAbove === Blocks.AIR) {
+        if (!blockAbove || !blockAbove.blocksLight) {
             return;
         }
 

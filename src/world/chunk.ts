@@ -1,17 +1,15 @@
-import { BufferAttribute, Mesh, Scene, Vector3, Vector3Tuple } from 'three';
+import { Mesh, Scene, Vector3, Vector3Tuple } from 'three';
 import { VertexNormalsHelper } from 'three/examples/jsm/helpers/VertexNormalsHelper';
 import { Game } from '../game';
-import { indexToPos, indexToXZY, posToIndex, xyzTupelToIndex, xzyToIndex } from '../util/index-to-vector3';
+import { indexToPos, xyzTupelToIndex, xzyToIndex } from '../util/index-to-vector3';
 import { ITickable } from '../tickable';
 import { ChunkColumn } from './chunk-column';
 import { Blocks } from '../block/blocks';
 import { Block } from '../block/block';
 import { BlockState } from '../block/block-state/block-state';
-import { ChunkBlockData } from './chunk-renderer';
-import { WorldFeature } from './feature/world-feature';
-import { floodFillBlockLight, floodFillBlockLightAdditive } from '../light/flood-fill';
-import { BlockPos, modifyBlockPosValues } from '../block/block-pos';
-import { mod } from '../util/mod';
+import { BlockPos, sumBlockPos } from '../block/block-pos';
+import { manhattenDistance } from '../light/flood-fill';
+import { areBlockLightPropertiesEqual } from '../light/are-block-light-properties-equal';
 
 export const CHUNK_WIDTH = 16;
 export const CHUNK_HEIGHT = 16;
@@ -23,25 +21,18 @@ export class Chunk implements ITickable {
     private blockData: Uint8Array = new Uint8Array(CHUNK_WIDTH * CHUNK_WIDTH * CHUNK_HEIGHT);
     private blockStates: Map<number, BlockState> = new Map();
 
-    // private skyLight: Uint8Array = new Uint8Array(CHUNK_WIDTH * CHUNK_WIDTH * CHUNK_HEIGHT);
-    // private blockLight: Uint8Array = new Uint8Array(CHUNK_WIDTH * CHUNK_WIDTH * CHUNK_HEIGHT);
-
     public readonly solidMesh: Mesh;
     public readonly waterMesh: Mesh;
     public readonly transparentMesh: Mesh;
-    public readonly foliageMesh: Mesh;
-
-    private normalHelper?: VertexNormalsHelper;
 
     public constructor(
         private readonly chunkColumn: ChunkColumn,
         private readonly position: Vector3,
     ) {
-        const { solid, transparent, water, foliage } = Game.main.blocks.getBlockMaterials();
+        const { solid, transparent, water } = Game.main.blocks.getBlockMaterials();
         this.solidMesh = new Mesh(undefined, solid);
         this.transparentMesh = new Mesh(undefined, transparent);
         this.waterMesh = new Mesh(undefined, water);
-        this.foliageMesh = new Mesh(undefined, foliage);
     }
 
     public register(scene: Scene) {
@@ -49,25 +40,19 @@ export class Chunk implements ITickable {
         this.solidMesh.position.set(worldPosition.x, worldPosition.y, worldPosition.z);
         this.waterMesh.position.set(worldPosition.x, worldPosition.y, worldPosition.z);
         this.transparentMesh.position.set(worldPosition.x, worldPosition.y, worldPosition.z);
-        this.foliageMesh.position.set(worldPosition.x, worldPosition.y, worldPosition.z);
         scene.add(this.solidMesh);
         scene.add(this.waterMesh);
         scene.add(this.transparentMesh);
-        scene.add(this.foliageMesh);
     }
 
     public unregister(scene: Scene) {
         if (this.solidMesh?.geometry) this.solidMesh.geometry.dispose();
         if (this.waterMesh?.geometry) this.waterMesh.geometry.dispose();
         if (this.transparentMesh?.geometry) this.transparentMesh.geometry.dispose();
-        if (this.foliageMesh?.geometry) this.foliageMesh.geometry.dispose();
 
         scene.remove(this.solidMesh);
         scene.remove(this.waterMesh);
         scene.remove(this.transparentMesh);
-        scene.remove(this.foliageMesh);
-
-        if (this.normalHelper) Game.main.scene.remove(this.normalHelper);
     }
 
     public onTick(deltaTime: number): void {}
@@ -140,7 +125,7 @@ export class Chunk implements ITickable {
                     const blockDataIndex = xyzTupelToIndex(x, y, z, CHUNK_WIDTH, CHUNK_WIDTH);
                     this.blockData[blockDataIndex] = spilledBlock;
                 }
-            }    
+            }
         }
     }
 
@@ -162,49 +147,51 @@ export class Chunk implements ITickable {
         if (this.solidMesh?.geometry) this.solidMesh.geometry.dispose();
         if (this.waterMesh?.geometry) this.waterMesh.geometry.dispose();
         if (this.transparentMesh?.geometry) this.transparentMesh.geometry.dispose();
-        if (this.foliageMesh?.geometry) this.foliageMesh.geometry.dispose();
-
-        const blockLight = new Uint8Array(this.blockData.length);
-        for (let i = 0; i < this.blockData.length; i++) {
-            const block = Blocks.getBlockById(this.blockData[i]);
-            const lightLevel = block.getLightLevel();
-            if (lightLevel <= 0) {
-                continue;
-            }
-
-            const pos = indexToPos(i);
-            floodFillBlockLightAdditive(blockLight, this.blockData, pos, lightLevel);
-        }
 
         const geometry = await Game.main.chunkGeometryBuilderPool.buildGeometry(
             this.position,
             {
                 blockModelIndices,
                 blocks: this.blockData,
-                neighborBlocks: this.getNeighborChunks().map((chunk) => chunk?.blockData ?? new Uint8Array()),
-                blockLight,
+                neighborBlocks: this.getNeighborChunkBlocks(),
                 skyLight: this.chunkColumn.getSkyLight(),
             },
         );
         this.solidMesh.geometry = geometry.solid;
         this.waterMesh.geometry = geometry.water;
         this.transparentMesh.geometry = geometry.transparent;
-        this.foliageMesh.geometry = geometry.foliage;
-
-        // if (this.normalHelper) Game.main.scene.remove(this.normalHelper);
-        // this.normalHelper = new VertexNormalsHelper(this.solidMesh, 0.5);
-        // Game.main.scene.add(this.normalHelper);
     }
 
-    private getNeighborChunks() {
-        return [
-            this.chunkColumn.getChunk([this.position.x, this.position.y + 1, this.position.z]),
-            this.chunkColumn.getChunk([this.position.x, this.position.y - 1, this.position.z]),
-            this.chunkColumn.getChunk([this.position.x - 1, this.position.y, this.position.z]),
-            this.chunkColumn.getChunk([this.position.x + 1, this.position.y, this.position.z]),
-            this.chunkColumn.getChunk([this.position.x, this.position.y, this.position.z - 1]),
-            this.chunkColumn.getChunk([this.position.x, this.position.y, this.position.z + 1]),
-        ];
+    private getNeighborChunkBlocks(): Uint8Array[] {
+        const neighborBlockData = [];
+        for (let i = 0; i < 3 * 3 * 3; i++) {
+            const pos = sumBlockPos(indexToPos(i, 3), { x: this.position.x - 1, y: this.position.y - 1, z: this.position.z - 1 });
+            const chunk = this.chunkColumn.getChunk([pos.x, pos.y, pos.z]);
+            neighborBlockData.push(chunk?.getBlockData() ?? new Uint8Array());
+        }
+
+        return neighborBlockData;
+    }
+
+    private getNeighborChunks(maxDistance = 3): Chunk[] {
+        const neighborChunks = [];
+        for (let i = 0; i < 3 * 3 * 3; i++) {
+            const relativePos = indexToPos(i, 3);
+            const distance = manhattenDistance(relativePos, { x: 1, y: 1, z: 1 });
+            if (distance > maxDistance || distance === 0) {
+                continue;
+            }
+
+            const pos = sumBlockPos(relativePos, { x: this.position.x - 1, y: this.position.y - 1, z: this.position.z - 1 });
+            const chunk = this.chunkColumn.getChunk([pos.x, pos.y, pos.z]);
+            if (!chunk) {
+                continue;
+            }
+
+            neighborChunks.push(chunk);
+        }
+
+        return neighborChunks;
     }
 
     public setBlock([x, y, z]: Vector3Tuple, block: Block): void {
@@ -218,8 +205,12 @@ export class Chunk implements ITickable {
         this.requestRebuild();
 
         // TODO: Only update the relevant chunk
-        if (x <= 0 || y <= 0 || z <= 0 || x >= CHUNK_WIDTH - 1 || y >= CHUNK_HEIGHT - 1 || z >= CHUNK_WIDTH - 1) {
-            this.getNeighborChunks().filter((chunk): chunk is Chunk => chunk !== undefined).forEach((chunk) => chunk.requestRebuild());
+        const oldBlock = Blocks.getBlockById(oldBlockId);
+        if (!areBlockLightPropertiesEqual(block, oldBlock)) {
+            this.getNeighborChunks().forEach((chunk) => chunk.requestRebuild());
+        } else if(x <= 0 || y <= 0 || z <= 0 || x >= CHUNK_WIDTH - 1 || y >= CHUNK_HEIGHT - 1 || z >= CHUNK_WIDTH - 1) {
+            console.log(`pls update for ${oldBlock.name} -> ${block.name}`);
+            this.getNeighborChunks(1).forEach((chunk) => chunk.requestRebuild());
         }
     }
 
@@ -255,14 +246,5 @@ export class Chunk implements ITickable {
 
     public enableRebuilds() {
         this.rebuildsEnabled = true;
-    }
-
-    public calculateLight(testPoint: BlockPos) {
-        // floodFillBlockLightAdditive(this.skyLightMap, this.blockData, modifyBlockPosValues(testPoint, (v) => mod(v, 16)), 15);
-        // console.log(this.skyLightMap)
-
-        // // this.solidMesh.geometry.attributes.skylight = 1; // = this.skyLightMap; // .getAttribute('skylight').;
-        // this.solidMesh.geometry.setAttribute('skylight', new BufferAttribute(this.skyLightMap, 1));
-        // this.solidMesh.geometry.attributes.position.needsUpdate = true;
     }
 }

@@ -6,6 +6,7 @@ import { World } from '../world/world';
 import { Player } from '../player/player';
 
 export abstract class Block {
+    public readonly isFoliage: boolean = false;
     public readonly blocksLight: boolean = true;
     public readonly occludesNeighborBlocks: boolean = true;
 

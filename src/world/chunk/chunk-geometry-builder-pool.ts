@@ -16,15 +16,13 @@ export class ChunkGeometryBuilderPool extends WorkerPool<ChunkGeometryBuilder> {
         solid: BufferGeometry,
         water: BufferGeometry,
         transparent: BufferGeometry,
-        foliage: BufferGeometry,
     }> {
-        const { solid, water, transparent, foliage } = await this.getWorker().buildGeometry(chunkPosition, blockData);
+        const { solid, water, transparent } = await this.getWorker().buildGeometry(chunkPosition, blockData);
 
         return {
             solid: this.getGeometryFromChunkMeshData(solid),
             water: this.getGeometryFromChunkMeshData(water),
             transparent: this.getGeometryFromChunkMeshData(transparent),
-            foliage: this.getGeometryFromChunkMeshData(foliage),
         };
     }
 
@@ -39,6 +37,7 @@ export class ChunkGeometryBuilderPool extends WorkerPool<ChunkGeometryBuilder> {
         // Lighting
         geometry.setAttribute('blockLight', new BufferAttribute(chunkMeshData.blockLight, 1));
         geometry.setAttribute('skyLight', new BufferAttribute(chunkMeshData.skyLight, 1));
+        geometry.setAttribute('foliage', new BufferAttribute(chunkMeshData.foliage, 1));
 
         return geometry;
     }

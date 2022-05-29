@@ -61,8 +61,6 @@ export class Blocks {
     private solidMaterial?: ShaderMaterial; // =   / new MeshStandardMaterial({ opacity: 1, transparent: false });
     private waterMaterial = new MeshStandardMaterial({ opacity: 0.8, transparent: true });
     private transparentMaterial?: Material;
-    // private foliageMaterial = new MeshStandardMaterial({ alphaTest: 0.5, color: '#62a63a' });
-    private foliageMaterial?: ReturnType<typeof createFoliageMaterial>;
 
     public constructor() {
         const blockTextures = Blocks.blocks.flatMap(
@@ -77,13 +75,10 @@ export class Blocks {
         const atlas = await this.textureAtlas.buildAtlas();
         this.solidMaterial = makeOpaqueBlockMaterial(atlas);
         this.transparentMaterial = makeOpaqueBlockMaterial(atlas);
-        // this.transparentMaterial.map = atlas;
         this.waterMaterial.map = atlas;
-        this.foliageMaterial = createFoliageMaterial(atlas);
     }
 
     public update(deltaTime: number) {
-        if (this.foliageMaterial) this.foliageMaterial.update(deltaTime);
     }
 
     public static getBlockId(block: Block): number {
@@ -94,16 +89,11 @@ export class Blocks {
         return Blocks.blocks[id];
     }
 
-    public getBlockMaterials(): { solid: ShaderMaterial, transparent: Material, water: Material, foliage: Material } {
-        if (!this.foliageMaterial) {
-            throw new Error('Foliage material not initialized');
-        }
-
+    public getBlockMaterials(): { solid: ShaderMaterial, transparent: Material, water: Material } {
         return {
             solid: this.solidMaterial!,
             transparent: this.transparentMaterial!,
             water: this.waterMaterial,
-            foliage: this.foliageMaterial.shader,
         };
     }
 

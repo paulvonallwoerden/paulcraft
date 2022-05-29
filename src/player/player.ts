@@ -1,15 +1,14 @@
-import pMap from "p-map";
-import { Audio, AudioLoader, Box3, Camera, Intersection, MathUtils, Raycaster, Vector2, Vector3, Vector3Tuple } from "three";
-import { degToRad, radToDeg } from "three/src/math/MathUtils";
-import { Game } from "../game";
-import { Input, LeftMouseButton, RightMouseButton } from "../input/input";
-import { xyzTupelToIndex } from "../util/index-to-vector3";
-import { randomElement } from "../util/random-element";
-import { Blocks } from "../block/blocks";
-import { BlockPos, floorBlockPos, modifyBlockPosValues } from "../block/block-pos";
-import { WorldCursor } from "./world-cursor";
-import { mod } from "../util/mod";
-import { floodFillBlockLight } from "../light/flood-fill";
+import pMap from 'p-map';
+import { Audio, AudioLoader, Box3, Camera, Intersection, MathUtils, Raycaster, Vector2, Vector3, Vector3Tuple } from 'three';
+import { degToRad, radToDeg } from 'three/src/math/MathUtils';
+import { Game } from '../game';
+import { Input, LeftMouseButton, RightMouseButton } from '../input/input';
+import { xyzTupelToIndex } from '../util/index-to-vector3';
+import { randomElement } from '../util/random-element';
+import { Blocks } from '../block/blocks';
+import { BlockPos, floorBlockPos, modifyBlockPosValues } from '../block/block-pos';
+import { WorldCursor } from './world-cursor';
+import { mod } from '../util/mod';
 
 // TODO: Re-factor to:
 // - don't use createTerrainCollisionBoxes as it's stupid.
@@ -168,15 +167,6 @@ export class Player {
 
             if (this.input.isKeyDowned('P')) {
                 console.log(`The current player position is ${this.position.toArray()}`);
-            }
-
-            if (this.input.isKeyDowned('L')) {
-                const playerPos = floorBlockPos(this.position);
-                const chunk = Game.main.level.getWorld().chunkColumnManager.getChunkByBlockPos(playerPos);
-                if (chunk) {
-                    chunk.calculateLight(playerPos);
-                    console.log('Calculated light map at!');
-                }
             }
 
             if (this.input.isKeyDowned('Z')) {

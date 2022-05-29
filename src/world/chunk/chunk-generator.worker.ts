@@ -37,7 +37,6 @@ export class ChunkGenerator {
 
     public buildTerrain(chunkPosition: Vector3Tuple): Uint8Array {
         const blocks = this.buildBaseTerrain(chunkPosition);
-        // const decoratedBlocks = this.decorateTerrain(blocks);
 
         return Uint8Array.from(blocks.map((block) => Blocks.getBlockId(block)));
     }
@@ -60,7 +59,6 @@ export class ChunkGenerator {
                     continue;
                 }
 
-                // const isBlockAbove = this.sampleIsBlock([worldX, worldY + 1, worldZ], erosion, factor3D);
                 blockData[xyzTupelToIndex(x, mod(y, 16), z, CHUNK_WIDTH, CHUNK_WIDTH)] = Blocks.STONE;
             }
         }
@@ -145,79 +143,10 @@ export class ChunkGenerator {
                     break;
                 }
             }
-            // const blockAbove = Blocks.getBlockById(xyzTupelToIndex(x, y, z, CHUNK_WIDTH, CHUNK_WIDTH));
         }
 
         return blockData;
     }
-
-    // private decorateBaseTerrain(chunkPosition: Vector3Tuple, blockData: Omit<ChunkBlockData, 'blockModelIndices'>): Uint8Array {
-    // // const aleaRandom = AleaRandom(['2'].join(';'));
-    // const treePos = { x: 0, y: 0, z: 0 };
-
-    // // for (let x = -(CHUNK_WIDTH - 1); x < CHUNK_WIDTH; x++) {
-    // //     for (let z = -(CHUNK_WIDTH - 1); z < CHUNK_WIDTH; z++) {
-    // //         for (let y = CHUNK_HEIGHT * 2 - 2; y > -CHUNK_HEIGHT; y--) {
-    // for (let x = -16; x < 32; x++) {
-    //     for (let z = -16; z < 32; z++) {
-    //         for (let y = 30; y >= -16; y--) {
-    //             const block = Blocks.getBlockById(getBlockFromChunkBlockData(blockData, new Vector3(x, y, z)));
-    //             const blockAbove = Blocks.getBlockById(getBlockFromChunkBlockData(blockData, new Vector3(x, y + 1, z)));
-    //             const isTopBlock = block !== Blocks.AIR && blockAbove === Blocks.AIR;
-
-    //             const worldPos = {
-    //                 x: chunkPosition[0] * CHUNK_WIDTH + x,
-    //                 y: chunkPosition[1] * CHUNK_HEIGHT + y,
-    //                 z: chunkPosition[2] * CHUNK_WIDTH + z,
-    //             };
-
-    //             // if (chunkPosition[1] === 0 && y === 0) {
-    //             //     console.log(chunkPosition[0])
-    //             // }
-
-    //             const placeTree = worldPos.x === treePos.x && worldPos.z === treePos.z;
-    //             if (worldPos.x === 0 && worldPos.y === 77 && worldPos.z === 0) {
-    //                 // if (isTopBlock) console.log(chunkPosition.join(','), worldPos);
-    //                 // else console.log(chunkPosition.join(','))
-    //                 // if (block === Blocks.STONE && blockAbove === Blocks.AIR) console.log(worldPos);
-    //                 console.log(chunkPosition)
-    //             }
-    //             if (block === Blocks.STONE && blockAbove === Blocks.AIR && placeTree) {
-    //                 const featureBlocks = buildFeatureVariant(OakTreeFeature.variants[0]);
-    //                 this.placeFeature(blockData.blocks, { x, y: y + 1, z }, featureBlocks);
-    //             }
-
-    //             if (isBlockPosIn({ x, y, z }, { x: 0, y: 0, z: 0 }, { x: CHUNK_WIDTH - 1, y: CHUNK_HEIGHT - 1, z: CHUNK_WIDTH - 1 })) {
-    //                 if (block === Blocks.STONE && blockAbove === Blocks.AIR && worldPos.x === worldPos.z) {
-    //                     blockData.blocks[xyzTupelToIndex(x, y, z, CHUNK_WIDTH, CHUNK_WIDTH)] = Blocks.getBlockId(Blocks.GRASS);
-    //                 }
-    //             }
-
-    //             if (block === Blocks.STONE && blockAbove !== Blocks.AIR) {
-    //                 break;
-    //             }
-    //         }
-    //     }
-    // }
-
-    // const { blocks } = blockData;
-    // for (let i = 0; i < blocks.length; i += 1) {
-    //     const block = blocks[i];
-    //     const { x, y, z } = indexToXZY(i, CHUNK_WIDTH, CHUNK_WIDTH);
-    //     if (aleaRandom.next() > 0.005) {
-    //         continue;
-    //     }
-
-    //     const suitableForFeature = block === Blocks.GRASS && y < CHUNK_WIDTH - 1 && blocks[xyzTupelToIndex(x, y + 1, z, CHUNK_WIDTH, CHUNK_WIDTH)] === Blocks.AIR;
-    //     if (suitableForFeature) {
-    //         const featureBlocks = buildFeatureVariant(OakTreeFeature.variants[0]);
-    //         this.placeFeature(blocks, { x, y: y + 1, z }, featureBlocks); 
-    //         // blocks[xyzTupelToIndex(x, y + 1, z, CHUNK_WIDTH, CHUNK_WIDTH)] = featureBlocks.blocks[0];
-    //     }
-    // }
-
-    //     return blockData.blocks;
-    // }
 
     private placeFeature(
         position: BlockPos,
