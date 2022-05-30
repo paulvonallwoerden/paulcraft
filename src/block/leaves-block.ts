@@ -2,30 +2,26 @@ import { Block } from "./block";
 import { BlockFaces } from "./block-face";
 import { BlockModel } from "./block-model/block-model";
 
-export const WaterBlockModel: BlockModel = {
+export const LeavesBlockModel: BlockModel = {
     elements: [
         {
             from: [0, 0, 0],
-            to: [15, 13, 15],
+            to: [15, 15, 15],
             faces: BlockFaces.reduce((faces, face) => ({
                 ...faces,
                 [face]: {
-                    cull: true,
-                    texture: 'textures/blocks/water.png',
+                    texture: 'textures/blocks/oak_leaves.png',
                 },
             }), {}),
         },
     ],
 }
 
-export class WaterBlock extends Block {
+export class LeavesBlock extends Block {
+    public readonly isFoliage = true;
     public readonly blocksLight = false;
 
     public constructor() {
-        super('water', [WaterBlockModel]);
-    }
-
-    public isCollidable(): boolean {
-        return false;
+        super('leaves', [LeavesBlockModel]);
     }
 }

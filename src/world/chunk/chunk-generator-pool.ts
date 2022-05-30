@@ -4,9 +4,10 @@ import type { ChunkGenerator } from "./chunk-generator.worker";
 import { Biome } from "../biome/biome";
 import { ArrayMap2D, Map2D, PaletteMap2D } from "../../util/map-2d";
 import { CHUNK_WIDTH } from "./chunk-constants";
-import { Vector2 } from "three";
+import { Vector2, Vector2Tuple } from "three";
 import { randomElement } from "../../util/random-element";
 import { BlockPos } from "../../block/block-pos";
+import { ChunkBlockData } from "../chunk-renderer";
 
 export class ChunkGeneratorPool {
     private readonly workers: Remote<ChunkGenerator>[] = [];
@@ -22,17 +23,11 @@ export class ChunkGeneratorPool {
     }
 
     public async buildBaseTerrain(chunkPosition: BlockPos): Promise<Uint8Array> {
-        return this.getWorker().buildTerrain([
-            chunkPosition.x,
-            chunkPosition.y,
-            chunkPosition.z,
-        ]);
+        return this.getWorker().buildTerrain([chunkPosition.x, chunkPosition.y, chunkPosition.z]);
     }
 
-    public async generateBiomeMap(chunkPosition: Vector2): Promise<Map2D<Biome>> {
-        const biomes = await this.getWorker().generateBiomeMap(chunkPosition);
-
-        return PaletteMap2D.fromArray(biomes, CHUNK_WIDTH);
+    public async decorateTerrain(chunkPosition: Vector2Tuple, blockData: Uint8Array[]): Promise<Uint8Array[]> {
+        return this.getWorker().decorateTerrain(chunkPosition, blockData);
     }
 
     private getWorker() {

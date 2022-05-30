@@ -1,4 +1,4 @@
-import { Euler, Matrix4, Quaternion, Vector2Tuple, Vector3, Vector3Tuple } from "three";
+import { Euler, Matrix3, Matrix4, Quaternion, Vector2, Vector2Tuple, Vector3, Vector3Tuple } from "three";
 import { degToRad } from "three/src/math/MathUtils";
 import { BlockFace, BlockFaces } from "../block-face";
 import { SerializedBlockModels } from "../blocks";
@@ -58,6 +58,7 @@ const FaceTrsMatrices: Record<BlockFace, Matrix4> = {
 const DefaultElementFromToModifier = (fromAndTo: [Vector3Tuple, Vector3Tuple]) => fromAndTo;
 export type ElementFromToModifier = typeof DefaultElementFromToModifier;
 
+// TODO: Add caching. Recalculating the mesh for every block is not necessary.
 export class BlockModelRenderer {
     public constructor(
         private readonly blockUvs: SerializedBlockModels['textureUvs'],
@@ -120,12 +121,12 @@ export class BlockModelRenderer {
         const modelMatrix = this.makeTrsMatrixFromBlockModelRotation(blockModel.rotation);
         const elementMatrix = this.makeTrsMatrixFromBlockModelRotation(element.rotation);
         const faceMatrix = new Matrix4().compose(
-            new Vector3(fromX / 15, fromY / 15, fromZ / 15),
+            new Vector3(fromX / 16, fromY / 16, fromZ / 16),
             new Quaternion().identity(),
-            new Vector3(sizeX / 15, sizeY / 15, sizeZ / 15),
+            new Vector3((sizeX + 1) / 16, (sizeY + 1) / 16, (sizeZ + 1) / 16),
         );
 
-        const rts = modelMatrix
+        const rts = modelMatrix.clone()
             .multiply(elementMatrix)
             .multiply(faceMatrix)
             .multiply(FaceTrsMatrices[blockFace]);
@@ -149,14 +150,19 @@ export class BlockModelRenderer {
             triangleOffset + 3,
         );
 
-        // Normals
+        const normalMatrix = new Matrix4().makeRotationFromEuler(new Euler(
+            (element.rotation?.axis === 'x' ? element.rotation.angle : 0) + (blockModel.rotation?.axis === 'x' ? blockModel.rotation.angle : 0),
+            (element.rotation?.axis === 'y' ? element.rotation.angle : 0) + (blockModel.rotation?.axis === 'y' ? blockModel.rotation.angle : 0),
+            (element.rotation?.axis === 'z' ? element.rotation.angle : 0) + (blockModel.rotation?.axis === 'z' ? blockModel.rotation.angle : 0),
+        ));
+        const normal = new Vector3().fromArray(FaceNormals[blockFace]).applyMatrix4(normalMatrix);
         for (let i = 0; i < 4; i++) {
-            mesh.normals.push(...FaceNormals[blockFace]);
+            mesh.normals.push(...normal.normalize().toArray());
         }
 
         // UVs
         const { texture } = modelFace;
-        const [uvScaleX, uvScaleY, uvScaleZ] = [sizeX / 16, sizeY / 16, sizeZ / 16];
+        const [uvScaleX, uvScaleY, uvScaleZ] = [(sizeX + 1) / 16, (sizeY + 1) / 16, (sizeZ + 1) / 16];
         const uvs = this.blockUvs[texture];
         switch (blockFace) {
             case BlockFace.FRONT:

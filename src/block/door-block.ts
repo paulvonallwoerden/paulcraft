@@ -17,7 +17,7 @@ export function makeDoorBlockModel(open: boolean, rotation: number, texture: str
         elements: [
             {
                 from: [0, 0, 0],
-                to: open ? [15, 15, 2] : [2, 15, 15],
+                to: open ? [15, 15, 1] : [1, 15, 15],
                 faces: BlockFaces.reduce((faces, face) => ({
                     ...faces,
                     [face]: { texture },
@@ -31,6 +31,8 @@ const DefaultDoorBlockStateValues = { open: false, isTop: false, facing: 0 };
 type DoorBlockStateValues = typeof DefaultDoorBlockStateValues;
 
 export class DoorBlock extends Block {
+    public readonly blocksLight = false;
+
     public constructor() {
         super('door', [
             makeDoorBlockModel(false, 90, 'textures/blocks/oak_door_bottom.png'),

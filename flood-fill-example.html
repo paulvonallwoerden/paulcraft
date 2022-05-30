@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+
+    <style>
+        * {
+            padding: 0;
+            margin: 0;
+        }
+        canvas {
+            display: block;
+            image-rendering: pixelated;
+
+            border-style: solid;
+            border-width: 1px;
+            border-color: bisque;
+            box-sizing: border-box;
+
+            margin: auto;
+        }
+        #canvasGood {
+            background-color: green;
+        }
+        #canvasBad {
+            background-color: red;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="canvasGood" width="100" height="100"></canvas>
+    <canvas id="canvasBad" width="100" height="100"></canvas>
+
+    <script>
+        function floodFill(data, x, y, distance, enableTimeout) {
+            if (distance > 40) {
+                return;
+            }
+
+            if (x < 0 || y < 0 || x >= 100 || y >= 100) {
+                return;
+            }
+
+            // if (Math.abs(x - 50) + Math.abs(y - 50) > 40) {
+            //     return;
+            // }
+
+            const index = (x) + (y * 100);
+            if (data[index] > 0) {
+                return;
+            }
+            data[index] = 1;
+            drawData(data, 'canvasBad');
+            // if (data[index] === 0) {
+            //     data[index] = 1;
+            // }
+ 
+            if (enableTimeout) {
+                setTimeout(() => {
+                    floodFill(data, x, y + 1, distance + 1, enableTimeout);
+                    floodFill(data, x, y - 1, distance + 1, enableTimeout);
+                    floodFill(data, x + 1, y, distance + 1, enableTimeout);
+                    floodFill(data, x - 1, y, distance + 1, enableTimeout);
+                }, 1);
+            } else {
+                floodFill(data, x, y + 1, distance + 1, enableTimeout);
+                floodFill(data, x, y - 1, distance + 1, enableTimeout);
+                floodFill(data, x + 1, y, distance + 1, enableTimeout);
+                floodFill(data, x - 1, y, distance + 1, enableTimeout);
+            }
+        }
+
+        function drawData(data, canvasId) {
+            /**
+             * @type {HTMLCanvasElement}
+             */
+            const canvas = document.getElementById(canvasId);
+            const context = canvas.getContext('2d');
+
+            context.fillStyle = 'white';
+            context.fillRect(0, 0, 100, 100);
+
+            context.fillStyle = 'black';
+            const max = Math.max(...data);
+            for (let i = 0; i < data.length; i++) {
+                if (data[i] <= 0) {
+                    continue;
+                }
+
+                const x = i % 100;
+                const y = Math.floor(i / 100);
+                context.fillRect(x, y, 1, 1);
+            }
+        }
+
+        // Run without setTimeout
+        const data1 = new Uint8Array(100 * 100);
+        floodFill(data1, 50, 50, 0, false);
+        drawData(data1, 'canvasBad');
+
+        // Run with setTimeout
+        const data2 = new Uint8Array(100 * 100);
+        floodFill(data2, 50, 50, 0, true);
+        // Waiting a second to ensure the algorithm has finished.
+        setTimeout(() => { drawData(data2, 'canvasGood') }, 1000);
+    </script>
+</body>
+</html>

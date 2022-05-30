@@ -17,6 +17,8 @@ A clone of Minecraft that runs in the browser. **[Play it now!](https://paulvona
   * Fly down: `Left-Shift`
 * Disable collision: `N`
 
+> For more technical controls look at [player.ts](src/player/player.ts).
+
 ### Features
 
 * Infinite world
@@ -28,24 +30,31 @@ A clone of Minecraft that runs in the browser. **[Play it now!](https://paulvona
 * Block ticks (e.g. growing plants)
 * Player controller with block collisions
 * Sounds & Music
+* Lighting
+* Structures (e.g. Trees)
+* Day/Night cycle
 
 ### Planned features
 
-* Structures (e.g. Trees)
 * Saving
 * Items
 * Inventory
 * UI
 * Entities (e.g. Pigs, Sheep)
-* Lighting
+* Finer player/world collisions
 
 ### Known bugs
 
 * Using another browser tab will cause the player to fall through the terrain
-* Chunk rendering order is not prioritized on player location
+* Visible chunk borders for lighting & tree generation
 
 ## Impressions
 
+![Night](docs/media/night.png)
+![Light](docs/media/light.png)
+![Door open](docs/media/door-open.png)
+![Door close](docs/media/door-close.png)
+![Sky](docs/media/sky.png)
 ![3D Cliffs](docs/media/cliffs.png)
 ![Block states](docs/media/block-states.png)
 ![Block ticks](docs/media/block-ticks.png)
