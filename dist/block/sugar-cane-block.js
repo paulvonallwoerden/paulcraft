@@ -49,7 +49,9 @@ var SugarCaneBlockModel = {
 var SugarCaneBlock = /** @class */ (function (_super) {
     __extends(SugarCaneBlock, _super);
     function SugarCaneBlock() {
-        return _super.call(this, 'sugar_cane', [SugarCaneBlockModel]) || this;
+        var _this = _super.call(this, 'sugar_cane', [SugarCaneBlockModel]) || this;
+        _this.blocksLight = false;
+        return _this;
     }
     SugarCaneBlock.prototype.isCollidable = function () {
         return false;

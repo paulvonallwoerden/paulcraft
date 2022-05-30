@@ -36,11 +36,16 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
 };
 import { Vector3 } from 'three';
 import { Chunk, CHUNK_HEIGHT } from './chunk';
+import { Game } from '../game';
+import { CHUNK_WIDTH } from './chunk/chunk-constants';
+import { posToIndex } from '../util/index-to-vector3';
+import { mod } from '../util/mod';
 var ChunkColumn = /** @class */ (function () {
     function ChunkColumn(manager, position, height) {
         this.manager = manager;
         this.position = position;
         this.chunks = [];
+        this.skyLight = new Uint8Array(CHUNK_WIDTH * CHUNK_WIDTH * CHUNK_WIDTH * 8);
         for (var i = 0; i < height; i++) {
             this.chunks.push(new Chunk(this, new Vector3(position[0], i, position[1])));
         }
@@ -71,7 +76,12 @@ var ChunkColumn = /** @class */ (function () {
         if (chunkLocalY < 0 || chunkLocalY >= this.chunks.length) {
             return;
         }
-        return this.chunks[chunkLocalY].setBlock([x, y - chunkLocalY * CHUNK_HEIGHT, z], block);
+        var oldBlock = this.getBlockAt([x, y, z]);
+        this.chunks[chunkLocalY].setBlock([x, y - chunkLocalY * CHUNK_HEIGHT, z], block);
+        // TODO: Run this async and NOT sync! Important!
+        if (oldBlock !== block && ((oldBlock === null || oldBlock === void 0 ? void 0 : oldBlock.blocksLight) !== block.blocksLight)) {
+            this.calculateSkyLight();
+        }
     };
     ChunkColumn.prototype.getBlockAt = function (_a) {
         var x = _a[0], y = _a[1], z = _a[2];
@@ -80,6 +90,21 @@ var ChunkColumn = /** @class */ (function () {
             return undefined;
         }
         return this.chunks[chunkLocalY].getBlock([x, y - chunkLocalY * CHUNK_HEIGHT, z]);
+    };
+    ChunkColumn.prototype.decorateTerrain = function () {
+        return __awaiter(this, void 0, void 0, function () {
+            var decoratedBlocks;
+            return __generator(this, function (_a) {
+                switch (_a.label) {
+                    case 0: return [4 /*yield*/, Game.main.chunkGeneratorPool.decorateTerrain(this.position, this.chunks.map(function (chunk) { return chunk.getBlockData(); }))];
+                    case 1:
+                        decoratedBlocks = _a.sent();
+                        this.chunks.forEach(function (chunk, i) { return chunk.setBlockData(decoratedBlocks[i]); });
+                        this.calculateSkyLight();
+                        return [2 /*return*/];
+                }
+            });
+        });
     };
     ChunkColumn.prototype.getChunkMeshes = function () {
         return this.chunks.flatMap(function (chunk) { return [chunk.solidMesh, chunk.transparentMesh]; }).filter(function (chunk) { return chunk !== undefined; });
@@ -93,6 +118,29 @@ var ChunkColumn = /** @class */ (function () {
             return undefined;
         }
         return neighborColumn.chunks[absolutePos[1]];
+    };
+    ChunkColumn.prototype.spillBlockData = function (blockData) {
+        this.spilledBlockData = blockData;
+    };
+    ChunkColumn.prototype.getSpilledBlockData = function () {
+        return this.spilledBlockData;
+    };
+    ChunkColumn.prototype.calculateSkyLight = function () {
+        this.skyLight = new Uint8Array(this.skyLight.length);
+        for (var x = 0; x < CHUNK_WIDTH; x += 1) {
+            for (var z = 0; z < CHUNK_WIDTH; z += 1) {
+                for (var y = CHUNK_WIDTH * 8 - 1; y >= 0; y -= 1) {
+                    var pos = { x: x, y: y, z: z };
+                    if (this.getBlockAt([mod(x, 16), y, mod(z, 16)]).blocksLight) {
+                        break;
+                    }
+                    this.skyLight[posToIndex(pos)] = 15;
+                }
+            }
+        }
+    };
+    ChunkColumn.prototype.getSkyLight = function () {
+        return this.skyLight;
     };
     return ChunkColumn;
 }());

@@ -18,3 +18,6 @@ export function floorBlockPos(pos) {
 export function modifyBlockPosValues(pos, modify) {
     return { x: modify(pos.x), y: modify(pos.y), z: modify(pos.z) };
 }
+export function isBlockPosIn(pos, from, to) {
+    return pos.x >= from.x && pos.x <= to.x && pos.y >= from.y && pos.y <= to.y && pos.z >= from.z && pos.z <= to.z;
+}

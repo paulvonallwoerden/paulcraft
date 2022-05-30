@@ -38,7 +38,7 @@ export function makeDoorBlockModel(open, rotation, texture) {
         elements: [
             {
                 from: [0, 0, 0],
-                to: open ? [15, 15, 2] : [2, 15, 15],
+                to: open ? [15, 15, 1] : [1, 15, 15],
                 faces: BlockFaces.reduce(function (faces, face) {
                     var _a;
                     return (__assign(__assign({}, faces), (_a = {}, _a[face] = { texture: texture }, _a)));
@@ -51,7 +51,7 @@ var DefaultDoorBlockStateValues = { open: false, isTop: false, facing: 0 };
 var DoorBlock = /** @class */ (function (_super) {
     __extends(DoorBlock, _super);
     function DoorBlock() {
-        return _super.call(this, 'door', [
+        var _this = _super.call(this, 'door', [
             makeDoorBlockModel(false, 90, 'textures/blocks/oak_door_bottom.png'),
             makeDoorBlockModel(true, 90, 'textures/blocks/oak_door_bottom.png'),
             makeDoorBlockModel(false, 90, 'textures/blocks/oak_door_top.png'),
@@ -69,6 +69,8 @@ var DoorBlock = /** @class */ (function (_super) {
             makeDoorBlockModel(false, 0, 'textures/blocks/oak_door_top.png'),
             makeDoorBlockModel(true, 0, 'textures/blocks/oak_door_top.png'),
         ]) || this;
+        _this.blocksLight = false;
+        return _this;
     }
     DoorBlock.prototype.getBlockModel = function (blockState) {
         var open = blockState.get('open');

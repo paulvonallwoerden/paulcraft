@@ -34,16 +34,17 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
         if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
     }
 };
-import pMap from "p-map";
-import { Audio, AudioLoader, Box3, MathUtils, Raycaster, Vector2, Vector3 } from "three";
-import { degToRad, radToDeg } from "three/src/math/MathUtils";
-import { Game } from "../game";
-import { LeftMouseButton, RightMouseButton } from "../input/input";
-import { xyzTupelToIndex } from "../util/index-to-vector3";
-import { randomElement } from "../util/random-element";
-import { Blocks } from "../block/blocks";
-import { WorldCursor } from "./world-cursor";
-import { mod } from "../util/mod";
+import pMap from 'p-map';
+import { Audio, AudioLoader, Box3, MathUtils, Raycaster, Vector2, Vector3 } from 'three';
+import { degToRad, radToDeg } from 'three/src/math/MathUtils';
+import { Game } from '../game';
+import { LeftMouseButton, RightMouseButton } from '../input/input';
+import { xyzTupelToIndex } from '../util/index-to-vector3';
+import { randomElement } from '../util/random-element';
+import { Blocks } from '../block/blocks';
+import { floorBlockPos, modifyBlockPosValues } from '../block/block-pos';
+import { WorldCursor } from './world-cursor';
+import { mod } from '../util/mod';
 // TODO: Re-factor to:
 // - don't use createTerrainCollisionBoxes as it's stupid.
 // - use block-based ray-casting and not mesh-based ray-casting.
@@ -68,7 +69,7 @@ var Player = /** @class */ (function () {
         this.terrainCollisionBoxes = [];
         this.placeBlockSounds = [];
         this.digBlockSounds = [];
-        this.selectedBlockId = Blocks.getBlockId(Blocks.CAULDRON);
+        this.selectedBlockId = Blocks.getBlockId(Blocks.TORCH);
         this.worldCursor = new WorldCursor(Game.main.blocks);
         this.audio = new Audio(Game.main.audioListener);
         this.updateMovement(0, 0);
@@ -137,7 +138,7 @@ var Player = /** @class */ (function () {
             }
             {
                 var world = Game.main.level.getWorld();
-                this.worldCursor.set(world, hitBlockPos);
+                // this.worldCursor.set(world, hitBlockPos);
                 if (this.input.isKeyDowned(RightMouseButton)) {
                     var hitBlock = world.getBlock(hitBlockPos);
                     var interactionResult = hitBlock === null || hitBlock === void 0 ? void 0 : hitBlock.onInteract(world, hitBlockPos);
@@ -183,6 +184,14 @@ var Player = /** @class */ (function () {
             }
             if (this.input.isKeyDowned('N')) {
                 this.noclip = !this.noclip;
+            }
+            if (this.input.isKeyDowned('P')) {
+                console.log("The current player position is ".concat(this.position.toArray()));
+            }
+            if (this.input.isKeyDowned('Z')) {
+                Game.main.level.getWorld().chunkColumnManager.drop();
+                var chunkPosition = floorBlockPos(modifyBlockPosValues(this.position, function (v) { return v / 16; }));
+                Game.main.level.getWorld().chunkColumnManager.setCenter(chunkPosition.x, chunkPosition.z);
             }
             var x = Math.cos(this.rotation.y);
             var z = Math.sin(this.rotation.y);

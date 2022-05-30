@@ -36,8 +36,11 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
 };
 import { Mesh, Vector3 } from 'three';
 import { Game } from '../game';
-import { xyzTupelToIndex, xzyToIndex } from '../util/index-to-vector3';
+import { indexToPos, xyzTupelToIndex, xzyToIndex } from '../util/index-to-vector3';
 import { Blocks } from '../block/blocks';
+import { sumBlockPos } from '../block/block-pos';
+import { manhattenDistance } from '../light/flood-fill';
+import { areBlockLightPropertiesEqual } from '../light/are-block-light-properties-equal';
 export var CHUNK_WIDTH = 16;
 export var CHUNK_HEIGHT = 16;
 var Chunk = /** @class */ (function () {
@@ -45,6 +48,7 @@ var Chunk = /** @class */ (function () {
         this.chunkColumn = chunkColumn;
         this.position = position;
         this.shouldRebuild = false;
+        this.rebuildsEnabled = false;
         this.blockData = new Uint8Array(CHUNK_WIDTH * CHUNK_WIDTH * CHUNK_HEIGHT);
         this.blockStates = new Map();
         var _a = Game.main.blocks.getBlockMaterials(), solid = _a.solid, transparent = _a.transparent, water = _a.water;
@@ -62,6 +66,13 @@ var Chunk = /** @class */ (function () {
         scene.add(this.transparentMesh);
     };
     Chunk.prototype.unregister = function (scene) {
+        var _a, _b, _c;
+        if ((_a = this.solidMesh) === null || _a === void 0 ? void 0 : _a.geometry)
+            this.solidMesh.geometry.dispose();
+        if ((_b = this.waterMesh) === null || _b === void 0 ? void 0 : _b.geometry)
+            this.waterMesh.geometry.dispose();
+        if ((_c = this.transparentMesh) === null || _c === void 0 ? void 0 : _c.geometry)
+            this.transparentMesh.geometry.dispose();
         scene.remove(this.solidMesh);
         scene.remove(this.waterMesh);
         scene.remove(this.transparentMesh);
@@ -111,28 +122,66 @@ var Chunk = /** @class */ (function () {
             });
         });
     };
+    Chunk.prototype.decorateTerrain = function () {
+        return __awaiter(this, void 0, void 0, function () {
+            return __generator(this, function (_a) {
+                this.applySpilledBlockData();
+                return [2 /*return*/];
+            });
+        });
+    };
+    Chunk.prototype.applySpilledBlockData = function () {
+        var spilledBlockData = this.chunkColumn.getSpilledBlockData();
+        if (!spilledBlockData) {
+            return;
+        }
+        for (var x = 0; x < CHUNK_WIDTH; x++) {
+            for (var y = 0; y < CHUNK_HEIGHT; y++) {
+                for (var z = 0; z < CHUNK_WIDTH; z++) {
+                    var index = xyzTupelToIndex(x, y + this.position.y * CHUNK_HEIGHT, z, CHUNK_WIDTH, CHUNK_WIDTH);
+                    var spilledBlock = spilledBlockData[index];
+                    if (!spilledBlock) {
+                        continue;
+                    }
+                    var blockDataIndex = xyzTupelToIndex(x, y, z, CHUNK_WIDTH, CHUNK_WIDTH);
+                    this.blockData[blockDataIndex] = spilledBlock;
+                }
+            }
+        }
+    };
     Chunk.prototype.requestRebuild = function () {
+        if (!this.rebuildsEnabled) {
+            return;
+        }
         this.shouldRebuild = true;
     };
     Chunk.prototype.buildMesh = function () {
+        var _a, _b, _c;
         return __awaiter(this, void 0, void 0, function () {
             var blockModelIndices, geometry;
             var _this = this;
-            return __generator(this, function (_a) {
-                switch (_a.label) {
+            return __generator(this, function (_d) {
+                switch (_d.label) {
                     case 0:
                         blockModelIndices = {};
                         this.blockStates.forEach(function (state, index) {
                             var block = Blocks.getBlockById(_this.blockData[index]);
                             blockModelIndices[index] = block.getBlockModel(state);
                         });
-                        return [4 /*yield*/, Game.main.chunkGeometryBuilderPool.buildGeometry({
+                        if ((_a = this.solidMesh) === null || _a === void 0 ? void 0 : _a.geometry)
+                            this.solidMesh.geometry.dispose();
+                        if ((_b = this.waterMesh) === null || _b === void 0 ? void 0 : _b.geometry)
+                            this.waterMesh.geometry.dispose();
+                        if ((_c = this.transparentMesh) === null || _c === void 0 ? void 0 : _c.geometry)
+                            this.transparentMesh.geometry.dispose();
+                        return [4 /*yield*/, Game.main.chunkGeometryBuilderPool.buildGeometry(this.position, {
                                 blockModelIndices: blockModelIndices,
                                 blocks: this.blockData,
-                                neighborBlocks: this.getNeighborChunks().map(function (chunk) { var _a; return (_a = chunk === null || chunk === void 0 ? void 0 : chunk.blockData) !== null && _a !== void 0 ? _a : new Uint8Array(); }),
+                                neighborBlocks: this.getNeighborChunkBlocks(),
+                                skyLight: this.chunkColumn.getSkyLight(),
                             })];
                     case 1:
-                        geometry = _a.sent();
+                        geometry = _d.sent();
                         this.solidMesh.geometry = geometry.solid;
                         this.waterMesh.geometry = geometry.water;
                         this.transparentMesh.geometry = geometry.transparent;
@@ -141,23 +190,51 @@ var Chunk = /** @class */ (function () {
             });
         });
     };
-    Chunk.prototype.getNeighborChunks = function () {
-        return [
-            this.chunkColumn.getChunk([this.position.x, this.position.y + 1, this.position.z]),
-            this.chunkColumn.getChunk([this.position.x, this.position.y - 1, this.position.z]),
-            this.chunkColumn.getChunk([this.position.x - 1, this.position.y, this.position.z]),
-            this.chunkColumn.getChunk([this.position.x + 1, this.position.y, this.position.z]),
-            this.chunkColumn.getChunk([this.position.x, this.position.y, this.position.z - 1]),
-            this.chunkColumn.getChunk([this.position.x, this.position.y, this.position.z + 1]),
-        ];
+    Chunk.prototype.getNeighborChunkBlocks = function () {
+        var _a;
+        var neighborBlockData = [];
+        for (var i = 0; i < 3 * 3 * 3; i++) {
+            var pos = sumBlockPos(indexToPos(i, 3), { x: this.position.x - 1, y: this.position.y - 1, z: this.position.z - 1 });
+            var chunk = this.chunkColumn.getChunk([pos.x, pos.y, pos.z]);
+            neighborBlockData.push((_a = chunk === null || chunk === void 0 ? void 0 : chunk.getBlockData()) !== null && _a !== void 0 ? _a : new Uint8Array());
+        }
+        return neighborBlockData;
+    };
+    Chunk.prototype.getNeighborChunks = function (maxDistance) {
+        if (maxDistance === void 0) { maxDistance = 3; }
+        var neighborChunks = [];
+        for (var i = 0; i < 3 * 3 * 3; i++) {
+            var relativePos = indexToPos(i, 3);
+            var distance = manhattenDistance(relativePos, { x: 1, y: 1, z: 1 });
+            if (distance > maxDistance || distance === 0) {
+                continue;
+            }
+            var pos = sumBlockPos(relativePos, { x: this.position.x - 1, y: this.position.y - 1, z: this.position.z - 1 });
+            var chunk = this.chunkColumn.getChunk([pos.x, pos.y, pos.z]);
+            if (!chunk) {
+                continue;
+            }
+            neighborChunks.push(chunk);
+        }
+        return neighborChunks;
     };
     Chunk.prototype.setBlock = function (_a, block) {
         var x = _a[0], y = _a[1], z = _a[2];
-        this.blockData[xyzTupelToIndex(x, y, z, CHUNK_WIDTH, CHUNK_WIDTH)] = Blocks.getBlockId(block);
+        var oldBlockId = this.blockData[xyzTupelToIndex(x, y, z, CHUNK_WIDTH, CHUNK_WIDTH)];
+        var newBlockId = Blocks.getBlockId(block);
+        if (newBlockId === oldBlockId) {
+            return;
+        }
+        this.blockData[xyzTupelToIndex(x, y, z, CHUNK_WIDTH, CHUNK_WIDTH)] = newBlockId;
         this.requestRebuild();
         // TODO: Only update the relevant chunk
-        if (x <= 0 || y <= 0 || z <= 0 || x >= CHUNK_WIDTH - 1 || y >= CHUNK_HEIGHT - 1 || z >= CHUNK_WIDTH - 1) {
-            this.getNeighborChunks().filter(function (chunk) { return chunk !== undefined; }).forEach(function (chunk) { return chunk.requestRebuild(); });
+        var oldBlock = Blocks.getBlockById(oldBlockId);
+        if (!areBlockLightPropertiesEqual(block, oldBlock)) {
+            this.getNeighborChunks().forEach(function (chunk) { return chunk.requestRebuild(); });
+        }
+        else if (x <= 0 || y <= 0 || z <= 0 || x >= CHUNK_WIDTH - 1 || y >= CHUNK_HEIGHT - 1 || z >= CHUNK_WIDTH - 1) {
+            console.log("pls update for ".concat(oldBlock.name, " -> ").concat(block.name));
+            this.getNeighborChunks(1).forEach(function (chunk) { return chunk.requestRebuild(); });
         }
     };
     Chunk.prototype.getBlock = function (_a) {
@@ -174,11 +251,20 @@ var Chunk = /** @class */ (function () {
     Chunk.prototype.setBlockState = function (_a, state) {
         var x = _a[0], y = _a[1], z = _a[2];
         this.blockStates.set(xyzTupelToIndex(x, y, z, CHUNK_WIDTH, CHUNK_WIDTH), state);
-        this.shouldRebuild = true;
+        this.requestRebuild();
     };
     Chunk.prototype.getBlockState = function (_a) {
         var x = _a[0], y = _a[1], z = _a[2];
         return this.blockStates.get(xyzTupelToIndex(x, y, z, CHUNK_WIDTH, CHUNK_WIDTH));
+    };
+    Chunk.prototype.setBlockData = function (blockData) {
+        this.blockData = blockData;
+    };
+    Chunk.prototype.getBlockData = function () {
+        return this.blockData;
+    };
+    Chunk.prototype.enableRebuilds = function () {
+        this.rebuildsEnabled = true;
     };
     return Chunk;
 }());

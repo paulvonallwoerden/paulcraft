@@ -14,11 +14,9 @@ var __extends = (this && this.__extends) || (function () {
     };
 })();
 var _a;
-import { Vector3 } from "three";
 import { Block } from "./block";
 import { BlockFace } from "./block-face";
-import { Blocks } from "./blocks";
-export var GrassBlockModel = {
+export var OakLogBlockModel = {
     elements: [
         {
             from: [0, 0, 0],
@@ -26,44 +24,37 @@ export var GrassBlockModel = {
             faces: (_a = {},
                 _a[BlockFace.TOP] = {
                     cull: true,
-                    texture: 'textures/blocks/grass_block_top.png',
-                },
-                _a[BlockFace.LEFT] = {
-                    cull: true,
-                    texture: 'textures/blocks/grass_block_side.png',
-                },
-                _a[BlockFace.RIGHT] = {
-                    cull: true,
-                    texture: 'textures/blocks/grass_block_side.png',
-                },
-                _a[BlockFace.FRONT] = {
-                    cull: true,
-                    texture: 'textures/blocks/grass_block_side.png',
-                },
-                _a[BlockFace.BACK] = {
-                    cull: true,
-                    texture: 'textures/blocks/grass_block_side.png',
+                    texture: 'textures/blocks/oak_log_top.png',
                 },
                 _a[BlockFace.BOTTOM] = {
                     cull: true,
-                    texture: 'textures/blocks/dirt.png',
+                    texture: 'textures/blocks/oak_log_top.png',
                 },
-                _a)
+                _a[BlockFace.FRONT] = {
+                    cull: true,
+                    texture: 'textures/blocks/oak_log.png',
+                },
+                _a[BlockFace.BACK] = {
+                    cull: true,
+                    texture: 'textures/blocks/oak_log.png',
+                },
+                _a[BlockFace.LEFT] = {
+                    cull: true,
+                    texture: 'textures/blocks/oak_log.png',
+                },
+                _a[BlockFace.RIGHT] = {
+                    cull: true,
+                    texture: 'textures/blocks/oak_log.png',
+                },
+                _a),
         },
     ],
 };
-var GrassBlock = /** @class */ (function (_super) {
-    __extends(GrassBlock, _super);
-    function GrassBlock() {
-        return _super.call(this, 'grass', [GrassBlockModel]) || this;
+var OakLogBlock = /** @class */ (function (_super) {
+    __extends(OakLogBlock, _super);
+    function OakLogBlock() {
+        return _super.call(this, 'oak_log', [OakLogBlockModel]) || this;
     }
-    GrassBlock.prototype.onRandomTick = function (level, pos) {
-        var blockAbove = level.getBlockAt(new Vector3(pos.x, pos.y + 1, pos.z));
-        if (!blockAbove || !blockAbove.blocksLight) {
-            return;
-        }
-        level.setBlockAt(new Vector3(pos.x, pos.y, pos.z), Blocks.DIRT);
-    };
-    return GrassBlock;
+    return OakLogBlock;
 }(Block));
-export { GrassBlock };
+export { OakLogBlock };

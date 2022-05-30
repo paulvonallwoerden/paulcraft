@@ -178,7 +178,9 @@ var AirBlockModel = {
 var AirBlock = /** @class */ (function (_super) {
     __extends(AirBlock, _super);
     function AirBlock() {
-        return _super.call(this, 'air', [AirBlockModel]) || this;
+        var _this = _super.call(this, 'air', [AirBlockModel]) || this;
+        _this.blocksLight = false;
+        return _this;
     }
     AirBlock.prototype.isCollidable = function () {
         return false;
@@ -242,6 +244,48 @@ function getBlockModelTextures(blockModel) {
 
 /***/ }),
 
+/***/ "./src/block/block-pos.ts":
+/*!********************************!*\
+  !*** ./src/block/block-pos.ts ***!
+  \********************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "sumBlockPos": () => (/* binding */ sumBlockPos),
+/* harmony export */   "roundBlockPos": () => (/* binding */ roundBlockPos),
+/* harmony export */   "floorBlockPos": () => (/* binding */ floorBlockPos),
+/* harmony export */   "modifyBlockPosValues": () => (/* binding */ modifyBlockPosValues),
+/* harmony export */   "isBlockPosIn": () => (/* binding */ isBlockPosIn)
+/* harmony export */ });
+function sumBlockPos() {
+    var positions = [];
+    for (var _i = 0; _i < arguments.length; _i++) {
+        positions[_i] = arguments[_i];
+    }
+    return positions.reduce(function (result, pos) { return ({
+        x: result.x + pos.x,
+        y: result.y + pos.y,
+        z: result.z + pos.z,
+    }); });
+}
+function roundBlockPos(pos) {
+    return modifyBlockPosValues(pos, Math.round);
+}
+function floorBlockPos(pos) {
+    return modifyBlockPosValues(pos, Math.floor);
+}
+function modifyBlockPosValues(pos, modify) {
+    return { x: modify(pos.x), y: modify(pos.y), z: modify(pos.z) };
+}
+function isBlockPosIn(pos, from, to) {
+    return pos.x >= from.x && pos.x <= to.x && pos.y >= from.y && pos.y <= to.y && pos.z >= from.z && pos.z <= to.z;
+}
+
+
+/***/ }),
+
 /***/ "./src/block/block-state/block-state.ts":
 /*!**********************************************!*\
   !*** ./src/block/block-state/block-state.ts ***!
@@ -291,9 +335,13 @@ var Block = /** @class */ (function () {
     function Block(name, blockModels) {
         this.name = name;
         this.blockModels = blockModels;
+        this.isFoliage = false;
+        this.blocksLight = true;
+        this.occludesNeighborBlocks = true;
     }
     Block.prototype.onRandomTick = function (level, pos) { };
     Block.prototype.getBlockModel = function (blockState) { return 0; };
+    Block.prototype.getLightLevel = function () { return 0; };
     Block.prototype.onSetBlock = function (world, pos) { };
     Block.prototype.onPlace = function (player, world, pos) { return true; };
     Block.prototype.onBreak = function (world, pos) { };
@@ -317,19 +365,23 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */ __webpack_require__.d(__webpack_exports__, {
 /* harmony export */   "Blocks": () => (/* binding */ Blocks)
 /* harmony export */ });
-/* harmony import */ var three__WEBPACK_IMPORTED_MODULE_12__ = __webpack_require__(/*! three */ "./node_modules/three/build/three.module.js");
-/* harmony import */ var _util_remove_duplicates__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../util/remove-duplicates */ "./src/util/remove-duplicates.ts");
-/* harmony import */ var _air_block__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./air-block */ "./src/block/air-block.ts");
-/* harmony import */ var _block_model_block_model__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./block-model/block-model */ "./src/block/block-model/block-model.ts");
-/* harmony import */ var _cauldron_block__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./cauldron-block */ "./src/block/cauldron-block.ts");
-/* harmony import */ var _dirt_block__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./dirt-block */ "./src/block/dirt-block.ts");
-/* harmony import */ var _door_block__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ./door-block */ "./src/block/door-block.ts");
-/* harmony import */ var _grass_block__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ./grass-block */ "./src/block/grass-block.ts");
-/* harmony import */ var _sand_block__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ./sand-block */ "./src/block/sand-block.ts");
-/* harmony import */ var _stone_block__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ./stone-block */ "./src/block/stone-block.ts");
-/* harmony import */ var _sugar_cane_block__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! ./sugar-cane-block */ "./src/block/sugar-cane-block.ts");
-/* harmony import */ var _texture_atlas__WEBPACK_IMPORTED_MODULE_10__ = __webpack_require__(/*! ./texture-atlas */ "./src/block/texture-atlas.ts");
-/* harmony import */ var _water_block__WEBPACK_IMPORTED_MODULE_11__ = __webpack_require__(/*! ./water-block */ "./src/block/water-block.ts");
+/* harmony import */ var three__WEBPACK_IMPORTED_MODULE_16__ = __webpack_require__(/*! three */ "./node_modules/three/build/three.module.js");
+/* harmony import */ var _shader_opaque_block_shader__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../shader/opaque-block-shader */ "./src/shader/opaque-block-shader.ts");
+/* harmony import */ var _util_remove_duplicates__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../util/remove-duplicates */ "./src/util/remove-duplicates.ts");
+/* harmony import */ var _air_block__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./air-block */ "./src/block/air-block.ts");
+/* harmony import */ var _block_model_block_model__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./block-model/block-model */ "./src/block/block-model/block-model.ts");
+/* harmony import */ var _cauldron_block__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./cauldron-block */ "./src/block/cauldron-block.ts");
+/* harmony import */ var _dirt_block__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ./dirt-block */ "./src/block/dirt-block.ts");
+/* harmony import */ var _door_block__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ./door-block */ "./src/block/door-block.ts");
+/* harmony import */ var _grass_block__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ./grass-block */ "./src/block/grass-block.ts");
+/* harmony import */ var _leaves_block__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ./leaves-block */ "./src/block/leaves-block.ts");
+/* harmony import */ var _log_block__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! ./log-block */ "./src/block/log-block.ts");
+/* harmony import */ var _sand_block__WEBPACK_IMPORTED_MODULE_10__ = __webpack_require__(/*! ./sand-block */ "./src/block/sand-block.ts");
+/* harmony import */ var _stone_block__WEBPACK_IMPORTED_MODULE_11__ = __webpack_require__(/*! ./stone-block */ "./src/block/stone-block.ts");
+/* harmony import */ var _sugar_cane_block__WEBPACK_IMPORTED_MODULE_12__ = __webpack_require__(/*! ./sugar-cane-block */ "./src/block/sugar-cane-block.ts");
+/* harmony import */ var _texture_atlas__WEBPACK_IMPORTED_MODULE_13__ = __webpack_require__(/*! ./texture-atlas */ "./src/block/texture-atlas.ts");
+/* harmony import */ var _torch_block__WEBPACK_IMPORTED_MODULE_14__ = __webpack_require__(/*! ./torch-block */ "./src/block/torch-block.ts");
+/* harmony import */ var _water_block__WEBPACK_IMPORTED_MODULE_15__ = __webpack_require__(/*! ./water-block */ "./src/block/water-block.ts");
 var __assign = (undefined && undefined.__assign) || function () {
     __assign = Object.assign || function(t) {
         for (var s, i = 1, n = arguments.length; i < n; i++) {
@@ -390,14 +442,16 @@ var __generator = (undefined && undefined.__generator) || function (thisArg, bod
 
 
 
+
+
+
+
 var Blocks = /** @class */ (function () {
     function Blocks() {
-        this.solidMaterial = new three__WEBPACK_IMPORTED_MODULE_12__.MeshStandardMaterial({ opacity: 1, transparent: false });
-        this.waterMaterial = new three__WEBPACK_IMPORTED_MODULE_12__.MeshStandardMaterial({ opacity: 0.8, transparent: true });
-        this.transparentMaterial = new three__WEBPACK_IMPORTED_MODULE_12__.MeshStandardMaterial({ alphaTest: 0.5 });
-        var blockTextures = Blocks.blocks.flatMap(function (block) { return block.blockModels.flatMap(function (blockModel) { return (0,_block_model_block_model__WEBPACK_IMPORTED_MODULE_2__.getBlockModelTextures)(blockModel); }); });
-        this.blockTextureSources = (0,_util_remove_duplicates__WEBPACK_IMPORTED_MODULE_0__.removeDuplicates)(blockTextures);
-        this.textureAtlas = new _texture_atlas__WEBPACK_IMPORTED_MODULE_10__.TextureAtlas(this.blockTextureSources);
+        this.waterMaterial = new three__WEBPACK_IMPORTED_MODULE_16__.MeshStandardMaterial({ opacity: 0.8, transparent: true });
+        var blockTextures = Blocks.blocks.flatMap(function (block) { return block.blockModels.flatMap(function (blockModel) { return (0,_block_model_block_model__WEBPACK_IMPORTED_MODULE_3__.getBlockModelTextures)(blockModel); }); });
+        this.blockTextureSources = (0,_util_remove_duplicates__WEBPACK_IMPORTED_MODULE_1__.removeDuplicates)(blockTextures);
+        this.textureAtlas = new _texture_atlas__WEBPACK_IMPORTED_MODULE_13__.TextureAtlas(this.blockTextureSources);
     }
     Blocks.prototype.init = function () {
         return __awaiter(this, void 0, void 0, function () {
@@ -407,13 +461,15 @@ var Blocks = /** @class */ (function () {
                     case 0: return [4 /*yield*/, this.textureAtlas.buildAtlas()];
                     case 1:
                         atlas = _a.sent();
-                        this.solidMaterial.map = atlas;
-                        this.transparentMaterial.map = atlas;
+                        this.solidMaterial = (0,_shader_opaque_block_shader__WEBPACK_IMPORTED_MODULE_0__.makeOpaqueBlockMaterial)(atlas);
+                        this.transparentMaterial = (0,_shader_opaque_block_shader__WEBPACK_IMPORTED_MODULE_0__.makeOpaqueBlockMaterial)(atlas);
                         this.waterMaterial.map = atlas;
                         return [2 /*return*/];
                 }
             });
         });
+    };
+    Blocks.prototype.update = function (deltaTime) {
     };
     Blocks.getBlockId = function (block) {
         return Blocks.blocks.indexOf(block);
@@ -444,15 +500,18 @@ var Blocks = /** @class */ (function () {
     Blocks.prototype.getNumberOfBlocks = function () {
         return Blocks.blocks.length;
     };
-    Blocks.AIR = new _air_block__WEBPACK_IMPORTED_MODULE_1__.AirBlock();
-    Blocks.STONE = new _stone_block__WEBPACK_IMPORTED_MODULE_8__.StoneBlock();
-    Blocks.GRASS = new _grass_block__WEBPACK_IMPORTED_MODULE_6__.GrassBlock();
-    Blocks.DIRT = new _dirt_block__WEBPACK_IMPORTED_MODULE_4__.DirtBlock();
-    Blocks.SAND = new _sand_block__WEBPACK_IMPORTED_MODULE_7__.SandBlock();
-    Blocks.CAULDRON = new _cauldron_block__WEBPACK_IMPORTED_MODULE_3__.CauldronBlock();
-    Blocks.DOOR = new _door_block__WEBPACK_IMPORTED_MODULE_5__.DoorBlock();
-    Blocks.WATER = new _water_block__WEBPACK_IMPORTED_MODULE_11__.WaterBlock();
-    Blocks.SUGAR_CANE = new _sugar_cane_block__WEBPACK_IMPORTED_MODULE_9__.SugarCaneBlock();
+    Blocks.AIR = new _air_block__WEBPACK_IMPORTED_MODULE_2__.AirBlock();
+    Blocks.STONE = new _stone_block__WEBPACK_IMPORTED_MODULE_11__.StoneBlock();
+    Blocks.GRASS = new _grass_block__WEBPACK_IMPORTED_MODULE_7__.GrassBlock();
+    Blocks.DIRT = new _dirt_block__WEBPACK_IMPORTED_MODULE_5__.DirtBlock();
+    Blocks.SAND = new _sand_block__WEBPACK_IMPORTED_MODULE_10__.SandBlock();
+    Blocks.CAULDRON = new _cauldron_block__WEBPACK_IMPORTED_MODULE_4__.CauldronBlock();
+    Blocks.DOOR = new _door_block__WEBPACK_IMPORTED_MODULE_6__.DoorBlock();
+    Blocks.WATER = new _water_block__WEBPACK_IMPORTED_MODULE_15__.WaterBlock();
+    Blocks.SUGAR_CANE = new _sugar_cane_block__WEBPACK_IMPORTED_MODULE_12__.SugarCaneBlock();
+    Blocks.LEAVES = new _leaves_block__WEBPACK_IMPORTED_MODULE_8__.LeavesBlock();
+    Blocks.OAK_LOG = new _log_block__WEBPACK_IMPORTED_MODULE_9__.OakLogBlock();
+    Blocks.TORCH = new _torch_block__WEBPACK_IMPORTED_MODULE_14__.TorchBlock();
     Blocks.blocks = [
         Blocks.AIR,
         Blocks.STONE,
@@ -463,6 +522,9 @@ var Blocks = /** @class */ (function () {
         Blocks.DOOR,
         Blocks.WATER,
         Blocks.SUGAR_CANE,
+        Blocks.LEAVES,
+        Blocks.OAK_LOG,
+        Blocks.TORCH,
     ];
     return Blocks;
 }());
@@ -620,12 +682,14 @@ var DefaultCauldronBlockStateValues = {
 var CauldronBlock = /** @class */ (function (_super) {
     __extends(CauldronBlock, _super);
     function CauldronBlock() {
-        return _super.call(this, 'cauldron', [
+        var _this = _super.call(this, 'cauldron', [
             makeCauldronBlockModel(0),
             makeCauldronBlockModel(1),
             makeCauldronBlockModel(2),
             makeCauldronBlockModel(3),
         ]) || this;
+        _this.occludesNeighborBlocks = false;
+        return _this;
     }
     CauldronBlock.prototype.getBlockModel = function (blockState) {
         return blockState.get('level');
@@ -808,7 +872,7 @@ function makeDoorBlockModel(open, rotation, texture) {
         elements: [
             {
                 from: [0, 0, 0],
-                to: open ? [15, 15, 2] : [2, 15, 15],
+                to: open ? [15, 15, 1] : [1, 15, 15],
                 faces: _block_face__WEBPACK_IMPORTED_MODULE_1__.BlockFaces.reduce(function (faces, face) {
                     var _a;
                     return (__assign(__assign({}, faces), (_a = {}, _a[face] = { texture: texture }, _a)));
@@ -821,7 +885,7 @@ var DefaultDoorBlockStateValues = { open: false, isTop: false, facing: 0 };
 var DoorBlock = /** @class */ (function (_super) {
     __extends(DoorBlock, _super);
     function DoorBlock() {
-        return _super.call(this, 'door', [
+        var _this = _super.call(this, 'door', [
             makeDoorBlockModel(false, 90, 'textures/blocks/oak_door_bottom.png'),
             makeDoorBlockModel(true, 90, 'textures/blocks/oak_door_bottom.png'),
             makeDoorBlockModel(false, 90, 'textures/blocks/oak_door_top.png'),
@@ -839,6 +903,8 @@ var DoorBlock = /** @class */ (function (_super) {
             makeDoorBlockModel(false, 0, 'textures/blocks/oak_door_top.png'),
             makeDoorBlockModel(true, 0, 'textures/blocks/oak_door_top.png'),
         ]) || this;
+        _this.blocksLight = false;
+        return _this;
     }
     DoorBlock.prototype.getBlockModel = function (blockState) {
         var open = blockState.get('open');
@@ -993,12 +1059,161 @@ var GrassBlock = /** @class */ (function (_super) {
     }
     GrassBlock.prototype.onRandomTick = function (level, pos) {
         var blockAbove = level.getBlockAt(new three__WEBPACK_IMPORTED_MODULE_3__.Vector3(pos.x, pos.y + 1, pos.z));
-        if (blockAbove === _blocks__WEBPACK_IMPORTED_MODULE_2__.Blocks.AIR) {
+        if (!blockAbove || !blockAbove.blocksLight) {
             return;
         }
         level.setBlockAt(new three__WEBPACK_IMPORTED_MODULE_3__.Vector3(pos.x, pos.y, pos.z), _blocks__WEBPACK_IMPORTED_MODULE_2__.Blocks.DIRT);
     };
     return GrassBlock;
+}(_block__WEBPACK_IMPORTED_MODULE_0__.Block));
+
+
+
+/***/ }),
+
+/***/ "./src/block/leaves-block.ts":
+/*!***********************************!*\
+  !*** ./src/block/leaves-block.ts ***!
+  \***********************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "LeavesBlockModel": () => (/* binding */ LeavesBlockModel),
+/* harmony export */   "LeavesBlock": () => (/* binding */ LeavesBlock)
+/* harmony export */ });
+/* harmony import */ var _block__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./block */ "./src/block/block.ts");
+/* harmony import */ var _block_face__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./block-face */ "./src/block/block-face.ts");
+var __extends = (undefined && undefined.__extends) || (function () {
+    var extendStatics = function (d, b) {
+        extendStatics = Object.setPrototypeOf ||
+            ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
+            function (d, b) { for (var p in b) if (Object.prototype.hasOwnProperty.call(b, p)) d[p] = b[p]; };
+        return extendStatics(d, b);
+    };
+    return function (d, b) {
+        if (typeof b !== "function" && b !== null)
+            throw new TypeError("Class extends value " + String(b) + " is not a constructor or null");
+        extendStatics(d, b);
+        function __() { this.constructor = d; }
+        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
+    };
+})();
+var __assign = (undefined && undefined.__assign) || function () {
+    __assign = Object.assign || function(t) {
+        for (var s, i = 1, n = arguments.length; i < n; i++) {
+            s = arguments[i];
+            for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p))
+                t[p] = s[p];
+        }
+        return t;
+    };
+    return __assign.apply(this, arguments);
+};
+
+
+var LeavesBlockModel = {
+    elements: [
+        {
+            from: [0, 0, 0],
+            to: [15, 15, 15],
+            faces: _block_face__WEBPACK_IMPORTED_MODULE_1__.BlockFaces.reduce(function (faces, face) {
+                var _a;
+                return (__assign(__assign({}, faces), (_a = {}, _a[face] = {
+                    texture: 'textures/blocks/oak_leaves.png',
+                }, _a)));
+            }, {}),
+        },
+    ],
+};
+var LeavesBlock = /** @class */ (function (_super) {
+    __extends(LeavesBlock, _super);
+    function LeavesBlock() {
+        var _this = _super.call(this, 'leaves', [LeavesBlockModel]) || this;
+        _this.isFoliage = true;
+        _this.blocksLight = false;
+        return _this;
+    }
+    return LeavesBlock;
+}(_block__WEBPACK_IMPORTED_MODULE_0__.Block));
+
+
+
+/***/ }),
+
+/***/ "./src/block/log-block.ts":
+/*!********************************!*\
+  !*** ./src/block/log-block.ts ***!
+  \********************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "OakLogBlockModel": () => (/* binding */ OakLogBlockModel),
+/* harmony export */   "OakLogBlock": () => (/* binding */ OakLogBlock)
+/* harmony export */ });
+/* harmony import */ var _block__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./block */ "./src/block/block.ts");
+/* harmony import */ var _block_face__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./block-face */ "./src/block/block-face.ts");
+var __extends = (undefined && undefined.__extends) || (function () {
+    var extendStatics = function (d, b) {
+        extendStatics = Object.setPrototypeOf ||
+            ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
+            function (d, b) { for (var p in b) if (Object.prototype.hasOwnProperty.call(b, p)) d[p] = b[p]; };
+        return extendStatics(d, b);
+    };
+    return function (d, b) {
+        if (typeof b !== "function" && b !== null)
+            throw new TypeError("Class extends value " + String(b) + " is not a constructor or null");
+        extendStatics(d, b);
+        function __() { this.constructor = d; }
+        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
+    };
+})();
+var _a;
+
+
+var OakLogBlockModel = {
+    elements: [
+        {
+            from: [0, 0, 0],
+            to: [15, 15, 15],
+            faces: (_a = {},
+                _a[_block_face__WEBPACK_IMPORTED_MODULE_1__.BlockFace.TOP] = {
+                    cull: true,
+                    texture: 'textures/blocks/oak_log_top.png',
+                },
+                _a[_block_face__WEBPACK_IMPORTED_MODULE_1__.BlockFace.BOTTOM] = {
+                    cull: true,
+                    texture: 'textures/blocks/oak_log_top.png',
+                },
+                _a[_block_face__WEBPACK_IMPORTED_MODULE_1__.BlockFace.FRONT] = {
+                    cull: true,
+                    texture: 'textures/blocks/oak_log.png',
+                },
+                _a[_block_face__WEBPACK_IMPORTED_MODULE_1__.BlockFace.BACK] = {
+                    cull: true,
+                    texture: 'textures/blocks/oak_log.png',
+                },
+                _a[_block_face__WEBPACK_IMPORTED_MODULE_1__.BlockFace.LEFT] = {
+                    cull: true,
+                    texture: 'textures/blocks/oak_log.png',
+                },
+                _a[_block_face__WEBPACK_IMPORTED_MODULE_1__.BlockFace.RIGHT] = {
+                    cull: true,
+                    texture: 'textures/blocks/oak_log.png',
+                },
+                _a),
+        },
+    ],
+};
+var OakLogBlock = /** @class */ (function (_super) {
+    __extends(OakLogBlock, _super);
+    function OakLogBlock() {
+        return _super.call(this, 'oak_log', [OakLogBlockModel]) || this;
+    }
+    return OakLogBlock;
 }(_block__WEBPACK_IMPORTED_MODULE_0__.Block));
 
 
@@ -1218,7 +1433,9 @@ var SugarCaneBlockModel = {
 var SugarCaneBlock = /** @class */ (function (_super) {
     __extends(SugarCaneBlock, _super);
     function SugarCaneBlock() {
-        return _super.call(this, 'sugar_cane', [SugarCaneBlockModel]) || this;
+        var _this = _super.call(this, 'sugar_cane', [SugarCaneBlockModel]) || this;
+        _this.blocksLight = false;
+        return _this;
     }
     SugarCaneBlock.prototype.isCollidable = function () {
         return false;
@@ -1338,6 +1555,171 @@ var TextureAtlas = /** @class */ (function () {
 
 /***/ }),
 
+/***/ "./src/block/torch-block.ts":
+/*!**********************************!*\
+  !*** ./src/block/torch-block.ts ***!
+  \**********************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "TorchBlock": () => (/* binding */ TorchBlock)
+/* harmony export */ });
+/* harmony import */ var _block__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./block */ "./src/block/block.ts");
+/* harmony import */ var _block_face__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./block-face */ "./src/block/block-face.ts");
+/* harmony import */ var _block_state_block_state__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./block-state/block-state */ "./src/block/block-state/block-state.ts");
+/* harmony import */ var _blocks__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./blocks */ "./src/block/blocks.ts");
+var __extends = (undefined && undefined.__extends) || (function () {
+    var extendStatics = function (d, b) {
+        extendStatics = Object.setPrototypeOf ||
+            ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
+            function (d, b) { for (var p in b) if (Object.prototype.hasOwnProperty.call(b, p)) d[p] = b[p]; };
+        return extendStatics(d, b);
+    };
+    return function (d, b) {
+        if (typeof b !== "function" && b !== null)
+            throw new TypeError("Class extends value " + String(b) + " is not a constructor or null");
+        extendStatics(d, b);
+        function __() { this.constructor = d; }
+        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
+    };
+})();
+var __assign = (undefined && undefined.__assign) || function () {
+    __assign = Object.assign || function(t) {
+        for (var s, i = 1, n = arguments.length; i < n; i++) {
+            s = arguments[i];
+            for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p))
+                t[p] = s[p];
+        }
+        return t;
+    };
+    return __assign.apply(this, arguments);
+};
+var _a;
+
+
+
+
+var StandingTorchBlockModel = {
+    elements: [
+        {
+            from: [7, 0, 7],
+            to: [8, 9, 8],
+            faces: (_a = {},
+                _a[_block_face__WEBPACK_IMPORTED_MODULE_1__.BlockFace.TOP] = {
+                    texture: 'textures/blocks/tnt_top.png',
+                },
+                _a[_block_face__WEBPACK_IMPORTED_MODULE_1__.BlockFace.BOTTOM] = {
+                    texture: 'textures/blocks/oak_log_top.png',
+                },
+                _a[_block_face__WEBPACK_IMPORTED_MODULE_1__.BlockFace.FRONT] = {
+                    texture: 'textures/blocks/oak_log.png',
+                },
+                _a[_block_face__WEBPACK_IMPORTED_MODULE_1__.BlockFace.BACK] = {
+                    texture: 'textures/blocks/oak_log.png',
+                },
+                _a[_block_face__WEBPACK_IMPORTED_MODULE_1__.BlockFace.LEFT] = {
+                    texture: 'textures/blocks/oak_log.png',
+                },
+                _a[_block_face__WEBPACK_IMPORTED_MODULE_1__.BlockFace.RIGHT] = {
+                    texture: 'textures/blocks/oak_log.png',
+                },
+                _a),
+        },
+    ],
+};
+function makeHangingTorchBlockModel(angle) {
+    var _a;
+    return {
+        rotation: {
+            axis: 'y',
+            angle: angle,
+            origin: [0.5, 0, 0.5],
+        },
+        elements: [
+            {
+                from: [7, 4, 0],
+                to: [8, 13, 1],
+                rotation: {
+                    axis: 'x',
+                    angle: 20,
+                    origin: [0, 0.5, 0],
+                },
+                faces: (_a = {},
+                    _a[_block_face__WEBPACK_IMPORTED_MODULE_1__.BlockFace.TOP] = {
+                        texture: 'textures/blocks/tnt_top.png',
+                    },
+                    _a[_block_face__WEBPACK_IMPORTED_MODULE_1__.BlockFace.BOTTOM] = {
+                        texture: 'textures/blocks/oak_log_top.png',
+                    },
+                    _a[_block_face__WEBPACK_IMPORTED_MODULE_1__.BlockFace.FRONT] = {
+                        texture: 'textures/blocks/oak_log.png',
+                    },
+                    _a[_block_face__WEBPACK_IMPORTED_MODULE_1__.BlockFace.BACK] = {
+                        texture: 'textures/blocks/oak_log.png',
+                    },
+                    _a[_block_face__WEBPACK_IMPORTED_MODULE_1__.BlockFace.LEFT] = {
+                        texture: 'textures/blocks/oak_log.png',
+                    },
+                    _a[_block_face__WEBPACK_IMPORTED_MODULE_1__.BlockFace.RIGHT] = {
+                        texture: 'textures/blocks/oak_log.png',
+                    },
+                    _a),
+            },
+        ],
+    };
+}
+var DefaultTorchBlockStateValues = {
+    standing: true,
+    facing: 0,
+};
+var TorchBlock = /** @class */ (function (_super) {
+    __extends(TorchBlock, _super);
+    function TorchBlock() {
+        var _this = _super.call(this, 'torch', [
+            StandingTorchBlockModel,
+            makeHangingTorchBlockModel(0),
+            makeHangingTorchBlockModel(90),
+            makeHangingTorchBlockModel(180),
+            makeHangingTorchBlockModel(270),
+        ]) || this;
+        _this.blocksLight = false;
+        _this.occludesNeighborBlocks = false;
+        return _this;
+    }
+    TorchBlock.prototype.onSetBlock = function (world, pos) {
+        var existingState = world.getBlockState(pos);
+        if (existingState !== undefined) {
+            return;
+        }
+        world.setBlockState(pos, new _block_state_block_state__WEBPACK_IMPORTED_MODULE_2__.BlockState(__assign({}, DefaultTorchBlockStateValues)));
+    };
+    TorchBlock.prototype.onPlace = function (player, world, pos) {
+        var facing = player.getFacingDirection();
+        var standing = world.getBlock({ x: pos.x, y: pos.y - 1, z: pos.z }) !== _blocks__WEBPACK_IMPORTED_MODULE_3__.Blocks.AIR;
+        world.setBlockState(pos, new _block_state_block_state__WEBPACK_IMPORTED_MODULE_2__.BlockState({ standing: standing, facing: facing }));
+        return true;
+    };
+    TorchBlock.prototype.getBlockModel = function (state) {
+        if (state.get('standing')) {
+            return 0;
+        }
+        return 1 + state.get('facing');
+    };
+    TorchBlock.prototype.getLightLevel = function () {
+        return 15;
+    };
+    TorchBlock.prototype.isCollidable = function () {
+        return false;
+    };
+    return TorchBlock;
+}(_block__WEBPACK_IMPORTED_MODULE_0__.Block));
+
+
+
+/***/ }),
+
 /***/ "./src/block/water-block.ts":
 /*!**********************************!*\
   !*** ./src/block/water-block.ts ***!
@@ -1398,7 +1780,9 @@ var WaterBlockModel = {
 var WaterBlock = /** @class */ (function (_super) {
     __extends(WaterBlock, _super);
     function WaterBlock() {
-        return _super.call(this, 'water', [WaterBlockModel]) || this;
+        var _this = _super.call(this, 'water', [WaterBlockModel]) || this;
+        _this.blocksLight = false;
+        return _this;
     }
     WaterBlock.prototype.isCollidable = function () {
         return false;
@@ -1439,6 +1823,76 @@ var SmoothNoise = /** @class */ (function () {
     return SmoothNoise;
 }());
 
+
+
+/***/ }),
+
+/***/ "./src/shader/opaque-block-shader.ts":
+/*!*******************************************!*\
+  !*** ./src/shader/opaque-block-shader.ts ***!
+  \*******************************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "vertexShader": () => (/* binding */ vertexShader),
+/* harmony export */   "fragmentShader": () => (/* binding */ fragmentShader),
+/* harmony export */   "makeOpaqueBlockMaterial": () => (/* binding */ makeOpaqueBlockMaterial)
+/* harmony export */ });
+/* harmony import */ var three__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! three */ "./node_modules/three/build/three.module.js");
+
+var vertexShader = "\n    attribute float skyLight;\n    attribute float blockLight;\n    attribute float foliage;\n\n    varying float fLightLevel;\n    varying vec4 fFoliageColor;\n\n    varying vec2 vUv;\n    varying vec3 vNormal;\n\n    uniform float fAmbientLightLevel;\n    uniform float fSkyLightFactor;\n\n    void main() {\n        vUv = uv;\n        vNormal = normal;\n\n        fLightLevel = fAmbientLightLevel;\n\n        float fFaceFactor = max(0.0, dot(vNormal, vec3(0.0, 1.0, 0.0))) * 0.4 + 0.6;\n        float fNormalizedSkyLight = (skyLight / 15.0) * fSkyLightFactor * fFaceFactor;\n        float fNormalizedBlockLight = (blockLight / 15.0);\n        fLightLevel += max(fNormalizedBlockLight, fNormalizedSkyLight) * (1.0 - fAmbientLightLevel);\n\n        fFoliageColor = foliage * vec4(40.0 / 255.0, 110.0 / 255.0, 38.0 / 255.0, 1.0) + (1.0 - foliage) * vec4(1.0, 1.0, 1.0, 1.0);\n\n        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.);\n    }\n";
+var fragmentShader = "\n    uniform sampler2D uTexture;\n\n    varying vec2 vUv;\n    varying vec3 vNormal;\n\n    varying float fLightLevel;\n    varying vec4 fFoliageColor;\n\n    void main() {\n        vec4 color = texture2D(uTexture, vUv) * fFoliageColor;\n        gl_FragColor = color * vec4(fLightLevel, fLightLevel, fLightLevel, 1.0);\n    }\n";
+function makeOpaqueBlockMaterial(map) {
+    return new three__WEBPACK_IMPORTED_MODULE_0__.ShaderMaterial({
+        uniforms: {
+            uTexture: { value: map },
+            fAmbientLightLevel: { value: 0.15 },
+            fSkyLightFactor: { value: 1.0 },
+        },
+        fragmentShader: fragmentShader,
+        vertexShader: vertexShader,
+        alphaTest: 0.5,
+        transparent: true,
+    });
+}
+
+
+/***/ }),
+
+/***/ "./src/util/bounding-box.ts":
+/*!**********************************!*\
+  !*** ./src/util/bounding-box.ts ***!
+  \**********************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "computeBoundingBox": () => (/* binding */ computeBoundingBox)
+/* harmony export */ });
+/* harmony import */ var three__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! three */ "./node_modules/three/build/three.module.js");
+
+function computeBoundingBox(points) {
+    var box = new three__WEBPACK_IMPORTED_MODULE_0__.Box3();
+    for (var i = 0; i < points.length; i++) {
+        var _a = points[i], x = _a.x, y = _a.y, z = _a.z;
+        if (x < box.min.x)
+            box.min.x = x;
+        if (x > box.max.x)
+            box.max.x = x;
+        if (y < box.min.y)
+            box.min.y = y;
+        if (y > box.max.y)
+            box.max.y = y;
+        if (z < box.min.z)
+            box.min.z = z;
+        if (z > box.max.z)
+            box.max.z = z;
+    }
+    return box;
+}
 
 
 /***/ }),
@@ -1498,21 +1952,37 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */ __webpack_require__.d(__webpack_exports__, {
 /* harmony export */   "indexToXZY": () => (/* binding */ indexToXZY),
 /* harmony export */   "xzyToIndex": () => (/* binding */ xzyToIndex),
-/* harmony export */   "xyzTupelToIndex": () => (/* binding */ xyzTupelToIndex)
+/* harmony export */   "xyzTupelToIndex": () => (/* binding */ xyzTupelToIndex),
+/* harmony export */   "indexToPos": () => (/* binding */ indexToPos),
+/* harmony export */   "posToIndex": () => (/* binding */ posToIndex)
 /* harmony export */ });
-/* harmony import */ var three__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! three */ "./node_modules/three/build/three.module.js");
+/* harmony import */ var three__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! three */ "./node_modules/three/build/three.module.js");
+/* harmony import */ var _world_chunk_chunk_constants__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../world/chunk/chunk-constants */ "./src/world/chunk/chunk-constants.ts");
+
 
 function indexToXZY(index, xSize, zSize) {
     var x = index % xSize;
     var y = Math.floor(index / (xSize * zSize));
     var z = Math.floor(index / xSize) - zSize * y;
-    return new three__WEBPACK_IMPORTED_MODULE_0__.Vector3(x, y, z);
+    return new three__WEBPACK_IMPORTED_MODULE_1__.Vector3(x, y, z);
 }
 function xzyToIndex(vector, xSize, zSize) {
     return vector.x + vector.z * xSize + vector.y * xSize * zSize;
 }
 function xyzTupelToIndex(x, y, z, xSize, zSize) {
     return x + z * xSize + y * xSize * zSize;
+}
+function indexToPos(index, base) {
+    if (base === void 0) { base = _world_chunk_chunk_constants__WEBPACK_IMPORTED_MODULE_0__.CHUNK_WIDTH; }
+    var x = index % base;
+    var y = Math.floor(index / (base * base));
+    var z = Math.floor(index / base) - base * y;
+    return new three__WEBPACK_IMPORTED_MODULE_1__.Vector3(x, y, z);
+}
+function posToIndex(_a, base) {
+    var x = _a.x, z = _a.z, y = _a.y;
+    if (base === void 0) { base = _world_chunk_chunk_constants__WEBPACK_IMPORTED_MODULE_0__.CHUNK_WIDTH; }
+    return (x) + (z * base) + (y * base * base);
 }
 
 
@@ -1882,6 +2352,131 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */ });
 var CHUNK_WIDTH = 16;
 var CHUNK_HEIGHT = 16;
+
+
+/***/ }),
+
+/***/ "./src/world/feature/oak-tree-feature.ts":
+/*!***********************************************!*\
+  !*** ./src/world/feature/oak-tree-feature.ts ***!
+  \***********************************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "OakTreeFeature": () => (/* binding */ OakTreeFeature)
+/* harmony export */ });
+/* harmony import */ var _block_blocks__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../../block/blocks */ "./src/block/blocks.ts");
+
+var OakTreeFeature = {
+    placeOn: _block_blocks__WEBPACK_IMPORTED_MODULE_0__.Blocks.GRASS,
+    variants: [
+        {
+            elements: [
+                {
+                    shape: 'cube',
+                    from: [-2, 3, -2],
+                    to: [2, 4, 2],
+                    block: _block_blocks__WEBPACK_IMPORTED_MODULE_0__.Blocks.LEAVES,
+                },
+                {
+                    shape: 'cube',
+                    from: [-1, 5, -1],
+                    to: [1, 5, 1],
+                    block: _block_blocks__WEBPACK_IMPORTED_MODULE_0__.Blocks.LEAVES,
+                },
+                {
+                    shape: 'cube',
+                    from: [-1, 6, 0],
+                    to: [1, 6, 0],
+                    block: _block_blocks__WEBPACK_IMPORTED_MODULE_0__.Blocks.LEAVES,
+                },
+                {
+                    shape: 'cube',
+                    from: [0, 6, -1],
+                    to: [0, 6, 1],
+                    block: _block_blocks__WEBPACK_IMPORTED_MODULE_0__.Blocks.LEAVES,
+                },
+                {
+                    shape: 'cube',
+                    from: [0, 0, 0],
+                    to: [0, 5, 0],
+                    block: _block_blocks__WEBPACK_IMPORTED_MODULE_0__.Blocks.OAK_LOG,
+                },
+            ],
+        },
+    ],
+};
+
+
+/***/ }),
+
+/***/ "./src/world/feature/world-feature.ts":
+/*!********************************************!*\
+  !*** ./src/world/feature/world-feature.ts ***!
+  \********************************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "buildFeatureVariant": () => (/* binding */ buildFeatureVariant)
+/* harmony export */ });
+/* harmony import */ var three__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! three */ "./node_modules/three/build/three.module.js");
+/* harmony import */ var _util_bounding_box__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../../util/bounding-box */ "./src/util/bounding-box.ts");
+/* harmony import */ var _util_index_to_vector3__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../../util/index-to-vector3 */ "./src/util/index-to-vector3.ts");
+var __spreadArray = (undefined && undefined.__spreadArray) || function (to, from, pack) {
+    if (pack || arguments.length === 2) for (var i = 0, l = from.length, ar; i < l; i++) {
+        if (ar || !(i in from)) {
+            if (!ar) ar = Array.prototype.slice.call(from, 0, i);
+            ar[i] = from[i];
+        }
+    }
+    return to.concat(ar || Array.prototype.slice.call(from));
+};
+
+
+
+function buildFeatureVariant(variant) {
+    var elements = variant.elements;
+    var boundingBox = getFeatureVariantBoundingBox(variant);
+    var _a = boundingBox.min.toArray(), minX = _a[0], minY = _a[1], minZ = _a[2];
+    var _b = boundingBox.getSize(new three__WEBPACK_IMPORTED_MODULE_2__.Vector3()).add(new three__WEBPACK_IMPORTED_MODULE_2__.Vector3(1, 1, 1)).toArray(), width = _b[0], height = _b[1], depth = _b[2];
+    var blocks = [];
+    elements.forEach(function (element) {
+        if ('at' in element) {
+            var _a = element.at, x = _a[0], y = _a[1], z = _a[2];
+            blocks[(0,_util_index_to_vector3__WEBPACK_IMPORTED_MODULE_1__.xyzTupelToIndex)(x - minX, y - minY, z - minZ, width, depth)] = element.block;
+            return;
+        }
+        var _b = element.from, x1 = _b[0], y1 = _b[1], z1 = _b[2];
+        var _c = element.to, x2 = _c[0], y2 = _c[1], z2 = _c[2];
+        for (var x = x1; x <= x2; x++) {
+            for (var y = y1; y <= y2; y++) {
+                for (var z = z1; z <= z2; z++) {
+                    blocks[(0,_util_index_to_vector3__WEBPACK_IMPORTED_MODULE_1__.xyzTupelToIndex)(x - minX, y - minY, z - minZ, width, depth)] = element.block;
+                }
+            }
+        }
+    });
+    return { blocks: blocks, width: width, height: height, depth: depth };
+}
+function getFeatureVariantBoundingBox(variant) {
+    var elements = variant.elements;
+    var points = elements.reduce(function (points, element) {
+        if ('at' in element) {
+            return __spreadArray(__spreadArray([], points, true), [new three__WEBPACK_IMPORTED_MODULE_2__.Vector3().fromArray(element.at)], false);
+        }
+        return __spreadArray(__spreadArray([], points, true), [new three__WEBPACK_IMPORTED_MODULE_2__.Vector3().fromArray(element.from), new three__WEBPACK_IMPORTED_MODULE_2__.Vector3().fromArray(element.to)], false);
+    }, []);
+    return (0,_util_bounding_box__WEBPACK_IMPORTED_MODULE_0__.computeBoundingBox)(points);
+}
+// Tree
+// Cactus
+// Grass
+// Flower
+// Pumpkins
 
 
 /***/ }),
@@ -54442,19 +55037,23 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */ __webpack_require__.d(__webpack_exports__, {
 /* harmony export */   "ChunkGenerator": () => (/* binding */ ChunkGenerator)
 /* harmony export */ });
-/* harmony import */ var comlink__WEBPACK_IMPORTED_MODULE_12__ = __webpack_require__(/*! comlink */ "./node_modules/comlink/dist/esm/comlink.mjs");
+/* harmony import */ var comlink__WEBPACK_IMPORTED_MODULE_14__ = __webpack_require__(/*! comlink */ "./node_modules/comlink/dist/esm/comlink.mjs");
 /* harmony import */ var simplex_noise__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! simplex-noise */ "./node_modules/simplex-noise/dist/esm/simplex-noise.js");
-/* harmony import */ var three__WEBPACK_IMPORTED_MODULE_11__ = __webpack_require__(/*! three */ "./node_modules/three/build/three.module.js");
-/* harmony import */ var three_src_math_MathUtils__WEBPACK_IMPORTED_MODULE_10__ = __webpack_require__(/*! three/src/math/MathUtils */ "./node_modules/three/src/math/MathUtils.js");
-/* harmony import */ var _block_blocks__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../../block/blocks */ "./src/block/blocks.ts");
-/* harmony import */ var _noise_smooth_noise__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../../noise/smooth-noise */ "./src/noise/smooth-noise.ts");
-/* harmony import */ var _util_index_to_vector2__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../../util/index-to-vector2 */ "./src/util/index-to-vector2.ts");
-/* harmony import */ var _util_index_to_vector3__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../../util/index-to-vector3 */ "./src/util/index-to-vector3.ts");
-/* harmony import */ var _util_mod__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ../../util/mod */ "./src/util/mod.ts");
-/* harmony import */ var _biome_biome_generator__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ../biome/biome-generator */ "./src/world/biome/biome-generator.ts");
-/* harmony import */ var _biome_biome_map_generator__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ../biome/biome-map-generator */ "./src/world/biome/biome-map-generator.ts");
-/* harmony import */ var _world_noise__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ../world-noise */ "./src/world/world-noise.ts");
-/* harmony import */ var _chunk_constants__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! ./chunk-constants */ "./src/world/chunk/chunk-constants.ts");
+/* harmony import */ var three_src_math_MathUtils__WEBPACK_IMPORTED_MODULE_13__ = __webpack_require__(/*! three/src/math/MathUtils */ "./node_modules/three/src/math/MathUtils.js");
+/* harmony import */ var _block_block_pos__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../../block/block-pos */ "./src/block/block-pos.ts");
+/* harmony import */ var _block_blocks__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../../block/blocks */ "./src/block/blocks.ts");
+/* harmony import */ var _noise_smooth_noise__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../../noise/smooth-noise */ "./src/noise/smooth-noise.ts");
+/* harmony import */ var _util_index_to_vector2__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../../util/index-to-vector2 */ "./src/util/index-to-vector2.ts");
+/* harmony import */ var _util_index_to_vector3__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ../../util/index-to-vector3 */ "./src/util/index-to-vector3.ts");
+/* harmony import */ var _util_mod__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ../../util/mod */ "./src/util/mod.ts");
+/* harmony import */ var _biome_biome_generator__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ../biome/biome-generator */ "./src/world/biome/biome-generator.ts");
+/* harmony import */ var _biome_biome_map_generator__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ../biome/biome-map-generator */ "./src/world/biome/biome-map-generator.ts");
+/* harmony import */ var _feature_oak_tree_feature__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! ../feature/oak-tree-feature */ "./src/world/feature/oak-tree-feature.ts");
+/* harmony import */ var _feature_world_feature__WEBPACK_IMPORTED_MODULE_10__ = __webpack_require__(/*! ../feature/world-feature */ "./src/world/feature/world-feature.ts");
+/* harmony import */ var _world_noise__WEBPACK_IMPORTED_MODULE_11__ = __webpack_require__(/*! ../world-noise */ "./src/world/world-noise.ts");
+/* harmony import */ var _chunk_constants__WEBPACK_IMPORTED_MODULE_12__ = __webpack_require__(/*! ./chunk-constants */ "./src/world/chunk/chunk-constants.ts");
+
+
 
 
 
@@ -54472,34 +55071,32 @@ __webpack_require__.r(__webpack_exports__);
 var ChunkGenerator = /** @class */ (function () {
     function ChunkGenerator(noiseSeed) {
         this.noiseSeed = noiseSeed;
-        var smoothNoise = new _noise_smooth_noise__WEBPACK_IMPORTED_MODULE_2__.SmoothNoise(new simplex_noise__WEBPACK_IMPORTED_MODULE_0__["default"](noiseSeed));
-        this.biomeMapGenerator = new _biome_biome_map_generator__WEBPACK_IMPORTED_MODULE_7__.BiomeMapGenerator(smoothNoise);
-        this.biomeGenerator = new _biome_biome_generator__WEBPACK_IMPORTED_MODULE_6__.BiomeGenerator(smoothNoise);
-        this.worldNoise = new _world_noise__WEBPACK_IMPORTED_MODULE_8__.WorldNoise(noiseSeed);
+        var smoothNoise = new _noise_smooth_noise__WEBPACK_IMPORTED_MODULE_3__.SmoothNoise(new simplex_noise__WEBPACK_IMPORTED_MODULE_0__["default"](noiseSeed));
+        this.biomeMapGenerator = new _biome_biome_map_generator__WEBPACK_IMPORTED_MODULE_8__.BiomeMapGenerator(smoothNoise);
+        this.biomeGenerator = new _biome_biome_generator__WEBPACK_IMPORTED_MODULE_7__.BiomeGenerator(smoothNoise);
+        this.worldNoise = new _world_noise__WEBPACK_IMPORTED_MODULE_11__.WorldNoise(noiseSeed);
     }
     ChunkGenerator.prototype.buildTerrain = function (chunkPosition) {
         var blocks = this.buildBaseTerrain(chunkPosition);
-        // const decoratedBlocks = this.decorateTerrain(blocks);
-        return Uint8Array.from(blocks.map(function (block) { return _block_blocks__WEBPACK_IMPORTED_MODULE_1__.Blocks.getBlockId(block); }));
+        return Uint8Array.from(blocks.map(function (block) { return _block_blocks__WEBPACK_IMPORTED_MODULE_2__.Blocks.getBlockId(block); }));
     };
     ChunkGenerator.prototype.buildBaseTerrain = function (_a) {
         var chunkPositionX = _a[0], chunkPositionY = _a[1], chunkPositionZ = _a[2];
         var blockData = [];
-        for (var i = 0; i < _chunk_constants__WEBPACK_IMPORTED_MODULE_9__.CHUNK_WIDTH * _chunk_constants__WEBPACK_IMPORTED_MODULE_9__.CHUNK_WIDTH; i += 1) {
-            var _b = (0,_util_index_to_vector2__WEBPACK_IMPORTED_MODULE_3__.indexToXZ)(i, _chunk_constants__WEBPACK_IMPORTED_MODULE_9__.CHUNK_WIDTH).toArray(), x = _b[0], z = _b[1];
-            var erosion = this.worldNoise.sampleErosion(x + chunkPositionX * _chunk_constants__WEBPACK_IMPORTED_MODULE_9__.CHUNK_WIDTH, z + chunkPositionZ * _chunk_constants__WEBPACK_IMPORTED_MODULE_9__.CHUNK_WIDTH);
-            var worldX = chunkPositionX * _chunk_constants__WEBPACK_IMPORTED_MODULE_9__.CHUNK_WIDTH + x;
-            var worldZ = chunkPositionZ * _chunk_constants__WEBPACK_IMPORTED_MODULE_9__.CHUNK_WIDTH + z;
+        for (var i = 0; i < _chunk_constants__WEBPACK_IMPORTED_MODULE_12__.CHUNK_WIDTH * _chunk_constants__WEBPACK_IMPORTED_MODULE_12__.CHUNK_WIDTH; i += 1) {
+            var _b = (0,_util_index_to_vector2__WEBPACK_IMPORTED_MODULE_4__.indexToXZ)(i, _chunk_constants__WEBPACK_IMPORTED_MODULE_12__.CHUNK_WIDTH).toArray(), x = _b[0], z = _b[1];
+            var erosion = this.worldNoise.sampleErosion(x + chunkPositionX * _chunk_constants__WEBPACK_IMPORTED_MODULE_12__.CHUNK_WIDTH, z + chunkPositionZ * _chunk_constants__WEBPACK_IMPORTED_MODULE_12__.CHUNK_WIDTH);
+            var worldX = chunkPositionX * _chunk_constants__WEBPACK_IMPORTED_MODULE_12__.CHUNK_WIDTH + x;
+            var worldZ = chunkPositionZ * _chunk_constants__WEBPACK_IMPORTED_MODULE_12__.CHUNK_WIDTH + z;
             var factor3D = this.worldNoise.sample3DFactor(worldX, worldZ);
-            for (var y = 0; y < _chunk_constants__WEBPACK_IMPORTED_MODULE_9__.CHUNK_HEIGHT; y++) {
-                var worldY = chunkPositionY * _chunk_constants__WEBPACK_IMPORTED_MODULE_9__.CHUNK_HEIGHT + y;
+            for (var y = 0; y < _chunk_constants__WEBPACK_IMPORTED_MODULE_12__.CHUNK_HEIGHT; y++) {
+                var worldY = chunkPositionY * _chunk_constants__WEBPACK_IMPORTED_MODULE_12__.CHUNK_HEIGHT + y;
                 var isBlock = this.sampleIsBlock([worldX, worldY, worldZ], erosion, factor3D);
                 if (!isBlock) {
-                    blockData[(0,_util_index_to_vector3__WEBPACK_IMPORTED_MODULE_4__.xyzTupelToIndex)(x, (0,_util_mod__WEBPACK_IMPORTED_MODULE_5__.mod)(y, 16), z, _chunk_constants__WEBPACK_IMPORTED_MODULE_9__.CHUNK_WIDTH, _chunk_constants__WEBPACK_IMPORTED_MODULE_9__.CHUNK_WIDTH)] = _block_blocks__WEBPACK_IMPORTED_MODULE_1__.Blocks.AIR;
+                    blockData[(0,_util_index_to_vector3__WEBPACK_IMPORTED_MODULE_5__.xyzTupelToIndex)(x, (0,_util_mod__WEBPACK_IMPORTED_MODULE_6__.mod)(y, 16), z, _chunk_constants__WEBPACK_IMPORTED_MODULE_12__.CHUNK_WIDTH, _chunk_constants__WEBPACK_IMPORTED_MODULE_12__.CHUNK_WIDTH)] = worldY < 64 ? _block_blocks__WEBPACK_IMPORTED_MODULE_2__.Blocks.WATER : _block_blocks__WEBPACK_IMPORTED_MODULE_2__.Blocks.AIR;
                     continue;
                 }
-                var isBlockAbove = this.sampleIsBlock([worldX, worldY + 1, worldZ], erosion, factor3D);
-                blockData[(0,_util_index_to_vector3__WEBPACK_IMPORTED_MODULE_4__.xyzTupelToIndex)(x, (0,_util_mod__WEBPACK_IMPORTED_MODULE_5__.mod)(y, 16), z, _chunk_constants__WEBPACK_IMPORTED_MODULE_9__.CHUNK_WIDTH, _chunk_constants__WEBPACK_IMPORTED_MODULE_9__.CHUNK_WIDTH)] = isBlockAbove ? _block_blocks__WEBPACK_IMPORTED_MODULE_1__.Blocks.STONE : _block_blocks__WEBPACK_IMPORTED_MODULE_1__.Blocks.GRASS;
+                blockData[(0,_util_index_to_vector3__WEBPACK_IMPORTED_MODULE_5__.xyzTupelToIndex)(x, (0,_util_mod__WEBPACK_IMPORTED_MODULE_6__.mod)(y, 16), z, _chunk_constants__WEBPACK_IMPORTED_MODULE_12__.CHUNK_WIDTH, _chunk_constants__WEBPACK_IMPORTED_MODULE_12__.CHUNK_WIDTH)] = _block_blocks__WEBPACK_IMPORTED_MODULE_2__.Blocks.STONE;
             }
         }
         return blockData;
@@ -54514,38 +55111,86 @@ var ChunkGenerator = /** @class */ (function () {
         // Base Map
         var sampleFlat = ((erosion / 4 + 0.45) - (worldY / 128)) * 0.7;
         // Final Map
-        var sample = (0,three_src_math_MathUtils__WEBPACK_IMPORTED_MODULE_10__.lerp)(sampleFlat, sample3d, (factor3D + 1) / 2);
+        var sample = (0,three_src_math_MathUtils__WEBPACK_IMPORTED_MODULE_13__.lerp)(sampleFlat, sample3d, (factor3D + 1) / 2);
         return sample > 0;
     };
-    // TODO: Remove this. It is unused. Biomes should be declared after the terrain is generated. Biomes should not be
-    // a template for generating terrain. This will result in a more diverse world where biomes aren't bound to specific
-    // terrain types.
-    ChunkGenerator.prototype.generateBiomeMap = function (chunkPosition) {
-        var biomes = [];
-        for (var i = 0; i < _chunk_constants__WEBPACK_IMPORTED_MODULE_9__.CHUNK_WIDTH * _chunk_constants__WEBPACK_IMPORTED_MODULE_9__.CHUNK_WIDTH; i += 1) {
-            var position = (0,_util_index_to_vector2__WEBPACK_IMPORTED_MODULE_3__.indexToXZ)(i, _chunk_constants__WEBPACK_IMPORTED_MODULE_9__.CHUNK_WIDTH);
-            biomes[i] = this.biomeMapGenerator.sampleBiomeAt(new three__WEBPACK_IMPORTED_MODULE_11__.Vector2(position.x + chunkPosition.x * _chunk_constants__WEBPACK_IMPORTED_MODULE_9__.CHUNK_WIDTH, position.y + chunkPosition.y * _chunk_constants__WEBPACK_IMPORTED_MODULE_9__.CHUNK_WIDTH));
-        }
-        return biomes;
+    ChunkGenerator.prototype.decorateTerrain = function (chunkPosition, blockData) {
+        return this.decorateBaseTerrain(chunkPosition, blockData);
     };
-    // TODO: Remove this. It is unused.
-    ChunkGenerator.prototype.generateHeightMap = function (chunkPosition) {
-        var height = [];
-        for (var i = 0; i < _chunk_constants__WEBPACK_IMPORTED_MODULE_9__.CHUNK_WIDTH * _chunk_constants__WEBPACK_IMPORTED_MODULE_9__.CHUNK_WIDTH; i += 1) {
-            var position = (0,_util_index_to_vector2__WEBPACK_IMPORTED_MODULE_3__.indexToXZ)(i, _chunk_constants__WEBPACK_IMPORTED_MODULE_9__.CHUNK_WIDTH);
-            var x = position.x + chunkPosition[0] * _chunk_constants__WEBPACK_IMPORTED_MODULE_9__.CHUNK_WIDTH;
-            var z = position.y + chunkPosition[1] * _chunk_constants__WEBPACK_IMPORTED_MODULE_9__.CHUNK_WIDTH;
-            height[i] = this.worldNoise.sampleErosion(x, z);
+    ChunkGenerator.prototype.decorateBaseTerrain = function (chunkPosition, blockData) {
+        var getBlock = function (x, theY, z) {
+            var theSection = Math.floor(theY / 16);
+            var theIndex = (0,_util_index_to_vector3__WEBPACK_IMPORTED_MODULE_5__.xyzTupelToIndex)(x, theY % 16, z, _chunk_constants__WEBPACK_IMPORTED_MODULE_12__.CHUNK_WIDTH, _chunk_constants__WEBPACK_IMPORTED_MODULE_12__.CHUNK_WIDTH);
+            return _block_blocks__WEBPACK_IMPORTED_MODULE_2__.Blocks.getBlockById(blockData[theSection][theIndex]);
+        };
+        var setBlock = function (x, theY, z, block) {
+            var theSection = Math.floor(theY / 16);
+            var theIndex = (0,_util_index_to_vector3__WEBPACK_IMPORTED_MODULE_5__.xyzTupelToIndex)(x, theY % 16, z, _chunk_constants__WEBPACK_IMPORTED_MODULE_12__.CHUNK_WIDTH, _chunk_constants__WEBPACK_IMPORTED_MODULE_12__.CHUNK_WIDTH);
+            blockData[theSection][theIndex] = _block_blocks__WEBPACK_IMPORTED_MODULE_2__.Blocks.getBlockId(block);
+        };
+        for (var i = 0; i < _chunk_constants__WEBPACK_IMPORTED_MODULE_12__.CHUNK_WIDTH * _chunk_constants__WEBPACK_IMPORTED_MODULE_12__.CHUNK_WIDTH; i += 1) {
+            var _a = (0,_util_index_to_vector2__WEBPACK_IMPORTED_MODULE_4__.indexToXZ)(i, _chunk_constants__WEBPACK_IMPORTED_MODULE_12__.CHUNK_WIDTH), x = _a.x, z = _a.y;
+            var isTreeGoodHere = !((x !== 1 || z !== 10) && (x !== 1 || z !== 1) && (x !== 10 || z !== 1) && (x !== 10 || z !== 10));
+            for (var y = _chunk_constants__WEBPACK_IMPORTED_MODULE_12__.CHUNK_HEIGHT * 8 - 1; y >= 0; y -= 1) {
+                var section = Math.floor(y / 16);
+                var index = (0,_util_index_to_vector3__WEBPACK_IMPORTED_MODULE_5__.xyzTupelToIndex)(x, y % 16, z, _chunk_constants__WEBPACK_IMPORTED_MODULE_12__.CHUNK_WIDTH, _chunk_constants__WEBPACK_IMPORTED_MODULE_12__.CHUNK_WIDTH);
+                var block = _block_blocks__WEBPACK_IMPORTED_MODULE_2__.Blocks.getBlockById(blockData[section][index]);
+                if (block === _block_blocks__WEBPACK_IMPORTED_MODULE_2__.Blocks.STONE && getBlock(x, y + 1, z) === _block_blocks__WEBPACK_IMPORTED_MODULE_2__.Blocks.WATER) {
+                    blockData[section][index] = _block_blocks__WEBPACK_IMPORTED_MODULE_2__.Blocks.getBlockId(_block_blocks__WEBPACK_IMPORTED_MODULE_2__.Blocks.SAND);
+                    continue;
+                }
+                if (block === _block_blocks__WEBPACK_IMPORTED_MODULE_2__.Blocks.STONE && getBlock(x, y + 1, z) === _block_blocks__WEBPACK_IMPORTED_MODULE_2__.Blocks.AIR) {
+                    // blockData[section][index] = Blocks.getBlockId(Blocks.GRASS);
+                    setBlock(x, y, z, _block_blocks__WEBPACK_IMPORTED_MODULE_2__.Blocks.GRASS);
+                    if (getBlock(x, y - 1, z) === _block_blocks__WEBPACK_IMPORTED_MODULE_2__.Blocks.STONE)
+                        setBlock(x, y - 1, z, _block_blocks__WEBPACK_IMPORTED_MODULE_2__.Blocks.DIRT);
+                    if (getBlock(x, y - 2, z) === _block_blocks__WEBPACK_IMPORTED_MODULE_2__.Blocks.STONE)
+                        setBlock(x, y - 2, z, _block_blocks__WEBPACK_IMPORTED_MODULE_2__.Blocks.DIRT);
+                    if (getBlock(x, y - 3, z) === _block_blocks__WEBPACK_IMPORTED_MODULE_2__.Blocks.STONE)
+                        setBlock(x, y - 3, z, _block_blocks__WEBPACK_IMPORTED_MODULE_2__.Blocks.DIRT);
+                    continue;
+                }
+                if (block === _block_blocks__WEBPACK_IMPORTED_MODULE_2__.Blocks.WATER) {
+                    isTreeGoodHere = false;
+                }
+                if (block === _block_blocks__WEBPACK_IMPORTED_MODULE_2__.Blocks.AIR) {
+                    continue;
+                }
+                if (isTreeGoodHere) {
+                    var feature = (0,_feature_world_feature__WEBPACK_IMPORTED_MODULE_10__.buildFeatureVariant)(_feature_oak_tree_feature__WEBPACK_IMPORTED_MODULE_9__.OakTreeFeature.variants[0]);
+                    this.placeFeature({ x: x, y: y, z: z }, feature, function (pos, block) {
+                        var ss = Math.floor(pos.y / 16);
+                        var ind = (0,_util_index_to_vector3__WEBPACK_IMPORTED_MODULE_5__.xyzTupelToIndex)(pos.x, pos.y % 16, pos.z, _chunk_constants__WEBPACK_IMPORTED_MODULE_12__.CHUNK_WIDTH, _chunk_constants__WEBPACK_IMPORTED_MODULE_12__.CHUNK_WIDTH);
+                        blockData[ss][ind] = _block_blocks__WEBPACK_IMPORTED_MODULE_2__.Blocks.getBlockId(block);
+                    });
+                    break;
+                }
+            }
         }
-        return height;
+        return blockData;
+    };
+    ChunkGenerator.prototype.placeFeature = function (position, _a, setBlock) {
+        var featureBlocks = _a.blocks, depth = _a.depth, height = _a.height, width = _a.width;
+        // const { x, y, z } = position;
+        for (var i = 0; i < featureBlocks.length; i += 1) {
+            var block = featureBlocks[i];
+            if (block === undefined) {
+                continue;
+            }
+            var blockPos = (0,_util_index_to_vector3__WEBPACK_IMPORTED_MODULE_5__.indexToXZY)(i, width, depth);
+            var pos = (0,_block_block_pos__WEBPACK_IMPORTED_MODULE_1__.sumBlockPos)(position, { x: -Math.floor(width / 2), y: 0, z: -Math.floor(depth / 2) }, blockPos);
+            if ((0,_block_block_pos__WEBPACK_IMPORTED_MODULE_1__.isBlockPosIn)(pos, { x: 0, y: 0, z: 0 }, { x: _chunk_constants__WEBPACK_IMPORTED_MODULE_12__.CHUNK_WIDTH - 1, y: _chunk_constants__WEBPACK_IMPORTED_MODULE_12__.CHUNK_HEIGHT * 8 - 1, z: _chunk_constants__WEBPACK_IMPORTED_MODULE_12__.CHUNK_WIDTH - 1 })) {
+                setBlock(pos, block);
+            }
+        }
     };
     return ChunkGenerator;
 }());
 
-(0,comlink__WEBPACK_IMPORTED_MODULE_12__.expose)(ChunkGenerator);
+(0,comlink__WEBPACK_IMPORTED_MODULE_14__.expose)(ChunkGenerator);
 
 })();
 
 /******/ })()
 ;
-//# sourceMappingURL=chunk-generator.worker.d776bd13b12f29b338fa.worker.js.map
+//# sourceMappingURL=chunk-generator.worker.87982a9601d3d3f22ae0.worker.js.map

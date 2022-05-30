@@ -20,7 +20,9 @@ export var AirBlockModel = {
 var AirBlock = /** @class */ (function (_super) {
     __extends(AirBlock, _super);
     function AirBlock() {
-        return _super.call(this, 'air', [AirBlockModel]) || this;
+        var _this = _super.call(this, 'air', [AirBlockModel]) || this;
+        _this.blocksLight = false;
+        return _this;
     }
     AirBlock.prototype.isCollidable = function () {
         return false;

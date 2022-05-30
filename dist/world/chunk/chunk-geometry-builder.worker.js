@@ -5,8 +5,8 @@ var ChunkGeometryBuilder = /** @class */ (function () {
         this.blockModels = blockModels;
         this.chunkRenderer = new ChunkRenderer(blockModels);
     }
-    ChunkGeometryBuilder.prototype.buildGeometry = function (blockData) {
-        return this.chunkRenderer.buildGeometry(blockData);
+    ChunkGeometryBuilder.prototype.buildGeometry = function (chunkPosition, blockData) {
+        return this.chunkRenderer.buildGeometry(chunkPosition, blockData);
     };
     return ChunkGeometryBuilder;
 }());

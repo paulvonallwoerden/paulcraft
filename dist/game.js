@@ -34,12 +34,11 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
         if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
     }
 };
-import { AmbientLight, Audio, AudioListener, AudioLoader, Fog, PerspectiveCamera, Scene, WebGLRenderer } from 'three';
+import { AmbientLight, Audio, AudioListener, AudioLoader, PerspectiveCamera, Scene, WebGLRenderer } from 'three';
 import { Blocks } from './block/blocks';
 import { Input } from './input/input';
 import { Level } from './level';
 import { OriginCross } from './origin-cross';
-import ChunkDataGeneratorWorker from './world/chunk-data-generator.worker.ts';
 import { ChunkGeneratorPool } from './world/chunk/chunk-generator-pool';
 import { ChunkGeometryBuilderPool } from './world/chunk/chunk-geometry-builder-pool';
 import Stats from 'stats.js';
@@ -54,9 +53,6 @@ var Game = /** @class */ (function () {
         this.timeSinceLastTick = 0;
         this.ticksPerSecond = 20;
         this.blocks = new Blocks();
-        this.chunkDataGeneratorWorkerPool = [];
-        this.chunkDataGenerationResults = {};
-        this.chunkGeometryResults = {};
         // TODO: Make this configurable or at least random.
         this.seed = 'ijn3fi3fin3fim';
         this.audioListener = new AudioListener();
@@ -67,7 +63,7 @@ var Game = /** @class */ (function () {
         this.stats = new Stats();
         Game.main = this;
         this.scene = new Scene();
-        this.scene.fog = new Fog(0xe6fcff, 90, 110);
+        // this.scene.fog = new Fog(0xe6fcff, 90, 110)
         var width = root.clientWidth, height = root.clientHeight;
         var ambientLight = new AmbientLight(0x888888);
         this.scene.add(ambientLight);
@@ -92,8 +88,7 @@ var Game = /** @class */ (function () {
     }
     Game.prototype.init = function () {
         return __awaiter(this, void 0, void 0, function () {
-            var i, worker, musicLoader, shimmer;
-            var _this = this;
+            var musicLoader, shimmer;
             return __generator(this, function (_a) {
                 switch (_a.label) {
                     case 0:
@@ -111,23 +106,22 @@ var Game = /** @class */ (function () {
                     case 3:
                         _a.sent();
                         // Legacy
-                        for (i = 0; i < 4; i++) {
-                            worker = new ChunkDataGeneratorWorker();
-                            worker.postMessage({
-                                type: 'seed',
-                                seed: this.seed,
-                            });
-                            worker.addEventListener('message', function (_a) {
-                                var data = _a.data;
-                                if (data.type === 'generate--complete') {
-                                    _this.chunkDataGenerationResults[JSON.stringify(data.position)] = data.result;
-                                }
-                                if (data.type === 'build-mesh--complete') {
-                                    _this.chunkGeometryResults[JSON.stringify(data.position)] = data.result;
-                                }
-                            });
-                            this.chunkDataGeneratorWorkerPool.push(worker);
-                        }
+                        // for (let i = 0; i < 4; i++) {
+                        //     const worker = new ChunkDataGeneratorWorker();
+                        //     worker.postMessage({
+                        //         type: 'seed',
+                        //         seed: this.seed,
+                        //     });
+                        //     worker.addEventListener('message', ({ data }) => {
+                        //         if (data.type === 'generate--complete') {
+                        //             this.chunkDataGenerationResults[JSON.stringify(data.position)] = data.result;
+                        //         }
+                        //         if (data.type === 'build-mesh--complete') {
+                        //             this.chunkGeometryResults[JSON.stringify(data.position)] = data.result;
+                        //         }
+                        //     });
+                        //     this.chunkDataGeneratorWorkerPool.push(worker);
+                        // }
                         // Level
                         console.log("Leveling...");
                         this.level = new Level(this, this.scene);
@@ -176,6 +170,7 @@ var Game = /** @class */ (function () {
             this.tick(deltaTime);
             this.timeSinceLastTick -= 1000 / this.ticksPerSecond;
         }
+        this.blocks.update(deltaTime);
         this.level.update(deltaTime);
         this.renderer.render(this.scene, this.camera);
         this.level.lateUpdate(deltaTime);

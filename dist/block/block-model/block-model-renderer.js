@@ -28,6 +28,7 @@ var FaceTrsMatrices = (_b = {},
     _b[BlockFace.BACK] = new Matrix4().compose(new Vector3(1, 0, 0), new Quaternion().setFromEuler(new Euler(0, degToRad(180), 0), true), new Vector3(1, 1, 1)),
     _b);
 var DefaultElementFromToModifier = function (fromAndTo) { return fromAndTo; };
+// TODO: Add caching. Recalculating the mesh for every block is not necessary.
 var BlockModelRenderer = /** @class */ (function () {
     function BlockModelRenderer(blockUvs, elementFromToModifier) {
         if (elementFromToModifier === void 0) { elementFromToModifier = DefaultElementFromToModifier; }
@@ -55,16 +56,17 @@ var BlockModelRenderer = /** @class */ (function () {
     };
     BlockModelRenderer.prototype.renderFace = function (blockModel, position, element, modelFace, blockFace, solidityMap, mesh) {
         var _a, _b, _c, _d, _e, _f;
+        var _g, _h, _j, _k, _l, _m;
         if (modelFace.cull && solidityMap[blockFace] === true) {
             return mesh;
         }
         // Vertices
-        var _g = this.elementFromToModifier(this.normalizeToFrom(element.from, element.to)), _h = _g[0], fromX = _h[0], fromY = _h[1], fromZ = _h[2], _j = _g[1], toX = _j[0], toY = _j[1], toZ = _j[2];
-        var _k = [toX - fromX, toY - fromY, toZ - fromZ], sizeX = _k[0], sizeY = _k[1], sizeZ = _k[2];
+        var _o = this.elementFromToModifier(this.normalizeToFrom(element.from, element.to)), _p = _o[0], fromX = _p[0], fromY = _p[1], fromZ = _p[2], _q = _o[1], toX = _q[0], toY = _q[1], toZ = _q[2];
+        var _r = [toX - fromX, toY - fromY, toZ - fromZ], sizeX = _r[0], sizeY = _r[1], sizeZ = _r[2];
         var modelMatrix = this.makeTrsMatrixFromBlockModelRotation(blockModel.rotation);
         var elementMatrix = this.makeTrsMatrixFromBlockModelRotation(element.rotation);
-        var faceMatrix = new Matrix4().compose(new Vector3(fromX / 15, fromY / 15, fromZ / 15), new Quaternion().identity(), new Vector3(sizeX / 15, sizeY / 15, sizeZ / 15));
-        var rts = modelMatrix
+        var faceMatrix = new Matrix4().compose(new Vector3(fromX / 16, fromY / 16, fromZ / 16), new Quaternion().identity(), new Vector3((sizeX + 1) / 16, (sizeY + 1) / 16, (sizeZ + 1) / 16));
+        var rts = modelMatrix.clone()
             .multiply(elementMatrix)
             .multiply(faceMatrix)
             .multiply(FaceTrsMatrices[blockFace]);
@@ -72,13 +74,14 @@ var BlockModelRenderer = /** @class */ (function () {
         // Triangles
         var triangleOffset = (mesh.vertices.length / 3) - 4;
         mesh.triangles.push(triangleOffset, triangleOffset + 1, triangleOffset + 2, triangleOffset + 2, triangleOffset + 1, triangleOffset + 3);
-        // Normals
+        var normalMatrix = new Matrix4().makeRotationFromEuler(new Euler((((_g = element.rotation) === null || _g === void 0 ? void 0 : _g.axis) === 'x' ? element.rotation.angle : 0) + (((_h = blockModel.rotation) === null || _h === void 0 ? void 0 : _h.axis) === 'x' ? blockModel.rotation.angle : 0), (((_j = element.rotation) === null || _j === void 0 ? void 0 : _j.axis) === 'y' ? element.rotation.angle : 0) + (((_k = blockModel.rotation) === null || _k === void 0 ? void 0 : _k.axis) === 'y' ? blockModel.rotation.angle : 0), (((_l = element.rotation) === null || _l === void 0 ? void 0 : _l.axis) === 'z' ? element.rotation.angle : 0) + (((_m = blockModel.rotation) === null || _m === void 0 ? void 0 : _m.axis) === 'z' ? blockModel.rotation.angle : 0)));
+        var normal = new Vector3().fromArray(FaceNormals[blockFace]).applyMatrix4(normalMatrix);
         for (var i = 0; i < 4; i++) {
-            (_b = mesh.normals).push.apply(_b, FaceNormals[blockFace]);
+            (_b = mesh.normals).push.apply(_b, normal.normalize().toArray());
         }
         // UVs
         var texture = modelFace.texture;
-        var _l = [sizeX / 16, sizeY / 16, sizeZ / 16], uvScaleX = _l[0], uvScaleY = _l[1], uvScaleZ = _l[2];
+        var _s = [(sizeX + 1) / 16, (sizeY + 1) / 16, (sizeZ + 1) / 16], uvScaleX = _s[0], uvScaleY = _s[1], uvScaleZ = _s[2];
         var uvs = this.blockUvs[texture];
         switch (blockFace) {
             case BlockFace.FRONT:

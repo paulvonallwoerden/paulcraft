@@ -46,6 +46,7 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
     }
 };
 import { MeshStandardMaterial } from "three";
+import { makeOpaqueBlockMaterial } from "../shader/opaque-block-shader";
 import { removeDuplicates } from "../util/remove-duplicates";
 import { AirBlock } from "./air-block";
 import { getBlockModelTextures } from "./block-model/block-model";
@@ -53,16 +54,17 @@ import { CauldronBlock } from "./cauldron-block";
 import { DirtBlock } from "./dirt-block";
 import { DoorBlock } from "./door-block";
 import { GrassBlock } from "./grass-block";
+import { LeavesBlock } from "./leaves-block";
+import { OakLogBlock } from "./log-block";
 import { SandBlock } from "./sand-block";
 import { StoneBlock } from "./stone-block";
 import { SugarCaneBlock } from "./sugar-cane-block";
 import { TextureAtlas } from "./texture-atlas";
+import { TorchBlock } from "./torch-block";
 import { WaterBlock } from "./water-block";
 var Blocks = /** @class */ (function () {
     function Blocks() {
-        this.solidMaterial = new MeshStandardMaterial({ opacity: 1, transparent: false });
         this.waterMaterial = new MeshStandardMaterial({ opacity: 0.8, transparent: true });
-        this.transparentMaterial = new MeshStandardMaterial({ alphaTest: 0.5 });
         var blockTextures = Blocks.blocks.flatMap(function (block) { return block.blockModels.flatMap(function (blockModel) { return getBlockModelTextures(blockModel); }); });
         this.blockTextureSources = removeDuplicates(blockTextures);
         this.textureAtlas = new TextureAtlas(this.blockTextureSources);
@@ -75,13 +77,15 @@ var Blocks = /** @class */ (function () {
                     case 0: return [4 /*yield*/, this.textureAtlas.buildAtlas()];
                     case 1:
                         atlas = _a.sent();
-                        this.solidMaterial.map = atlas;
-                        this.transparentMaterial.map = atlas;
+                        this.solidMaterial = makeOpaqueBlockMaterial(atlas);
+                        this.transparentMaterial = makeOpaqueBlockMaterial(atlas);
                         this.waterMaterial.map = atlas;
                         return [2 /*return*/];
                 }
             });
         });
+    };
+    Blocks.prototype.update = function (deltaTime) {
     };
     Blocks.getBlockId = function (block) {
         return Blocks.blocks.indexOf(block);
@@ -121,6 +125,9 @@ var Blocks = /** @class */ (function () {
     Blocks.DOOR = new DoorBlock();
     Blocks.WATER = new WaterBlock();
     Blocks.SUGAR_CANE = new SugarCaneBlock();
+    Blocks.LEAVES = new LeavesBlock();
+    Blocks.OAK_LOG = new OakLogBlock();
+    Blocks.TORCH = new TorchBlock();
     Blocks.blocks = [
         Blocks.AIR,
         Blocks.STONE,
@@ -131,6 +138,9 @@ var Blocks = /** @class */ (function () {
         Blocks.DOOR,
         Blocks.WATER,
         Blocks.SUGAR_CANE,
+        Blocks.LEAVES,
+        Blocks.OAK_LOG,
+        Blocks.TORCH,
     ];
     return Blocks;
 }());

@@ -131,12 +131,14 @@ var DefaultCauldronBlockStateValues = {
 var CauldronBlock = /** @class */ (function (_super) {
     __extends(CauldronBlock, _super);
     function CauldronBlock() {
-        return _super.call(this, 'cauldron', [
+        var _this = _super.call(this, 'cauldron', [
             makeCauldronBlockModel(0),
             makeCauldronBlockModel(1),
             makeCauldronBlockModel(2),
             makeCauldronBlockModel(3),
         ]) || this;
+        _this.occludesNeighborBlocks = false;
+        return _this;
     }
     CauldronBlock.prototype.getBlockModel = function (blockState) {
         return blockState.get('level');

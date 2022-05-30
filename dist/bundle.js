@@ -1,6 +1,123 @@
 /******/ (() => { // webpackBootstrap
 /******/ 	var __webpack_modules__ = ({
 
+/***/ "./node_modules/bezier-easing/src/index.js":
+/*!*************************************************!*\
+  !*** ./node_modules/bezier-easing/src/index.js ***!
+  \*************************************************/
+/***/ ((module) => {
+
+/**
+ * https://github.com/gre/bezier-easing
+ * BezierEasing - use bezier curve for transition easing function
+ * by Gaëtan Renaudeau 2014 - 2015 – MIT License
+ */
+
+// These values are established by empiricism with tests (tradeoff: performance VS precision)
+var NEWTON_ITERATIONS = 4;
+var NEWTON_MIN_SLOPE = 0.001;
+var SUBDIVISION_PRECISION = 0.0000001;
+var SUBDIVISION_MAX_ITERATIONS = 10;
+
+var kSplineTableSize = 11;
+var kSampleStepSize = 1.0 / (kSplineTableSize - 1.0);
+
+var float32ArraySupported = typeof Float32Array === 'function';
+
+function A (aA1, aA2) { return 1.0 - 3.0 * aA2 + 3.0 * aA1; }
+function B (aA1, aA2) { return 3.0 * aA2 - 6.0 * aA1; }
+function C (aA1)      { return 3.0 * aA1; }
+
+// Returns x(t) given t, x1, and x2, or y(t) given t, y1, and y2.
+function calcBezier (aT, aA1, aA2) { return ((A(aA1, aA2) * aT + B(aA1, aA2)) * aT + C(aA1)) * aT; }
+
+// Returns dx/dt given t, x1, and x2, or dy/dt given t, y1, and y2.
+function getSlope (aT, aA1, aA2) { return 3.0 * A(aA1, aA2) * aT * aT + 2.0 * B(aA1, aA2) * aT + C(aA1); }
+
+function binarySubdivide (aX, aA, aB, mX1, mX2) {
+  var currentX, currentT, i = 0;
+  do {
+    currentT = aA + (aB - aA) / 2.0;
+    currentX = calcBezier(currentT, mX1, mX2) - aX;
+    if (currentX > 0.0) {
+      aB = currentT;
+    } else {
+      aA = currentT;
+    }
+  } while (Math.abs(currentX) > SUBDIVISION_PRECISION && ++i < SUBDIVISION_MAX_ITERATIONS);
+  return currentT;
+}
+
+function newtonRaphsonIterate (aX, aGuessT, mX1, mX2) {
+ for (var i = 0; i < NEWTON_ITERATIONS; ++i) {
+   var currentSlope = getSlope(aGuessT, mX1, mX2);
+   if (currentSlope === 0.0) {
+     return aGuessT;
+   }
+   var currentX = calcBezier(aGuessT, mX1, mX2) - aX;
+   aGuessT -= currentX / currentSlope;
+ }
+ return aGuessT;
+}
+
+function LinearEasing (x) {
+  return x;
+}
+
+module.exports = function bezier (mX1, mY1, mX2, mY2) {
+  if (!(0 <= mX1 && mX1 <= 1 && 0 <= mX2 && mX2 <= 1)) {
+    throw new Error('bezier x values must be in [0, 1] range');
+  }
+
+  if (mX1 === mY1 && mX2 === mY2) {
+    return LinearEasing;
+  }
+
+  // Precompute samples table
+  var sampleValues = float32ArraySupported ? new Float32Array(kSplineTableSize) : new Array(kSplineTableSize);
+  for (var i = 0; i < kSplineTableSize; ++i) {
+    sampleValues[i] = calcBezier(i * kSampleStepSize, mX1, mX2);
+  }
+
+  function getTForX (aX) {
+    var intervalStart = 0.0;
+    var currentSample = 1;
+    var lastSample = kSplineTableSize - 1;
+
+    for (; currentSample !== lastSample && sampleValues[currentSample] <= aX; ++currentSample) {
+      intervalStart += kSampleStepSize;
+    }
+    --currentSample;
+
+    // Interpolate to provide an initial guess for t
+    var dist = (aX - sampleValues[currentSample]) / (sampleValues[currentSample + 1] - sampleValues[currentSample]);
+    var guessForT = intervalStart + dist * kSampleStepSize;
+
+    var initialSlope = getSlope(guessForT, mX1, mX2);
+    if (initialSlope >= NEWTON_MIN_SLOPE) {
+      return newtonRaphsonIterate(aX, guessForT, mX1, mX2);
+    } else if (initialSlope === 0.0) {
+      return guessForT;
+    } else {
+      return binarySubdivide(aX, intervalStart, intervalStart + kSampleStepSize, mX1, mX2);
+    }
+  }
+
+  return function BezierEasing (x) {
+    // Because JavaScript number are imprecise, we should guarantee the extremes are right.
+    if (x === 0) {
+      return 0;
+    }
+    if (x === 1) {
+      return 1;
+    }
+    return calcBezier(getTForX(x), mY1, mY2);
+  };
+};
+
+
+/***/ }),
+
 /***/ "./node_modules/stats.js/build/stats.min.js":
 /*!**************************************************!*\
   !*** ./node_modules/stats.js/build/stats.min.js ***!
@@ -195,7 +312,9 @@ var AirBlockModel = {
 var AirBlock = /** @class */ (function (_super) {
     __extends(AirBlock, _super);
     function AirBlock() {
-        return _super.call(this, 'air', [AirBlockModel]) || this;
+        var _this = _super.call(this, 'air', [AirBlockModel]) || this;
+        _this.blocksLight = false;
+        return _this;
     }
     AirBlock.prototype.isCollidable = function () {
         return false;
@@ -284,6 +403,7 @@ var FaceTrsMatrices = (_b = {},
     _b[_block_face__WEBPACK_IMPORTED_MODULE_0__.BlockFace.BACK] = new three__WEBPACK_IMPORTED_MODULE_1__.Matrix4().compose(new three__WEBPACK_IMPORTED_MODULE_1__.Vector3(1, 0, 0), new three__WEBPACK_IMPORTED_MODULE_1__.Quaternion().setFromEuler(new three__WEBPACK_IMPORTED_MODULE_1__.Euler(0, (0,three_src_math_MathUtils__WEBPACK_IMPORTED_MODULE_2__.degToRad)(180), 0), true), new three__WEBPACK_IMPORTED_MODULE_1__.Vector3(1, 1, 1)),
     _b);
 var DefaultElementFromToModifier = function (fromAndTo) { return fromAndTo; };
+// TODO: Add caching. Recalculating the mesh for every block is not necessary.
 var BlockModelRenderer = /** @class */ (function () {
     function BlockModelRenderer(blockUvs, elementFromToModifier) {
         if (elementFromToModifier === void 0) { elementFromToModifier = DefaultElementFromToModifier; }
@@ -311,16 +431,17 @@ var BlockModelRenderer = /** @class */ (function () {
     };
     BlockModelRenderer.prototype.renderFace = function (blockModel, position, element, modelFace, blockFace, solidityMap, mesh) {
         var _a, _b, _c, _d, _e, _f;
+        var _g, _h, _j, _k, _l, _m;
         if (modelFace.cull && solidityMap[blockFace] === true) {
             return mesh;
         }
         // Vertices
-        var _g = this.elementFromToModifier(this.normalizeToFrom(element.from, element.to)), _h = _g[0], fromX = _h[0], fromY = _h[1], fromZ = _h[2], _j = _g[1], toX = _j[0], toY = _j[1], toZ = _j[2];
-        var _k = [toX - fromX, toY - fromY, toZ - fromZ], sizeX = _k[0], sizeY = _k[1], sizeZ = _k[2];
+        var _o = this.elementFromToModifier(this.normalizeToFrom(element.from, element.to)), _p = _o[0], fromX = _p[0], fromY = _p[1], fromZ = _p[2], _q = _o[1], toX = _q[0], toY = _q[1], toZ = _q[2];
+        var _r = [toX - fromX, toY - fromY, toZ - fromZ], sizeX = _r[0], sizeY = _r[1], sizeZ = _r[2];
         var modelMatrix = this.makeTrsMatrixFromBlockModelRotation(blockModel.rotation);
         var elementMatrix = this.makeTrsMatrixFromBlockModelRotation(element.rotation);
-        var faceMatrix = new three__WEBPACK_IMPORTED_MODULE_1__.Matrix4().compose(new three__WEBPACK_IMPORTED_MODULE_1__.Vector3(fromX / 15, fromY / 15, fromZ / 15), new three__WEBPACK_IMPORTED_MODULE_1__.Quaternion().identity(), new three__WEBPACK_IMPORTED_MODULE_1__.Vector3(sizeX / 15, sizeY / 15, sizeZ / 15));
-        var rts = modelMatrix
+        var faceMatrix = new three__WEBPACK_IMPORTED_MODULE_1__.Matrix4().compose(new three__WEBPACK_IMPORTED_MODULE_1__.Vector3(fromX / 16, fromY / 16, fromZ / 16), new three__WEBPACK_IMPORTED_MODULE_1__.Quaternion().identity(), new three__WEBPACK_IMPORTED_MODULE_1__.Vector3((sizeX + 1) / 16, (sizeY + 1) / 16, (sizeZ + 1) / 16));
+        var rts = modelMatrix.clone()
             .multiply(elementMatrix)
             .multiply(faceMatrix)
             .multiply(FaceTrsMatrices[blockFace]);
@@ -328,13 +449,14 @@ var BlockModelRenderer = /** @class */ (function () {
         // Triangles
         var triangleOffset = (mesh.vertices.length / 3) - 4;
         mesh.triangles.push(triangleOffset, triangleOffset + 1, triangleOffset + 2, triangleOffset + 2, triangleOffset + 1, triangleOffset + 3);
-        // Normals
+        var normalMatrix = new three__WEBPACK_IMPORTED_MODULE_1__.Matrix4().makeRotationFromEuler(new three__WEBPACK_IMPORTED_MODULE_1__.Euler((((_g = element.rotation) === null || _g === void 0 ? void 0 : _g.axis) === 'x' ? element.rotation.angle : 0) + (((_h = blockModel.rotation) === null || _h === void 0 ? void 0 : _h.axis) === 'x' ? blockModel.rotation.angle : 0), (((_j = element.rotation) === null || _j === void 0 ? void 0 : _j.axis) === 'y' ? element.rotation.angle : 0) + (((_k = blockModel.rotation) === null || _k === void 0 ? void 0 : _k.axis) === 'y' ? blockModel.rotation.angle : 0), (((_l = element.rotation) === null || _l === void 0 ? void 0 : _l.axis) === 'z' ? element.rotation.angle : 0) + (((_m = blockModel.rotation) === null || _m === void 0 ? void 0 : _m.axis) === 'z' ? blockModel.rotation.angle : 0)));
+        var normal = new three__WEBPACK_IMPORTED_MODULE_1__.Vector3().fromArray(FaceNormals[blockFace]).applyMatrix4(normalMatrix);
         for (var i = 0; i < 4; i++) {
-            (_b = mesh.normals).push.apply(_b, FaceNormals[blockFace]);
+            (_b = mesh.normals).push.apply(_b, normal.normalize().toArray());
         }
         // UVs
         var texture = modelFace.texture;
-        var _l = [sizeX / 16, sizeY / 16, sizeZ / 16], uvScaleX = _l[0], uvScaleY = _l[1], uvScaleZ = _l[2];
+        var _s = [(sizeX + 1) / 16, (sizeY + 1) / 16, (sizeZ + 1) / 16], uvScaleX = _s[0], uvScaleY = _s[1], uvScaleZ = _s[2];
         var uvs = this.blockUvs[texture];
         switch (blockFace) {
             case _block_face__WEBPACK_IMPORTED_MODULE_0__.BlockFace.FRONT:
@@ -409,6 +531,48 @@ function getBlockModelTextures(blockModel) {
 
 /***/ }),
 
+/***/ "./src/block/block-pos.ts":
+/*!********************************!*\
+  !*** ./src/block/block-pos.ts ***!
+  \********************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "sumBlockPos": () => (/* binding */ sumBlockPos),
+/* harmony export */   "roundBlockPos": () => (/* binding */ roundBlockPos),
+/* harmony export */   "floorBlockPos": () => (/* binding */ floorBlockPos),
+/* harmony export */   "modifyBlockPosValues": () => (/* binding */ modifyBlockPosValues),
+/* harmony export */   "isBlockPosIn": () => (/* binding */ isBlockPosIn)
+/* harmony export */ });
+function sumBlockPos() {
+    var positions = [];
+    for (var _i = 0; _i < arguments.length; _i++) {
+        positions[_i] = arguments[_i];
+    }
+    return positions.reduce(function (result, pos) { return ({
+        x: result.x + pos.x,
+        y: result.y + pos.y,
+        z: result.z + pos.z,
+    }); });
+}
+function roundBlockPos(pos) {
+    return modifyBlockPosValues(pos, Math.round);
+}
+function floorBlockPos(pos) {
+    return modifyBlockPosValues(pos, Math.floor);
+}
+function modifyBlockPosValues(pos, modify) {
+    return { x: modify(pos.x), y: modify(pos.y), z: modify(pos.z) };
+}
+function isBlockPosIn(pos, from, to) {
+    return pos.x >= from.x && pos.x <= to.x && pos.y >= from.y && pos.y <= to.y && pos.z >= from.z && pos.z <= to.z;
+}
+
+
+/***/ }),
+
 /***/ "./src/block/block-state/block-state.ts":
 /*!**********************************************!*\
   !*** ./src/block/block-state/block-state.ts ***!
@@ -458,9 +622,13 @@ var Block = /** @class */ (function () {
     function Block(name, blockModels) {
         this.name = name;
         this.blockModels = blockModels;
+        this.isFoliage = false;
+        this.blocksLight = true;
+        this.occludesNeighborBlocks = true;
     }
     Block.prototype.onRandomTick = function (level, pos) { };
     Block.prototype.getBlockModel = function (blockState) { return 0; };
+    Block.prototype.getLightLevel = function () { return 0; };
     Block.prototype.onSetBlock = function (world, pos) { };
     Block.prototype.onPlace = function (player, world, pos) { return true; };
     Block.prototype.onBreak = function (world, pos) { };
@@ -484,19 +652,23 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */ __webpack_require__.d(__webpack_exports__, {
 /* harmony export */   "Blocks": () => (/* binding */ Blocks)
 /* harmony export */ });
-/* harmony import */ var three__WEBPACK_IMPORTED_MODULE_12__ = __webpack_require__(/*! three */ "./node_modules/three/build/three.module.js");
-/* harmony import */ var _util_remove_duplicates__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../util/remove-duplicates */ "./src/util/remove-duplicates.ts");
-/* harmony import */ var _air_block__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./air-block */ "./src/block/air-block.ts");
-/* harmony import */ var _block_model_block_model__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./block-model/block-model */ "./src/block/block-model/block-model.ts");
-/* harmony import */ var _cauldron_block__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./cauldron-block */ "./src/block/cauldron-block.ts");
-/* harmony import */ var _dirt_block__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./dirt-block */ "./src/block/dirt-block.ts");
-/* harmony import */ var _door_block__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ./door-block */ "./src/block/door-block.ts");
-/* harmony import */ var _grass_block__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ./grass-block */ "./src/block/grass-block.ts");
-/* harmony import */ var _sand_block__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ./sand-block */ "./src/block/sand-block.ts");
-/* harmony import */ var _stone_block__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ./stone-block */ "./src/block/stone-block.ts");
-/* harmony import */ var _sugar_cane_block__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! ./sugar-cane-block */ "./src/block/sugar-cane-block.ts");
-/* harmony import */ var _texture_atlas__WEBPACK_IMPORTED_MODULE_10__ = __webpack_require__(/*! ./texture-atlas */ "./src/block/texture-atlas.ts");
-/* harmony import */ var _water_block__WEBPACK_IMPORTED_MODULE_11__ = __webpack_require__(/*! ./water-block */ "./src/block/water-block.ts");
+/* harmony import */ var three__WEBPACK_IMPORTED_MODULE_16__ = __webpack_require__(/*! three */ "./node_modules/three/build/three.module.js");
+/* harmony import */ var _shader_opaque_block_shader__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../shader/opaque-block-shader */ "./src/shader/opaque-block-shader.ts");
+/* harmony import */ var _util_remove_duplicates__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../util/remove-duplicates */ "./src/util/remove-duplicates.ts");
+/* harmony import */ var _air_block__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./air-block */ "./src/block/air-block.ts");
+/* harmony import */ var _block_model_block_model__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./block-model/block-model */ "./src/block/block-model/block-model.ts");
+/* harmony import */ var _cauldron_block__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./cauldron-block */ "./src/block/cauldron-block.ts");
+/* harmony import */ var _dirt_block__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ./dirt-block */ "./src/block/dirt-block.ts");
+/* harmony import */ var _door_block__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ./door-block */ "./src/block/door-block.ts");
+/* harmony import */ var _grass_block__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ./grass-block */ "./src/block/grass-block.ts");
+/* harmony import */ var _leaves_block__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ./leaves-block */ "./src/block/leaves-block.ts");
+/* harmony import */ var _log_block__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! ./log-block */ "./src/block/log-block.ts");
+/* harmony import */ var _sand_block__WEBPACK_IMPORTED_MODULE_10__ = __webpack_require__(/*! ./sand-block */ "./src/block/sand-block.ts");
+/* harmony import */ var _stone_block__WEBPACK_IMPORTED_MODULE_11__ = __webpack_require__(/*! ./stone-block */ "./src/block/stone-block.ts");
+/* harmony import */ var _sugar_cane_block__WEBPACK_IMPORTED_MODULE_12__ = __webpack_require__(/*! ./sugar-cane-block */ "./src/block/sugar-cane-block.ts");
+/* harmony import */ var _texture_atlas__WEBPACK_IMPORTED_MODULE_13__ = __webpack_require__(/*! ./texture-atlas */ "./src/block/texture-atlas.ts");
+/* harmony import */ var _torch_block__WEBPACK_IMPORTED_MODULE_14__ = __webpack_require__(/*! ./torch-block */ "./src/block/torch-block.ts");
+/* harmony import */ var _water_block__WEBPACK_IMPORTED_MODULE_15__ = __webpack_require__(/*! ./water-block */ "./src/block/water-block.ts");
 var __assign = (undefined && undefined.__assign) || function () {
     __assign = Object.assign || function(t) {
         for (var s, i = 1, n = arguments.length; i < n; i++) {
@@ -557,14 +729,16 @@ var __generator = (undefined && undefined.__generator) || function (thisArg, bod
 
 
 
+
+
+
+
 var Blocks = /** @class */ (function () {
     function Blocks() {
-        this.solidMaterial = new three__WEBPACK_IMPORTED_MODULE_12__.MeshStandardMaterial({ opacity: 1, transparent: false });
-        this.waterMaterial = new three__WEBPACK_IMPORTED_MODULE_12__.MeshStandardMaterial({ opacity: 0.8, transparent: true });
-        this.transparentMaterial = new three__WEBPACK_IMPORTED_MODULE_12__.MeshStandardMaterial({ alphaTest: 0.5 });
-        var blockTextures = Blocks.blocks.flatMap(function (block) { return block.blockModels.flatMap(function (blockModel) { return (0,_block_model_block_model__WEBPACK_IMPORTED_MODULE_2__.getBlockModelTextures)(blockModel); }); });
-        this.blockTextureSources = (0,_util_remove_duplicates__WEBPACK_IMPORTED_MODULE_0__.removeDuplicates)(blockTextures);
-        this.textureAtlas = new _texture_atlas__WEBPACK_IMPORTED_MODULE_10__.TextureAtlas(this.blockTextureSources);
+        this.waterMaterial = new three__WEBPACK_IMPORTED_MODULE_16__.MeshStandardMaterial({ opacity: 0.8, transparent: true });
+        var blockTextures = Blocks.blocks.flatMap(function (block) { return block.blockModels.flatMap(function (blockModel) { return (0,_block_model_block_model__WEBPACK_IMPORTED_MODULE_3__.getBlockModelTextures)(blockModel); }); });
+        this.blockTextureSources = (0,_util_remove_duplicates__WEBPACK_IMPORTED_MODULE_1__.removeDuplicates)(blockTextures);
+        this.textureAtlas = new _texture_atlas__WEBPACK_IMPORTED_MODULE_13__.TextureAtlas(this.blockTextureSources);
     }
     Blocks.prototype.init = function () {
         return __awaiter(this, void 0, void 0, function () {
@@ -574,13 +748,15 @@ var Blocks = /** @class */ (function () {
                     case 0: return [4 /*yield*/, this.textureAtlas.buildAtlas()];
                     case 1:
                         atlas = _a.sent();
-                        this.solidMaterial.map = atlas;
-                        this.transparentMaterial.map = atlas;
+                        this.solidMaterial = (0,_shader_opaque_block_shader__WEBPACK_IMPORTED_MODULE_0__.makeOpaqueBlockMaterial)(atlas);
+                        this.transparentMaterial = (0,_shader_opaque_block_shader__WEBPACK_IMPORTED_MODULE_0__.makeOpaqueBlockMaterial)(atlas);
                         this.waterMaterial.map = atlas;
                         return [2 /*return*/];
                 }
             });
         });
+    };
+    Blocks.prototype.update = function (deltaTime) {
     };
     Blocks.getBlockId = function (block) {
         return Blocks.blocks.indexOf(block);
@@ -611,15 +787,18 @@ var Blocks = /** @class */ (function () {
     Blocks.prototype.getNumberOfBlocks = function () {
         return Blocks.blocks.length;
     };
-    Blocks.AIR = new _air_block__WEBPACK_IMPORTED_MODULE_1__.AirBlock();
-    Blocks.STONE = new _stone_block__WEBPACK_IMPORTED_MODULE_8__.StoneBlock();
-    Blocks.GRASS = new _grass_block__WEBPACK_IMPORTED_MODULE_6__.GrassBlock();
-    Blocks.DIRT = new _dirt_block__WEBPACK_IMPORTED_MODULE_4__.DirtBlock();
-    Blocks.SAND = new _sand_block__WEBPACK_IMPORTED_MODULE_7__.SandBlock();
-    Blocks.CAULDRON = new _cauldron_block__WEBPACK_IMPORTED_MODULE_3__.CauldronBlock();
-    Blocks.DOOR = new _door_block__WEBPACK_IMPORTED_MODULE_5__.DoorBlock();
-    Blocks.WATER = new _water_block__WEBPACK_IMPORTED_MODULE_11__.WaterBlock();
-    Blocks.SUGAR_CANE = new _sugar_cane_block__WEBPACK_IMPORTED_MODULE_9__.SugarCaneBlock();
+    Blocks.AIR = new _air_block__WEBPACK_IMPORTED_MODULE_2__.AirBlock();
+    Blocks.STONE = new _stone_block__WEBPACK_IMPORTED_MODULE_11__.StoneBlock();
+    Blocks.GRASS = new _grass_block__WEBPACK_IMPORTED_MODULE_7__.GrassBlock();
+    Blocks.DIRT = new _dirt_block__WEBPACK_IMPORTED_MODULE_5__.DirtBlock();
+    Blocks.SAND = new _sand_block__WEBPACK_IMPORTED_MODULE_10__.SandBlock();
+    Blocks.CAULDRON = new _cauldron_block__WEBPACK_IMPORTED_MODULE_4__.CauldronBlock();
+    Blocks.DOOR = new _door_block__WEBPACK_IMPORTED_MODULE_6__.DoorBlock();
+    Blocks.WATER = new _water_block__WEBPACK_IMPORTED_MODULE_15__.WaterBlock();
+    Blocks.SUGAR_CANE = new _sugar_cane_block__WEBPACK_IMPORTED_MODULE_12__.SugarCaneBlock();
+    Blocks.LEAVES = new _leaves_block__WEBPACK_IMPORTED_MODULE_8__.LeavesBlock();
+    Blocks.OAK_LOG = new _log_block__WEBPACK_IMPORTED_MODULE_9__.OakLogBlock();
+    Blocks.TORCH = new _torch_block__WEBPACK_IMPORTED_MODULE_14__.TorchBlock();
     Blocks.blocks = [
         Blocks.AIR,
         Blocks.STONE,
@@ -630,6 +809,9 @@ var Blocks = /** @class */ (function () {
         Blocks.DOOR,
         Blocks.WATER,
         Blocks.SUGAR_CANE,
+        Blocks.LEAVES,
+        Blocks.OAK_LOG,
+        Blocks.TORCH,
     ];
     return Blocks;
 }());
@@ -787,12 +969,14 @@ var DefaultCauldronBlockStateValues = {
 var CauldronBlock = /** @class */ (function (_super) {
     __extends(CauldronBlock, _super);
     function CauldronBlock() {
-        return _super.call(this, 'cauldron', [
+        var _this = _super.call(this, 'cauldron', [
             makeCauldronBlockModel(0),
             makeCauldronBlockModel(1),
             makeCauldronBlockModel(2),
             makeCauldronBlockModel(3),
         ]) || this;
+        _this.occludesNeighborBlocks = false;
+        return _this;
     }
     CauldronBlock.prototype.getBlockModel = function (blockState) {
         return blockState.get('level');
@@ -975,7 +1159,7 @@ function makeDoorBlockModel(open, rotation, texture) {
         elements: [
             {
                 from: [0, 0, 0],
-                to: open ? [15, 15, 2] : [2, 15, 15],
+                to: open ? [15, 15, 1] : [1, 15, 15],
                 faces: _block_face__WEBPACK_IMPORTED_MODULE_1__.BlockFaces.reduce(function (faces, face) {
                     var _a;
                     return (__assign(__assign({}, faces), (_a = {}, _a[face] = { texture: texture }, _a)));
@@ -988,7 +1172,7 @@ var DefaultDoorBlockStateValues = { open: false, isTop: false, facing: 0 };
 var DoorBlock = /** @class */ (function (_super) {
     __extends(DoorBlock, _super);
     function DoorBlock() {
-        return _super.call(this, 'door', [
+        var _this = _super.call(this, 'door', [
             makeDoorBlockModel(false, 90, 'textures/blocks/oak_door_bottom.png'),
             makeDoorBlockModel(true, 90, 'textures/blocks/oak_door_bottom.png'),
             makeDoorBlockModel(false, 90, 'textures/blocks/oak_door_top.png'),
@@ -1006,6 +1190,8 @@ var DoorBlock = /** @class */ (function (_super) {
             makeDoorBlockModel(false, 0, 'textures/blocks/oak_door_top.png'),
             makeDoorBlockModel(true, 0, 'textures/blocks/oak_door_top.png'),
         ]) || this;
+        _this.blocksLight = false;
+        return _this;
     }
     DoorBlock.prototype.getBlockModel = function (blockState) {
         var open = blockState.get('open');
@@ -1160,12 +1346,161 @@ var GrassBlock = /** @class */ (function (_super) {
     }
     GrassBlock.prototype.onRandomTick = function (level, pos) {
         var blockAbove = level.getBlockAt(new three__WEBPACK_IMPORTED_MODULE_3__.Vector3(pos.x, pos.y + 1, pos.z));
-        if (blockAbove === _blocks__WEBPACK_IMPORTED_MODULE_2__.Blocks.AIR) {
+        if (!blockAbove || !blockAbove.blocksLight) {
             return;
         }
         level.setBlockAt(new three__WEBPACK_IMPORTED_MODULE_3__.Vector3(pos.x, pos.y, pos.z), _blocks__WEBPACK_IMPORTED_MODULE_2__.Blocks.DIRT);
     };
     return GrassBlock;
+}(_block__WEBPACK_IMPORTED_MODULE_0__.Block));
+
+
+
+/***/ }),
+
+/***/ "./src/block/leaves-block.ts":
+/*!***********************************!*\
+  !*** ./src/block/leaves-block.ts ***!
+  \***********************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "LeavesBlockModel": () => (/* binding */ LeavesBlockModel),
+/* harmony export */   "LeavesBlock": () => (/* binding */ LeavesBlock)
+/* harmony export */ });
+/* harmony import */ var _block__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./block */ "./src/block/block.ts");
+/* harmony import */ var _block_face__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./block-face */ "./src/block/block-face.ts");
+var __extends = (undefined && undefined.__extends) || (function () {
+    var extendStatics = function (d, b) {
+        extendStatics = Object.setPrototypeOf ||
+            ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
+            function (d, b) { for (var p in b) if (Object.prototype.hasOwnProperty.call(b, p)) d[p] = b[p]; };
+        return extendStatics(d, b);
+    };
+    return function (d, b) {
+        if (typeof b !== "function" && b !== null)
+            throw new TypeError("Class extends value " + String(b) + " is not a constructor or null");
+        extendStatics(d, b);
+        function __() { this.constructor = d; }
+        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
+    };
+})();
+var __assign = (undefined && undefined.__assign) || function () {
+    __assign = Object.assign || function(t) {
+        for (var s, i = 1, n = arguments.length; i < n; i++) {
+            s = arguments[i];
+            for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p))
+                t[p] = s[p];
+        }
+        return t;
+    };
+    return __assign.apply(this, arguments);
+};
+
+
+var LeavesBlockModel = {
+    elements: [
+        {
+            from: [0, 0, 0],
+            to: [15, 15, 15],
+            faces: _block_face__WEBPACK_IMPORTED_MODULE_1__.BlockFaces.reduce(function (faces, face) {
+                var _a;
+                return (__assign(__assign({}, faces), (_a = {}, _a[face] = {
+                    texture: 'textures/blocks/oak_leaves.png',
+                }, _a)));
+            }, {}),
+        },
+    ],
+};
+var LeavesBlock = /** @class */ (function (_super) {
+    __extends(LeavesBlock, _super);
+    function LeavesBlock() {
+        var _this = _super.call(this, 'leaves', [LeavesBlockModel]) || this;
+        _this.isFoliage = true;
+        _this.blocksLight = false;
+        return _this;
+    }
+    return LeavesBlock;
+}(_block__WEBPACK_IMPORTED_MODULE_0__.Block));
+
+
+
+/***/ }),
+
+/***/ "./src/block/log-block.ts":
+/*!********************************!*\
+  !*** ./src/block/log-block.ts ***!
+  \********************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "OakLogBlockModel": () => (/* binding */ OakLogBlockModel),
+/* harmony export */   "OakLogBlock": () => (/* binding */ OakLogBlock)
+/* harmony export */ });
+/* harmony import */ var _block__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./block */ "./src/block/block.ts");
+/* harmony import */ var _block_face__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./block-face */ "./src/block/block-face.ts");
+var __extends = (undefined && undefined.__extends) || (function () {
+    var extendStatics = function (d, b) {
+        extendStatics = Object.setPrototypeOf ||
+            ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
+            function (d, b) { for (var p in b) if (Object.prototype.hasOwnProperty.call(b, p)) d[p] = b[p]; };
+        return extendStatics(d, b);
+    };
+    return function (d, b) {
+        if (typeof b !== "function" && b !== null)
+            throw new TypeError("Class extends value " + String(b) + " is not a constructor or null");
+        extendStatics(d, b);
+        function __() { this.constructor = d; }
+        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
+    };
+})();
+var _a;
+
+
+var OakLogBlockModel = {
+    elements: [
+        {
+            from: [0, 0, 0],
+            to: [15, 15, 15],
+            faces: (_a = {},
+                _a[_block_face__WEBPACK_IMPORTED_MODULE_1__.BlockFace.TOP] = {
+                    cull: true,
+                    texture: 'textures/blocks/oak_log_top.png',
+                },
+                _a[_block_face__WEBPACK_IMPORTED_MODULE_1__.BlockFace.BOTTOM] = {
+                    cull: true,
+                    texture: 'textures/blocks/oak_log_top.png',
+                },
+                _a[_block_face__WEBPACK_IMPORTED_MODULE_1__.BlockFace.FRONT] = {
+                    cull: true,
+                    texture: 'textures/blocks/oak_log.png',
+                },
+                _a[_block_face__WEBPACK_IMPORTED_MODULE_1__.BlockFace.BACK] = {
+                    cull: true,
+                    texture: 'textures/blocks/oak_log.png',
+                },
+                _a[_block_face__WEBPACK_IMPORTED_MODULE_1__.BlockFace.LEFT] = {
+                    cull: true,
+                    texture: 'textures/blocks/oak_log.png',
+                },
+                _a[_block_face__WEBPACK_IMPORTED_MODULE_1__.BlockFace.RIGHT] = {
+                    cull: true,
+                    texture: 'textures/blocks/oak_log.png',
+                },
+                _a),
+        },
+    ],
+};
+var OakLogBlock = /** @class */ (function (_super) {
+    __extends(OakLogBlock, _super);
+    function OakLogBlock() {
+        return _super.call(this, 'oak_log', [OakLogBlockModel]) || this;
+    }
+    return OakLogBlock;
 }(_block__WEBPACK_IMPORTED_MODULE_0__.Block));
 
 
@@ -1385,7 +1720,9 @@ var SugarCaneBlockModel = {
 var SugarCaneBlock = /** @class */ (function (_super) {
     __extends(SugarCaneBlock, _super);
     function SugarCaneBlock() {
-        return _super.call(this, 'sugar_cane', [SugarCaneBlockModel]) || this;
+        var _this = _super.call(this, 'sugar_cane', [SugarCaneBlockModel]) || this;
+        _this.blocksLight = false;
+        return _this;
     }
     SugarCaneBlock.prototype.isCollidable = function () {
         return false;
@@ -1505,6 +1842,171 @@ var TextureAtlas = /** @class */ (function () {
 
 /***/ }),
 
+/***/ "./src/block/torch-block.ts":
+/*!**********************************!*\
+  !*** ./src/block/torch-block.ts ***!
+  \**********************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "TorchBlock": () => (/* binding */ TorchBlock)
+/* harmony export */ });
+/* harmony import */ var _block__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./block */ "./src/block/block.ts");
+/* harmony import */ var _block_face__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./block-face */ "./src/block/block-face.ts");
+/* harmony import */ var _block_state_block_state__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./block-state/block-state */ "./src/block/block-state/block-state.ts");
+/* harmony import */ var _blocks__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./blocks */ "./src/block/blocks.ts");
+var __extends = (undefined && undefined.__extends) || (function () {
+    var extendStatics = function (d, b) {
+        extendStatics = Object.setPrototypeOf ||
+            ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
+            function (d, b) { for (var p in b) if (Object.prototype.hasOwnProperty.call(b, p)) d[p] = b[p]; };
+        return extendStatics(d, b);
+    };
+    return function (d, b) {
+        if (typeof b !== "function" && b !== null)
+            throw new TypeError("Class extends value " + String(b) + " is not a constructor or null");
+        extendStatics(d, b);
+        function __() { this.constructor = d; }
+        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
+    };
+})();
+var __assign = (undefined && undefined.__assign) || function () {
+    __assign = Object.assign || function(t) {
+        for (var s, i = 1, n = arguments.length; i < n; i++) {
+            s = arguments[i];
+            for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p))
+                t[p] = s[p];
+        }
+        return t;
+    };
+    return __assign.apply(this, arguments);
+};
+var _a;
+
+
+
+
+var StandingTorchBlockModel = {
+    elements: [
+        {
+            from: [7, 0, 7],
+            to: [8, 9, 8],
+            faces: (_a = {},
+                _a[_block_face__WEBPACK_IMPORTED_MODULE_1__.BlockFace.TOP] = {
+                    texture: 'textures/blocks/tnt_top.png',
+                },
+                _a[_block_face__WEBPACK_IMPORTED_MODULE_1__.BlockFace.BOTTOM] = {
+                    texture: 'textures/blocks/oak_log_top.png',
+                },
+                _a[_block_face__WEBPACK_IMPORTED_MODULE_1__.BlockFace.FRONT] = {
+                    texture: 'textures/blocks/oak_log.png',
+                },
+                _a[_block_face__WEBPACK_IMPORTED_MODULE_1__.BlockFace.BACK] = {
+                    texture: 'textures/blocks/oak_log.png',
+                },
+                _a[_block_face__WEBPACK_IMPORTED_MODULE_1__.BlockFace.LEFT] = {
+                    texture: 'textures/blocks/oak_log.png',
+                },
+                _a[_block_face__WEBPACK_IMPORTED_MODULE_1__.BlockFace.RIGHT] = {
+                    texture: 'textures/blocks/oak_log.png',
+                },
+                _a),
+        },
+    ],
+};
+function makeHangingTorchBlockModel(angle) {
+    var _a;
+    return {
+        rotation: {
+            axis: 'y',
+            angle: angle,
+            origin: [0.5, 0, 0.5],
+        },
+        elements: [
+            {
+                from: [7, 4, 0],
+                to: [8, 13, 1],
+                rotation: {
+                    axis: 'x',
+                    angle: 20,
+                    origin: [0, 0.5, 0],
+                },
+                faces: (_a = {},
+                    _a[_block_face__WEBPACK_IMPORTED_MODULE_1__.BlockFace.TOP] = {
+                        texture: 'textures/blocks/tnt_top.png',
+                    },
+                    _a[_block_face__WEBPACK_IMPORTED_MODULE_1__.BlockFace.BOTTOM] = {
+                        texture: 'textures/blocks/oak_log_top.png',
+                    },
+                    _a[_block_face__WEBPACK_IMPORTED_MODULE_1__.BlockFace.FRONT] = {
+                        texture: 'textures/blocks/oak_log.png',
+                    },
+                    _a[_block_face__WEBPACK_IMPORTED_MODULE_1__.BlockFace.BACK] = {
+                        texture: 'textures/blocks/oak_log.png',
+                    },
+                    _a[_block_face__WEBPACK_IMPORTED_MODULE_1__.BlockFace.LEFT] = {
+                        texture: 'textures/blocks/oak_log.png',
+                    },
+                    _a[_block_face__WEBPACK_IMPORTED_MODULE_1__.BlockFace.RIGHT] = {
+                        texture: 'textures/blocks/oak_log.png',
+                    },
+                    _a),
+            },
+        ],
+    };
+}
+var DefaultTorchBlockStateValues = {
+    standing: true,
+    facing: 0,
+};
+var TorchBlock = /** @class */ (function (_super) {
+    __extends(TorchBlock, _super);
+    function TorchBlock() {
+        var _this = _super.call(this, 'torch', [
+            StandingTorchBlockModel,
+            makeHangingTorchBlockModel(0),
+            makeHangingTorchBlockModel(90),
+            makeHangingTorchBlockModel(180),
+            makeHangingTorchBlockModel(270),
+        ]) || this;
+        _this.blocksLight = false;
+        _this.occludesNeighborBlocks = false;
+        return _this;
+    }
+    TorchBlock.prototype.onSetBlock = function (world, pos) {
+        var existingState = world.getBlockState(pos);
+        if (existingState !== undefined) {
+            return;
+        }
+        world.setBlockState(pos, new _block_state_block_state__WEBPACK_IMPORTED_MODULE_2__.BlockState(__assign({}, DefaultTorchBlockStateValues)));
+    };
+    TorchBlock.prototype.onPlace = function (player, world, pos) {
+        var facing = player.getFacingDirection();
+        var standing = world.getBlock({ x: pos.x, y: pos.y - 1, z: pos.z }) !== _blocks__WEBPACK_IMPORTED_MODULE_3__.Blocks.AIR;
+        world.setBlockState(pos, new _block_state_block_state__WEBPACK_IMPORTED_MODULE_2__.BlockState({ standing: standing, facing: facing }));
+        return true;
+    };
+    TorchBlock.prototype.getBlockModel = function (state) {
+        if (state.get('standing')) {
+            return 0;
+        }
+        return 1 + state.get('facing');
+    };
+    TorchBlock.prototype.getLightLevel = function () {
+        return 15;
+    };
+    TorchBlock.prototype.isCollidable = function () {
+        return false;
+    };
+    return TorchBlock;
+}(_block__WEBPACK_IMPORTED_MODULE_0__.Block));
+
+
+
+/***/ }),
+
 /***/ "./src/block/water-block.ts":
 /*!**********************************!*\
   !*** ./src/block/water-block.ts ***!
@@ -1565,7 +2067,9 @@ var WaterBlockModel = {
 var WaterBlock = /** @class */ (function (_super) {
     __extends(WaterBlock, _super);
     function WaterBlock() {
-        return _super.call(this, 'water', [WaterBlockModel]) || this;
+        var _this = _super.call(this, 'water', [WaterBlockModel]) || this;
+        _this.blocksLight = false;
+        return _this;
     }
     WaterBlock.prototype.isCollidable = function () {
         return false;
@@ -1588,18 +2092,17 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */ __webpack_require__.d(__webpack_exports__, {
 /* harmony export */   "Game": () => (/* binding */ Game)
 /* harmony export */ });
-/* harmony import */ var three__WEBPACK_IMPORTED_MODULE_10__ = __webpack_require__(/*! three */ "./node_modules/three/build/three.module.js");
+/* harmony import */ var three__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! three */ "./node_modules/three/build/three.module.js");
 /* harmony import */ var _block_blocks__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./block/blocks */ "./src/block/blocks.ts");
 /* harmony import */ var _input_input__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./input/input */ "./src/input/input.ts");
 /* harmony import */ var _level__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./level */ "./src/level.ts");
 /* harmony import */ var _origin_cross__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./origin-cross */ "./src/origin-cross.ts");
-/* harmony import */ var _world_chunk_data_generator_worker_ts__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./world/chunk-data-generator.worker.ts */ "./src/world/chunk-data-generator.worker.ts");
-/* harmony import */ var _world_chunk_chunk_generator_pool__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ./world/chunk/chunk-generator-pool */ "./src/world/chunk/chunk-generator-pool.ts");
-/* harmony import */ var _world_chunk_chunk_geometry_builder_pool__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ./world/chunk/chunk-geometry-builder-pool */ "./src/world/chunk/chunk-geometry-builder-pool.ts");
-/* harmony import */ var stats_js__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! stats.js */ "./node_modules/stats.js/build/stats.min.js");
-/* harmony import */ var stats_js__WEBPACK_IMPORTED_MODULE_7___default = /*#__PURE__*/__webpack_require__.n(stats_js__WEBPACK_IMPORTED_MODULE_7__);
-/* harmony import */ var _audio_audio_manager__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ./audio/audio-manager */ "./src/audio/audio-manager.ts");
-/* harmony import */ var _audio_sounds__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! ./audio/sounds */ "./src/audio/sounds.ts");
+/* harmony import */ var _world_chunk_chunk_generator_pool__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./world/chunk/chunk-generator-pool */ "./src/world/chunk/chunk-generator-pool.ts");
+/* harmony import */ var _world_chunk_chunk_geometry_builder_pool__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ./world/chunk/chunk-geometry-builder-pool */ "./src/world/chunk/chunk-geometry-builder-pool.ts");
+/* harmony import */ var stats_js__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! stats.js */ "./node_modules/stats.js/build/stats.min.js");
+/* harmony import */ var stats_js__WEBPACK_IMPORTED_MODULE_6___default = /*#__PURE__*/__webpack_require__.n(stats_js__WEBPACK_IMPORTED_MODULE_6__);
+/* harmony import */ var _audio_audio_manager__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ./audio/audio-manager */ "./src/audio/audio-manager.ts");
+/* harmony import */ var _audio_sounds__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ./audio/sounds */ "./src/audio/sounds.ts");
 var __awaiter = (undefined && undefined.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
     return new (P || (P = Promise))(function (resolve, reject) {
@@ -1646,7 +2149,6 @@ var __generator = (undefined && undefined.__generator) || function (thisArg, bod
 
 
 
-
 // TODO: This class has too many responsibilities. Factor it out.
 var Game = /** @class */ (function () {
     function Game(root) {
@@ -1656,29 +2158,26 @@ var Game = /** @class */ (function () {
         this.timeSinceLastTick = 0;
         this.ticksPerSecond = 20;
         this.blocks = new _block_blocks__WEBPACK_IMPORTED_MODULE_0__.Blocks();
-        this.chunkDataGeneratorWorkerPool = [];
-        this.chunkDataGenerationResults = {};
-        this.chunkGeometryResults = {};
         // TODO: Make this configurable or at least random.
         this.seed = 'ijn3fi3fin3fim';
-        this.audioListener = new three__WEBPACK_IMPORTED_MODULE_10__.AudioListener();
-        this.audioManager = new _audio_audio_manager__WEBPACK_IMPORTED_MODULE_8__.AudioManager(this.audioListener, new three__WEBPACK_IMPORTED_MODULE_10__.AudioLoader(), _audio_sounds__WEBPACK_IMPORTED_MODULE_9__.ListOfSounds);
-        this.musicAudio = new three__WEBPACK_IMPORTED_MODULE_10__.Audio(this.audioListener);
-        this.chunkGeneratorPool = new _world_chunk_chunk_generator_pool__WEBPACK_IMPORTED_MODULE_5__.ChunkGeneratorPool();
-        this.chunkGeometryBuilderPool = new _world_chunk_chunk_geometry_builder_pool__WEBPACK_IMPORTED_MODULE_6__.ChunkGeometryBuilderPool(this.blocks.serializeBlockModels());
-        this.stats = new (stats_js__WEBPACK_IMPORTED_MODULE_7___default())();
+        this.audioListener = new three__WEBPACK_IMPORTED_MODULE_9__.AudioListener();
+        this.audioManager = new _audio_audio_manager__WEBPACK_IMPORTED_MODULE_7__.AudioManager(this.audioListener, new three__WEBPACK_IMPORTED_MODULE_9__.AudioLoader(), _audio_sounds__WEBPACK_IMPORTED_MODULE_8__.ListOfSounds);
+        this.musicAudio = new three__WEBPACK_IMPORTED_MODULE_9__.Audio(this.audioListener);
+        this.chunkGeneratorPool = new _world_chunk_chunk_generator_pool__WEBPACK_IMPORTED_MODULE_4__.ChunkGeneratorPool();
+        this.chunkGeometryBuilderPool = new _world_chunk_chunk_geometry_builder_pool__WEBPACK_IMPORTED_MODULE_5__.ChunkGeometryBuilderPool(this.blocks.serializeBlockModels());
+        this.stats = new (stats_js__WEBPACK_IMPORTED_MODULE_6___default())();
         Game.main = this;
-        this.scene = new three__WEBPACK_IMPORTED_MODULE_10__.Scene();
-        this.scene.fog = new three__WEBPACK_IMPORTED_MODULE_10__.Fog(0xe6fcff, 90, 110);
+        this.scene = new three__WEBPACK_IMPORTED_MODULE_9__.Scene();
+        // this.scene.fog = new Fog(0xe6fcff, 90, 110)
         var width = root.clientWidth, height = root.clientHeight;
-        var ambientLight = new three__WEBPACK_IMPORTED_MODULE_10__.AmbientLight(0x888888);
+        var ambientLight = new three__WEBPACK_IMPORTED_MODULE_9__.AmbientLight(0x888888);
         this.scene.add(ambientLight);
-        this.renderer = new three__WEBPACK_IMPORTED_MODULE_10__.WebGLRenderer();
+        this.renderer = new three__WEBPACK_IMPORTED_MODULE_9__.WebGLRenderer();
         this.renderer.setSize(width, height);
         this.renderer.setClearColor(0xe6fcff);
         var canvas = root.appendChild(this.renderer.domElement);
         canvas.addEventListener('click', function () { return canvas.requestPointerLock(); });
-        this.camera = new three__WEBPACK_IMPORTED_MODULE_10__.PerspectiveCamera(75, width / height, 0.1, 100000);
+        this.camera = new three__WEBPACK_IMPORTED_MODULE_9__.PerspectiveCamera(75, width / height, 0.1, 100000);
         this.camera.add(this.audioListener);
         this.input = new _input_input__WEBPACK_IMPORTED_MODULE_1__.Input(document.body);
         var originCross = new _origin_cross__WEBPACK_IMPORTED_MODULE_3__.OriginCross();
@@ -1694,8 +2193,7 @@ var Game = /** @class */ (function () {
     }
     Game.prototype.init = function () {
         return __awaiter(this, void 0, void 0, function () {
-            var i, worker, musicLoader, shimmer;
-            var _this = this;
+            var musicLoader, shimmer;
             return __generator(this, function (_a) {
                 switch (_a.label) {
                     case 0:
@@ -1713,23 +2211,22 @@ var Game = /** @class */ (function () {
                     case 3:
                         _a.sent();
                         // Legacy
-                        for (i = 0; i < 4; i++) {
-                            worker = new _world_chunk_data_generator_worker_ts__WEBPACK_IMPORTED_MODULE_4__["default"]();
-                            worker.postMessage({
-                                type: 'seed',
-                                seed: this.seed,
-                            });
-                            worker.addEventListener('message', function (_a) {
-                                var data = _a.data;
-                                if (data.type === 'generate--complete') {
-                                    _this.chunkDataGenerationResults[JSON.stringify(data.position)] = data.result;
-                                }
-                                if (data.type === 'build-mesh--complete') {
-                                    _this.chunkGeometryResults[JSON.stringify(data.position)] = data.result;
-                                }
-                            });
-                            this.chunkDataGeneratorWorkerPool.push(worker);
-                        }
+                        // for (let i = 0; i < 4; i++) {
+                        //     const worker = new ChunkDataGeneratorWorker();
+                        //     worker.postMessage({
+                        //         type: 'seed',
+                        //         seed: this.seed,
+                        //     });
+                        //     worker.addEventListener('message', ({ data }) => {
+                        //         if (data.type === 'generate--complete') {
+                        //             this.chunkDataGenerationResults[JSON.stringify(data.position)] = data.result;
+                        //         }
+                        //         if (data.type === 'build-mesh--complete') {
+                        //             this.chunkGeometryResults[JSON.stringify(data.position)] = data.result;
+                        //         }
+                        //     });
+                        //     this.chunkDataGeneratorWorkerPool.push(worker);
+                        // }
                         // Level
                         console.log("Leveling...");
                         this.level = new _level__WEBPACK_IMPORTED_MODULE_2__.Level(this, this.scene);
@@ -1741,7 +2238,7 @@ var Game = /** @class */ (function () {
                         return [4 /*yield*/, this.audioManager.load()];
                     case 5:
                         _a.sent();
-                        musicLoader = new three__WEBPACK_IMPORTED_MODULE_10__.AudioLoader();
+                        musicLoader = new three__WEBPACK_IMPORTED_MODULE_9__.AudioLoader();
                         return [4 /*yield*/, musicLoader.loadAsync('audio/music/shimmer.mp3')];
                     case 6:
                         shimmer = _a.sent();
@@ -1778,6 +2275,7 @@ var Game = /** @class */ (function () {
             this.tick(deltaTime);
             this.timeSinceLastTick -= 1000 / this.ticksPerSecond;
         }
+        this.blocks.update(deltaTime);
         this.level.update(deltaTime);
         this.renderer.render(this.scene, this.camera);
         this.level.lateUpdate(deltaTime);
@@ -1957,7 +2455,7 @@ var Level = /** @class */ (function () {
         this.sun.target = this.sunTarget;
         this.scene.add(this.sun, this.sunTarget);
         // Player
-        this.player = new _player_player__WEBPACK_IMPORTED_MODULE_0__.Player(_game__WEBPACK_IMPORTED_MODULE_1__.Game.main.camera, _game__WEBPACK_IMPORTED_MODULE_1__.Game.main.input, new three__WEBPACK_IMPORTED_MODULE_3__.Vector3(0, 40, 0), new three__WEBPACK_IMPORTED_MODULE_3__.Vector2((0,three_src_math_MathUtils__WEBPACK_IMPORTED_MODULE_4__.degToRad)(0), (0,three_src_math_MathUtils__WEBPACK_IMPORTED_MODULE_4__.degToRad)(0)));
+        this.player = new _player_player__WEBPACK_IMPORTED_MODULE_0__.Player(_game__WEBPACK_IMPORTED_MODULE_1__.Game.main.camera, _game__WEBPACK_IMPORTED_MODULE_1__.Game.main.input, new three__WEBPACK_IMPORTED_MODULE_3__.Vector3(22, 68, 70), new three__WEBPACK_IMPORTED_MODULE_3__.Vector2((0,three_src_math_MathUtils__WEBPACK_IMPORTED_MODULE_4__.degToRad)(0), (0,three_src_math_MathUtils__WEBPACK_IMPORTED_MODULE_4__.degToRad)(0)));
         this.world = new _world_world__WEBPACK_IMPORTED_MODULE_2__.World(this, this.scene);
     }
     Level.prototype.init = function () {
@@ -2012,6 +2510,88 @@ var Level = /** @class */ (function () {
     return Level;
 }());
 
+
+
+/***/ }),
+
+/***/ "./src/light/are-block-light-properties-equal.ts":
+/*!*******************************************************!*\
+  !*** ./src/light/are-block-light-properties-equal.ts ***!
+  \*******************************************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "areBlockLightPropertiesEqual": () => (/* binding */ areBlockLightPropertiesEqual)
+/* harmony export */ });
+function areBlockLightPropertiesEqual(a, b) {
+    return (a === b) || (a.blocksLight === b.blocksLight
+        && a.getLightLevel() === b.getLightLevel());
+}
+
+
+/***/ }),
+
+/***/ "./src/light/flood-fill.ts":
+/*!*********************************!*\
+  !*** ./src/light/flood-fill.ts ***!
+  \*********************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "manhattenDistance": () => (/* binding */ manhattenDistance),
+/* harmony export */   "floodFillBlockLightAdditive": () => (/* binding */ floodFillBlockLightAdditive)
+/* harmony export */ });
+/* harmony import */ var _block_block_pos__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../block/block-pos */ "./src/block/block-pos.ts");
+/* harmony import */ var _util_index_to_vector3__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../util/index-to-vector3 */ "./src/util/index-to-vector3.ts");
+/* harmony import */ var _world_chunk_chunk_constants__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../world/chunk/chunk-constants */ "./src/world/chunk/chunk-constants.ts");
+
+
+
+function manhattenDistance(a, b) {
+    return Math.abs(a.x - b.x) + Math.abs(a.y - b.y) + Math.abs(a.z - b.z);
+}
+function floodFillBlockLightAdditive(lightLevels, start, strength, isLightBlockerAt) {
+    flood(start, start, lightLevels, strength, isLightBlockerAt, new Map());
+}
+function flood(pos, start, lightLevels, strength, isLightBlockerAt, visited) {
+    var _a;
+    var lightLevel = strength - manhattenDistance(start, pos);
+    if (lightLevel <= 0) {
+        return;
+    }
+    if (isLightBlockerAt(pos)) {
+        return;
+    }
+    if ((0,_block_block_pos__WEBPACK_IMPORTED_MODULE_0__.isBlockPosIn)(pos, { x: 0, y: 0, z: 0 }, { x: _world_chunk_chunk_constants__WEBPACK_IMPORTED_MODULE_2__.CHUNK_WIDTH - 1, y: _world_chunk_chunk_constants__WEBPACK_IMPORTED_MODULE_2__.CHUNK_HEIGHT - 1, z: _world_chunk_chunk_constants__WEBPACK_IMPORTED_MODULE_2__.CHUNK_WIDTH - 1 })) {
+        if (lightLevels[(0,_util_index_to_vector3__WEBPACK_IMPORTED_MODULE_1__.posToIndex)(pos)] >= lightLevel) {
+            return;
+        }
+        lightLevels[(0,_util_index_to_vector3__WEBPACK_IMPORTED_MODULE_1__.posToIndex)(pos)] = lightLevel;
+    }
+    else if ((0,_block_block_pos__WEBPACK_IMPORTED_MODULE_0__.isBlockPosIn)(pos, { x: -16, y: -16, z: -16 }, { x: 31, y: 31, z: 31 })) {
+        var posKey = (0,_util_index_to_vector3__WEBPACK_IMPORTED_MODULE_1__.posToIndex)({ x: pos.x + 16, y: pos.y + 16, z: pos.z + 16 }, 48);
+        if ((_a = visited.get(posKey)) !== null && _a !== void 0 ? _a : 0 >= lightLevel) {
+            return;
+        }
+        visited.set(posKey, lightLevel);
+    }
+    else {
+        return;
+    }
+    if (lightLevel - 1 <= 0) {
+        return;
+    }
+    flood({ x: pos.x + 1, y: pos.y, z: pos.z }, start, lightLevels, strength, isLightBlockerAt, visited);
+    flood({ x: pos.x - 1, y: pos.y, z: pos.z }, start, lightLevels, strength, isLightBlockerAt, visited);
+    flood({ x: pos.x, y: pos.y + 1, z: pos.z }, start, lightLevels, strength, isLightBlockerAt, visited);
+    flood({ x: pos.x, y: pos.y - 1, z: pos.z }, start, lightLevels, strength, isLightBlockerAt, visited);
+    flood({ x: pos.x, y: pos.y, z: pos.z + 1 }, start, lightLevels, strength, isLightBlockerAt, visited);
+    flood({ x: pos.x, y: pos.y, z: pos.z - 1 }, start, lightLevels, strength, isLightBlockerAt, visited);
+}
 
 
 /***/ }),
@@ -2092,15 +2672,16 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */   "Player": () => (/* binding */ Player)
 /* harmony export */ });
 /* harmony import */ var p_map__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! p-map */ "./node_modules/p-map/index.js");
-/* harmony import */ var three__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! three */ "./node_modules/three/build/three.module.js");
-/* harmony import */ var three_src_math_MathUtils__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! three/src/math/MathUtils */ "./node_modules/three/src/math/MathUtils.js");
+/* harmony import */ var three__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! three */ "./node_modules/three/build/three.module.js");
+/* harmony import */ var three_src_math_MathUtils__WEBPACK_IMPORTED_MODULE_10__ = __webpack_require__(/*! three/src/math/MathUtils */ "./node_modules/three/src/math/MathUtils.js");
 /* harmony import */ var _game__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../game */ "./src/game.ts");
 /* harmony import */ var _input_input__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../input/input */ "./src/input/input.ts");
 /* harmony import */ var _util_index_to_vector3__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../util/index-to-vector3 */ "./src/util/index-to-vector3.ts");
 /* harmony import */ var _util_random_element__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../util/random-element */ "./src/util/random-element.ts");
 /* harmony import */ var _block_blocks__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ../block/blocks */ "./src/block/blocks.ts");
-/* harmony import */ var _world_cursor__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ./world-cursor */ "./src/player/world-cursor.ts");
-/* harmony import */ var _util_mod__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ../util/mod */ "./src/util/mod.ts");
+/* harmony import */ var _block_block_pos__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ../block/block-pos */ "./src/block/block-pos.ts");
+/* harmony import */ var _world_cursor__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ./world-cursor */ "./src/player/world-cursor.ts");
+/* harmony import */ var _util_mod__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ../util/mod */ "./src/util/mod.ts");
 var __awaiter = (undefined && undefined.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
     return new (P || (P = Promise))(function (resolve, reject) {
@@ -2147,6 +2728,7 @@ var __generator = (undefined && undefined.__generator) || function (thisArg, bod
 
 
 
+
 // TODO: Re-factor to:
 // - don't use createTerrainCollisionBoxes as it's stupid.
 // - use block-based ray-casting and not mesh-based ray-casting.
@@ -2162,18 +2744,18 @@ var Player = /** @class */ (function () {
         this.walkingSpeed = 0.025;
         this.flyingSpeed = 0.065;
         this.isOnGround = false;
-        this.velocity = new three__WEBPACK_IMPORTED_MODULE_8__.Vector3();
+        this.velocity = new three__WEBPACK_IMPORTED_MODULE_9__.Vector3();
         this.flying = false;
         this.noclip = false;
         this.start = false;
-        this.raycaster = new three__WEBPACK_IMPORTED_MODULE_8__.Raycaster();
-        this.collisionBox = new three__WEBPACK_IMPORTED_MODULE_8__.Box3(new three__WEBPACK_IMPORTED_MODULE_8__.Vector3(-0.35, 0, -0.35), new three__WEBPACK_IMPORTED_MODULE_8__.Vector3(0.35, 1.8, 0.35));
+        this.raycaster = new three__WEBPACK_IMPORTED_MODULE_9__.Raycaster();
+        this.collisionBox = new three__WEBPACK_IMPORTED_MODULE_9__.Box3(new three__WEBPACK_IMPORTED_MODULE_9__.Vector3(-0.35, 0, -0.35), new three__WEBPACK_IMPORTED_MODULE_9__.Vector3(0.35, 1.8, 0.35));
         this.terrainCollisionBoxes = [];
         this.placeBlockSounds = [];
         this.digBlockSounds = [];
-        this.selectedBlockId = _block_blocks__WEBPACK_IMPORTED_MODULE_5__.Blocks.getBlockId(_block_blocks__WEBPACK_IMPORTED_MODULE_5__.Blocks.CAULDRON);
-        this.worldCursor = new _world_cursor__WEBPACK_IMPORTED_MODULE_6__.WorldCursor(_game__WEBPACK_IMPORTED_MODULE_1__.Game.main.blocks);
-        this.audio = new three__WEBPACK_IMPORTED_MODULE_8__.Audio(_game__WEBPACK_IMPORTED_MODULE_1__.Game.main.audioListener);
+        this.selectedBlockId = _block_blocks__WEBPACK_IMPORTED_MODULE_5__.Blocks.getBlockId(_block_blocks__WEBPACK_IMPORTED_MODULE_5__.Blocks.TORCH);
+        this.worldCursor = new _world_cursor__WEBPACK_IMPORTED_MODULE_7__.WorldCursor(_game__WEBPACK_IMPORTED_MODULE_1__.Game.main.blocks);
+        this.audio = new three__WEBPACK_IMPORTED_MODULE_9__.Audio(_game__WEBPACK_IMPORTED_MODULE_1__.Game.main.audioListener);
         this.updateMovement(0, 0);
         this.updateCamera(0);
     }
@@ -2191,7 +2773,7 @@ var Player = /** @class */ (function () {
             return __generator(this, function (_c) {
                 switch (_c.label) {
                     case 0:
-                        audioLoader = new three__WEBPACK_IMPORTED_MODULE_8__.AudioLoader();
+                        audioLoader = new three__WEBPACK_IMPORTED_MODULE_9__.AudioLoader();
                         _a = this;
                         return [4 /*yield*/, (0,p_map__WEBPACK_IMPORTED_MODULE_0__["default"])([
                                 'audio/dig0.mp3',
@@ -2240,7 +2822,7 @@ var Player = /** @class */ (function () {
             }
             {
                 var world = _game__WEBPACK_IMPORTED_MODULE_1__.Game.main.level.getWorld();
-                this.worldCursor.set(world, hitBlockPos);
+                // this.worldCursor.set(world, hitBlockPos);
                 if (this.input.isKeyDowned(_input_input__WEBPACK_IMPORTED_MODULE_2__.RightMouseButton)) {
                     var hitBlock = world.getBlock(hitBlockPos);
                     var interactionResult = hitBlock === null || hitBlock === void 0 ? void 0 : hitBlock.onInteract(world, hitBlockPos);
@@ -2250,7 +2832,7 @@ var Player = /** @class */ (function () {
                         Math.floor(samplePoint.y),
                         Math.floor(samplePoint.z),
                     ], hitX = _a[0], hitY = _a[1], hitZ = _a[2];
-                    var blockPos = new three__WEBPACK_IMPORTED_MODULE_8__.Vector3(hitX, hitY, hitZ);
+                    var blockPos = new three__WEBPACK_IMPORTED_MODULE_9__.Vector3(hitX, hitY, hitZ);
                     if (interactionResult === false && [_block_blocks__WEBPACK_IMPORTED_MODULE_5__.Blocks.AIR, _block_blocks__WEBPACK_IMPORTED_MODULE_5__.Blocks.WATER].includes(world.getBlock(blockPos))) {
                         if (this.audio.isPlaying)
                             this.audio.stop();
@@ -2287,18 +2869,26 @@ var Player = /** @class */ (function () {
             if (this.input.isKeyDowned('N')) {
                 this.noclip = !this.noclip;
             }
+            if (this.input.isKeyDowned('P')) {
+                console.log("The current player position is ".concat(this.position.toArray()));
+            }
+            if (this.input.isKeyDowned('Z')) {
+                _game__WEBPACK_IMPORTED_MODULE_1__.Game.main.level.getWorld().chunkColumnManager.drop();
+                var chunkPosition = (0,_block_block_pos__WEBPACK_IMPORTED_MODULE_6__.floorBlockPos)((0,_block_block_pos__WEBPACK_IMPORTED_MODULE_6__.modifyBlockPosValues)(this.position, function (v) { return v / 16; }));
+                _game__WEBPACK_IMPORTED_MODULE_1__.Game.main.level.getWorld().chunkColumnManager.setCenter(chunkPosition.x, chunkPosition.z);
+            }
             var x = Math.cos(this.rotation.y);
             var z = Math.sin(this.rotation.y);
-            var forward = new three__WEBPACK_IMPORTED_MODULE_8__.Vector2(x, z).normalize();
-            var right = new three__WEBPACK_IMPORTED_MODULE_8__.Vector2(-z, x).normalize();
-            this.velocity.multiply(new three__WEBPACK_IMPORTED_MODULE_8__.Vector3(0.9, 1, 0.9));
+            var forward = new three__WEBPACK_IMPORTED_MODULE_9__.Vector2(x, z).normalize();
+            var right = new three__WEBPACK_IMPORTED_MODULE_9__.Vector2(-z, x).normalize();
+            this.velocity.multiply(new three__WEBPACK_IMPORTED_MODULE_9__.Vector3(0.9, 1, 0.9));
             var inputVector = this.getInputVector();
-            this.velocity.add(new three__WEBPACK_IMPORTED_MODULE_8__.Vector3((forward.y * inputVector.x + right.y * inputVector.z) * movementSpeed, inputVector.y, (forward.x * inputVector.x + right.x * inputVector.z) * movementSpeed));
+            this.velocity.add(new three__WEBPACK_IMPORTED_MODULE_9__.Vector3((forward.y * inputVector.x + right.y * inputVector.z) * movementSpeed, inputVector.y, (forward.x * inputVector.x + right.x * inputVector.z) * movementSpeed));
             if (!this.flying) {
                 this.velocity.setY(this.velocity.y - 0.00005 * deltaTime);
             }
             else {
-                this.velocity.multiply(new three__WEBPACK_IMPORTED_MODULE_8__.Vector3(1, 0.9, 1));
+                this.velocity.multiply(new three__WEBPACK_IMPORTED_MODULE_9__.Vector3(1, 0.9, 1));
             }
         }
         if (!this.noclip) {
@@ -2308,7 +2898,7 @@ var Player = /** @class */ (function () {
         this.updateCamera(deltaTime);
     };
     Player.prototype.getInputVector = function () {
-        var inputVector = new three__WEBPACK_IMPORTED_MODULE_8__.Vector3();
+        var inputVector = new three__WEBPACK_IMPORTED_MODULE_9__.Vector3();
         if (this.input.isKeyPressed('W')) {
             inputVector.setX(-1);
         }
@@ -2333,7 +2923,7 @@ var Player = /** @class */ (function () {
         return inputVector;
     };
     Player.prototype.updateCollision = function (deltaTime, movementSpeed) {
-        var deltaPosition = this.velocity.clone().multiplyScalar(deltaTime).multiply(new three__WEBPACK_IMPORTED_MODULE_8__.Vector3(movementSpeed, 1, movementSpeed));
+        var deltaPosition = this.velocity.clone().multiplyScalar(deltaTime).multiply(new three__WEBPACK_IMPORTED_MODULE_9__.Vector3(movementSpeed, 1, movementSpeed));
         var potential = this.position.clone().add(deltaPosition);
         var collisionX = this.createTerrainCollisionBoxes([potential.x, this.position.y, this.position.z]);
         if (collisionX) {
@@ -2353,7 +2943,7 @@ var Player = /** @class */ (function () {
     };
     Player.prototype.createTerrainCollisionBoxes = function (_a) {
         var x = _a[0], y = _a[1], z = _a[2];
-        this.collisionBox.set(new three__WEBPACK_IMPORTED_MODULE_8__.Vector3(x - 0.35, y, z - 0.35), new three__WEBPACK_IMPORTED_MODULE_8__.Vector3(x + 0.35, y + 1.8, z + 0.35));
+        this.collisionBox.set(new three__WEBPACK_IMPORTED_MODULE_9__.Vector3(x - 0.35, y, z - 0.35), new three__WEBPACK_IMPORTED_MODULE_9__.Vector3(x + 0.35, y + 1.8, z + 0.35));
         var world = _game__WEBPACK_IMPORTED_MODULE_1__.Game.main.level.getWorld();
         var _b = [Math.floor(x + 0.5), Math.floor(y + 0.5), Math.floor(z + 0.5)], blockX = _b[0], blockY = _b[1], blockZ = _b[2];
         for (var ix = -2; ix < 2; ix += 1) {
@@ -2361,12 +2951,12 @@ var Player = /** @class */ (function () {
                 for (var iz = -2; iz < 2; iz += 1) {
                     var boxIndex = (0,_util_index_to_vector3__WEBPACK_IMPORTED_MODULE_3__.xyzTupelToIndex)(ix + 2, iy + 2, iz + 2, 5, 5);
                     if (!this.terrainCollisionBoxes[boxIndex]) {
-                        this.terrainCollisionBoxes[boxIndex] = new three__WEBPACK_IMPORTED_MODULE_8__.Box3();
+                        this.terrainCollisionBoxes[boxIndex] = new three__WEBPACK_IMPORTED_MODULE_9__.Box3();
                     }
-                    var blockPos = new three__WEBPACK_IMPORTED_MODULE_8__.Vector3(blockX + ix, blockY + iy, blockZ + iz);
+                    var blockPos = new three__WEBPACK_IMPORTED_MODULE_9__.Vector3(blockX + ix, blockY + iy, blockZ + iz);
                     var block = _game__WEBPACK_IMPORTED_MODULE_1__.Game.main.level.getBlockAt(blockPos);
                     var solidBlock = block !== undefined && block.isCollidable(world, blockPos);
-                    this.terrainCollisionBoxes[boxIndex].set(new three__WEBPACK_IMPORTED_MODULE_8__.Vector3(blockX + ix, blockY + iy, blockZ + iz), new three__WEBPACK_IMPORTED_MODULE_8__.Vector3(blockX + ix + 1, blockY + iy + 1, blockZ + iz + 1));
+                    this.terrainCollisionBoxes[boxIndex].set(new three__WEBPACK_IMPORTED_MODULE_9__.Vector3(blockX + ix, blockY + iy, blockZ + iz), new three__WEBPACK_IMPORTED_MODULE_9__.Vector3(blockX + ix + 1, blockY + iy + 1, blockZ + iz + 1));
                     if (!solidBlock) {
                         continue;
                     }
@@ -2380,19 +2970,19 @@ var Player = /** @class */ (function () {
         return false;
     };
     Player.prototype.updateMovement = function (deltaTime, movementSpeed) {
-        this.position.add(this.velocity.clone().multiplyScalar(deltaTime).multiply(new three__WEBPACK_IMPORTED_MODULE_8__.Vector3(movementSpeed, 1, movementSpeed)));
+        this.position.add(this.velocity.clone().multiplyScalar(deltaTime).multiply(new three__WEBPACK_IMPORTED_MODULE_9__.Vector3(movementSpeed, 1, movementSpeed)));
     };
     Player.prototype.updateCamera = function (deltaTime) {
         this.camera.position.set(this.position.x, this.position.y + 1.8, this.position.z);
-        this.rotation.x = three__WEBPACK_IMPORTED_MODULE_8__.MathUtils.clamp(this.rotation.x + (0,three_src_math_MathUtils__WEBPACK_IMPORTED_MODULE_9__.degToRad)(deltaTime * this.input.getMouseDelta()[1] * -0.01), -0.4999 * Math.PI, 0.4999 * Math.PI);
-        this.rotation.y += (0,three_src_math_MathUtils__WEBPACK_IMPORTED_MODULE_9__.degToRad)(deltaTime * this.input.getMouseDelta()[0] * -0.01);
+        this.rotation.x = three__WEBPACK_IMPORTED_MODULE_9__.MathUtils.clamp(this.rotation.x + (0,three_src_math_MathUtils__WEBPACK_IMPORTED_MODULE_10__.degToRad)(deltaTime * this.input.getMouseDelta()[1] * -0.01), -0.4999 * Math.PI, 0.4999 * Math.PI);
+        this.rotation.y += (0,three_src_math_MathUtils__WEBPACK_IMPORTED_MODULE_10__.degToRad)(deltaTime * this.input.getMouseDelta()[0] * -0.01);
         var phi = this.rotation.x - 0.5 * Math.PI;
         var theta = this.rotation.y;
-        var target = new three__WEBPACK_IMPORTED_MODULE_8__.Vector3().setFromSphericalCoords(1, phi, theta).add(this.camera.position);
+        var target = new three__WEBPACK_IMPORTED_MODULE_9__.Vector3().setFromSphericalCoords(1, phi, theta).add(this.camera.position);
         this.camera.lookAt(target);
     };
     Player.prototype.getFacingDirection = function () {
-        return (0,_util_mod__WEBPACK_IMPORTED_MODULE_7__.mod)(Math.round((0,three_src_math_MathUtils__WEBPACK_IMPORTED_MODULE_9__.radToDeg)(this.rotation.y) / 90), 4);
+        return (0,_util_mod__WEBPACK_IMPORTED_MODULE_8__.mod)(Math.round((0,three_src_math_MathUtils__WEBPACK_IMPORTED_MODULE_10__.radToDeg)(this.rotation.y) / 90), 4);
     };
     return Player;
 }());
@@ -2441,13 +3031,11 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */ __webpack_require__.d(__webpack_exports__, {
 /* harmony export */   "WorldCursor": () => (/* binding */ WorldCursor)
 /* harmony export */ });
-/* harmony import */ var three__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! three */ "./node_modules/three/build/three.module.js");
+/* harmony import */ var three__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! three */ "./node_modules/three/build/three.module.js");
 /* harmony import */ var _block_block_face__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../block/block-face */ "./src/block/block-face.ts");
 /* harmony import */ var _block_block_model_block_model_renderer__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../block/block-model/block-model-renderer */ "./src/block/block-model/block-model-renderer.ts");
-/* harmony import */ var _util_bounding_box__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../util/bounding-box */ "./src/util/bounding-box.ts");
-/* harmony import */ var _world_cursor_material__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./world-cursor-material */ "./src/player/world-cursor-material.ts");
+/* harmony import */ var _world_cursor_material__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./world-cursor-material */ "./src/player/world-cursor-material.ts");
 var _a;
-
 
 
 
@@ -2463,8 +3051,8 @@ var BLOCK_CURSOR_SOLIDITY_MAP = (_a = {},
 var BlockCursorOverlap = 0.05;
 var WorldCursor = /** @class */ (function () {
     function WorldCursor(blocks) {
-        this.material = (0,_world_cursor_material__WEBPACK_IMPORTED_MODULE_3__.createWorldCursorMaterial)();
-        this.parent = new three__WEBPACK_IMPORTED_MODULE_4__.Object3D();
+        this.material = (0,_world_cursor_material__WEBPACK_IMPORTED_MODULE_2__.createWorldCursorMaterial)();
+        this.parent = new three__WEBPACK_IMPORTED_MODULE_3__.Object3D();
         var elementFromToModifier = function (_a) {
             var from = _a[0], to = _a[1];
             return [
@@ -2479,26 +3067,30 @@ var WorldCursor = /** @class */ (function () {
     };
     WorldCursor.prototype.set = function (world, pos) {
         this.hide();
-        var block = world.getBlock(pos);
-        var state = world.getBlockState(pos);
-        if (!block) {
-            return;
-        }
-        var modelIndex = state ? block.getBlockModel(state) : 0;
-        var model = block.blockModels[modelIndex];
-        var modelMesh = this.blockModelRenderer.render(new three__WEBPACK_IMPORTED_MODULE_4__.Vector3(pos.x, pos.y, pos.z), model, BLOCK_CURSOR_SOLIDITY_MAP);
-        var points = [];
-        for (var i = 0; i < modelMesh.vertices.length; i += 3) {
-            points.push(new three__WEBPACK_IMPORTED_MODULE_4__.Vector3(modelMesh.vertices[i], modelMesh.vertices[i + 1], modelMesh.vertices[i + 2]));
-        }
-        var boundingBox = (0,_util_bounding_box__WEBPACK_IMPORTED_MODULE_2__.computeBoundingBox)(points);
-        var _a = boundingBox.getSize(new three__WEBPACK_IMPORTED_MODULE_4__.Vector3()).toArray(), width = _a[0], height = _a[1], depth = _a[2];
-        var boundingBoxGeometry = new three__WEBPACK_IMPORTED_MODULE_4__.BoxGeometry(width, height, depth);
-        var mesh = new three__WEBPACK_IMPORTED_MODULE_4__.Mesh(boundingBoxGeometry, this.material);
-        mesh.position.x = boundingBox.min.x + width / 2;
-        mesh.position.y = boundingBox.min.y + height / 2;
-        mesh.position.z = boundingBox.min.z + depth / 2;
-        this.parent.add(mesh);
+        // const block = world.getBlock(pos);
+        // const state = world.getBlockState(pos);
+        // if (!block) {
+        //     return;
+        // }
+        // const modelIndex = state ? block.getBlockModel(state) : 0;
+        // const model = block.blockModels[modelIndex];
+        // const modelMesh = this.blockModelRenderer.render(new Vector3(pos.x, pos.y, pos.z), model, BLOCK_CURSOR_SOLIDITY_MAP);
+        // const points = [];
+        // for (let i = 0; i < modelMesh.vertices.length; i += 3) {
+        //     points.push(new Vector3(
+        //         modelMesh.vertices[i],
+        //         modelMesh.vertices[i + 1],
+        //         modelMesh.vertices[i + 2],
+        //     ));
+        // }
+        // const boundingBox = computeBoundingBox(points);
+        // const [width, height, depth] = boundingBox.getSize(new Vector3()).toArray();
+        // const boundingBoxGeometry = new BoxGeometry(width, height, depth);
+        // const mesh = new Mesh(boundingBoxGeometry, this.material);
+        // mesh.position.x = boundingBox.min.x + width / 2;
+        // mesh.position.y = boundingBox.min.y + height / 2;
+        // mesh.position.z = boundingBox.min.z + depth / 2;
+        // this.parent.add(mesh);
     };
     WorldCursor.prototype.hide = function () {
         this.parent.clear();
@@ -2510,37 +3102,35 @@ var WorldCursor = /** @class */ (function () {
 
 /***/ }),
 
-/***/ "./src/util/bounding-box.ts":
-/*!**********************************!*\
-  !*** ./src/util/bounding-box.ts ***!
-  \**********************************/
+/***/ "./src/shader/opaque-block-shader.ts":
+/*!*******************************************!*\
+  !*** ./src/shader/opaque-block-shader.ts ***!
+  \*******************************************/
 /***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
 
 "use strict";
 __webpack_require__.r(__webpack_exports__);
 /* harmony export */ __webpack_require__.d(__webpack_exports__, {
-/* harmony export */   "computeBoundingBox": () => (/* binding */ computeBoundingBox)
+/* harmony export */   "vertexShader": () => (/* binding */ vertexShader),
+/* harmony export */   "fragmentShader": () => (/* binding */ fragmentShader),
+/* harmony export */   "makeOpaqueBlockMaterial": () => (/* binding */ makeOpaqueBlockMaterial)
 /* harmony export */ });
 /* harmony import */ var three__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! three */ "./node_modules/three/build/three.module.js");
 
-function computeBoundingBox(points) {
-    var box = new three__WEBPACK_IMPORTED_MODULE_0__.Box3();
-    for (var i = 0; i < points.length; i++) {
-        var _a = points[i], x = _a.x, y = _a.y, z = _a.z;
-        if (x < box.min.x)
-            box.min.x = x;
-        if (x > box.max.x)
-            box.max.x = x;
-        if (y < box.min.y)
-            box.min.y = y;
-        if (y > box.max.y)
-            box.max.y = y;
-        if (z < box.min.z)
-            box.min.z = z;
-        if (z > box.max.z)
-            box.max.z = z;
-    }
-    return box;
+var vertexShader = "\n    attribute float skyLight;\n    attribute float blockLight;\n    attribute float foliage;\n\n    varying float fLightLevel;\n    varying vec4 fFoliageColor;\n\n    varying vec2 vUv;\n    varying vec3 vNormal;\n\n    uniform float fAmbientLightLevel;\n    uniform float fSkyLightFactor;\n\n    void main() {\n        vUv = uv;\n        vNormal = normal;\n\n        fLightLevel = fAmbientLightLevel;\n\n        float fFaceFactor = max(0.0, dot(vNormal, vec3(0.0, 1.0, 0.0))) * 0.4 + 0.6;\n        float fNormalizedSkyLight = (skyLight / 15.0) * fSkyLightFactor * fFaceFactor;\n        float fNormalizedBlockLight = (blockLight / 15.0);\n        fLightLevel += max(fNormalizedBlockLight, fNormalizedSkyLight) * (1.0 - fAmbientLightLevel);\n\n        fFoliageColor = foliage * vec4(40.0 / 255.0, 110.0 / 255.0, 38.0 / 255.0, 1.0) + (1.0 - foliage) * vec4(1.0, 1.0, 1.0, 1.0);\n\n        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.);\n    }\n";
+var fragmentShader = "\n    uniform sampler2D uTexture;\n\n    varying vec2 vUv;\n    varying vec3 vNormal;\n\n    varying float fLightLevel;\n    varying vec4 fFoliageColor;\n\n    void main() {\n        vec4 color = texture2D(uTexture, vUv) * fFoliageColor;\n        gl_FragColor = color * vec4(fLightLevel, fLightLevel, fLightLevel, 1.0);\n    }\n";
+function makeOpaqueBlockMaterial(map) {
+    return new three__WEBPACK_IMPORTED_MODULE_0__.ShaderMaterial({
+        uniforms: {
+            uTexture: { value: map },
+            fAmbientLightLevel: { value: 0.15 },
+            fSkyLightFactor: { value: 1.0 },
+        },
+        fragmentShader: fragmentShader,
+        vertexShader: vertexShader,
+        alphaTest: 0.5,
+        transparent: true,
+    });
 }
 
 
@@ -2583,15 +3173,19 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */ __webpack_require__.d(__webpack_exports__, {
 /* harmony export */   "indexToXZY": () => (/* binding */ indexToXZY),
 /* harmony export */   "xzyToIndex": () => (/* binding */ xzyToIndex),
-/* harmony export */   "xyzTupelToIndex": () => (/* binding */ xyzTupelToIndex)
+/* harmony export */   "xyzTupelToIndex": () => (/* binding */ xyzTupelToIndex),
+/* harmony export */   "indexToPos": () => (/* binding */ indexToPos),
+/* harmony export */   "posToIndex": () => (/* binding */ posToIndex)
 /* harmony export */ });
-/* harmony import */ var three__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! three */ "./node_modules/three/build/three.module.js");
+/* harmony import */ var three__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! three */ "./node_modules/three/build/three.module.js");
+/* harmony import */ var _world_chunk_chunk_constants__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../world/chunk/chunk-constants */ "./src/world/chunk/chunk-constants.ts");
+
 
 function indexToXZY(index, xSize, zSize) {
     var x = index % xSize;
     var y = Math.floor(index / (xSize * zSize));
     var z = Math.floor(index / xSize) - zSize * y;
-    return new three__WEBPACK_IMPORTED_MODULE_0__.Vector3(x, y, z);
+    return new three__WEBPACK_IMPORTED_MODULE_1__.Vector3(x, y, z);
 }
 function xzyToIndex(vector, xSize, zSize) {
     return vector.x + vector.z * xSize + vector.y * xSize * zSize;
@@ -2599,96 +3193,17 @@ function xzyToIndex(vector, xSize, zSize) {
 function xyzTupelToIndex(x, y, z, xSize, zSize) {
     return x + z * xSize + y * xSize * zSize;
 }
-
-
-/***/ }),
-
-/***/ "./src/util/map-2d.ts":
-/*!****************************!*\
-  !*** ./src/util/map-2d.ts ***!
-  \****************************/
-/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
-
-"use strict";
-__webpack_require__.r(__webpack_exports__);
-/* harmony export */ __webpack_require__.d(__webpack_exports__, {
-/* harmony export */   "ArrayMap2D": () => (/* binding */ ArrayMap2D),
-/* harmony export */   "PaletteMap2D": () => (/* binding */ PaletteMap2D),
-/* harmony export */   "deserializeMap2D": () => (/* binding */ deserializeMap2D)
-/* harmony export */ });
-/* harmony import */ var _index_to_vector2__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./index-to-vector2 */ "./src/util/index-to-vector2.ts");
-
-var ArrayMap2D = /** @class */ (function () {
-    function ArrayMap2D(data, sideLength) {
-        this.data = data;
-        this.sideLength = sideLength;
-    }
-    ArrayMap2D.prototype.get = function (x, y) {
-        return this.data[(0,_index_to_vector2__WEBPACK_IMPORTED_MODULE_0__.xzTupelToIndex)(x, y, this.sideLength)];
-    };
-    ArrayMap2D.prototype.getV = function (_a) {
-        var x = _a.x, y = _a.y;
-        return this.data[(0,_index_to_vector2__WEBPACK_IMPORTED_MODULE_0__.xzTupelToIndex)(x, y, this.sideLength)];
-    };
-    ArrayMap2D.prototype.serialize = function () {
-        return {
-            type: 'arraymap2d',
-            spec: {
-                data: this.data,
-                sideLength: this.sideLength,
-            },
-        };
-    };
-    return ArrayMap2D;
-}());
-
-var PaletteMap2D = /** @class */ (function () {
-    function PaletteMap2D(palette, lookup, sideLength) {
-        this.palette = palette;
-        this.lookup = lookup;
-        this.sideLength = sideLength;
-    }
-    PaletteMap2D.prototype.get = function (x, y) {
-        return this.palette[this.lookup[(0,_index_to_vector2__WEBPACK_IMPORTED_MODULE_0__.xzTupelToIndex)(x, y, this.sideLength)]];
-    };
-    PaletteMap2D.prototype.getV = function (_a) {
-        var x = _a.x, y = _a.y;
-        return this.get(x, y);
-    };
-    PaletteMap2D.fromArray = function (data, sideLength) {
-        var palette = [];
-        var lookup = data.map(function (value) {
-            var existingPaletteEntryIndex = palette.findIndex(function (item) { return value === item; });
-            if (existingPaletteEntryIndex >= 0) {
-                return existingPaletteEntryIndex;
-            }
-            return palette.push(value) - 1;
-        });
-        return new PaletteMap2D(palette, lookup, sideLength);
-    };
-    PaletteMap2D.prototype.serialize = function () {
-        return {
-            type: 'palettemap2d',
-            spec: {
-                palette: this.palette,
-                lookup: this.lookup,
-                sideLength: this.sideLength,
-            },
-        };
-    };
-    return PaletteMap2D;
-}());
-
-function deserializeMap2D(_a) {
-    var type = _a.type, spec = _a.spec;
-    switch (type) {
-        case 'arraymap2d':
-            return new ArrayMap2D(spec.data, spec.sideLength);
-        case 'palettemap2d':
-            return new PaletteMap2D(spec.palette, spec.lookup, spec.sideLength);
-        default:
-            throw new Error('Unknown map2d type ' + type);
-    }
+function indexToPos(index, base) {
+    if (base === void 0) { base = _world_chunk_chunk_constants__WEBPACK_IMPORTED_MODULE_0__.CHUNK_WIDTH; }
+    var x = index % base;
+    var y = Math.floor(index / (base * base));
+    var z = Math.floor(index / base) - base * y;
+    return new three__WEBPACK_IMPORTED_MODULE_1__.Vector3(x, y, z);
+}
+function posToIndex(_a, base) {
+    var x = _a.x, z = _a.z, y = _a.y;
+    if (base === void 0) { base = _world_chunk_chunk_constants__WEBPACK_IMPORTED_MODULE_0__.CHUNK_WIDTH; }
+    return (x) + (z * base) + (y * base * base);
 }
 
 
@@ -2858,6 +3373,62 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */ });
 /* harmony import */ var three__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! three */ "./node_modules/three/build/three.module.js");
 /* harmony import */ var _chunk_column__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./chunk-column */ "./src/world/chunk-column.ts");
+var __assign = (undefined && undefined.__assign) || function () {
+    __assign = Object.assign || function(t) {
+        for (var s, i = 1, n = arguments.length; i < n; i++) {
+            s = arguments[i];
+            for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p))
+                t[p] = s[p];
+        }
+        return t;
+    };
+    return __assign.apply(this, arguments);
+};
+var __awaiter = (undefined && undefined.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+var __generator = (undefined && undefined.__generator) || function (thisArg, body) {
+    var _ = { label: 0, sent: function() { if (t[0] & 1) throw t[1]; return t[1]; }, trys: [], ops: [] }, f, y, t, g;
+    return g = { next: verb(0), "throw": verb(1), "return": verb(2) }, typeof Symbol === "function" && (g[Symbol.iterator] = function() { return this; }), g;
+    function verb(n) { return function (v) { return step([n, v]); }; }
+    function step(op) {
+        if (f) throw new TypeError("Generator is already executing.");
+        while (_) try {
+            if (f = 1, y && (t = op[0] & 2 ? y["return"] : op[0] ? y["throw"] || ((t = y["return"]) && t.call(y), 0) : y.next) && !(t = t.call(y, op[1])).done) return t;
+            if (y = 0, t) op = [op[0] & 2, t.value];
+            switch (op[0]) {
+                case 0: case 1: t = op; break;
+                case 4: _.label++; return { value: op[1], done: false };
+                case 5: _.label++; y = op[1]; op = [0]; continue;
+                case 7: op = _.ops.pop(); _.trys.pop(); continue;
+                default:
+                    if (!(t = _.trys, t = t.length > 0 && t[t.length - 1]) && (op[0] === 6 || op[0] === 2)) { _ = 0; continue; }
+                    if (op[0] === 3 && (!t || (op[1] > t[0] && op[1] < t[3]))) { _.label = op[1]; break; }
+                    if (op[0] === 6 && _.label < t[1]) { _.label = t[1]; t = op; break; }
+                    if (t && _.label < t[2]) { _.label = t[2]; _.ops.push(op); break; }
+                    if (t[2]) _.ops.pop();
+                    _.trys.pop(); continue;
+            }
+            op = body.call(thisArg, _);
+        } catch (e) { op = [6, e]; y = 0; } finally { f = t = 0; }
+        if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
+    }
+};
+var __spreadArray = (undefined && undefined.__spreadArray) || function (to, from, pack) {
+    if (pack || arguments.length === 2) for (var i = 0, l = from.length, ar; i < l; i++) {
+        if (ar || !(i in from)) {
+            if (!ar) ar = Array.prototype.slice.call(from, 0, i);
+            ar[i] = from[i];
+        }
+    }
+    return to.concat(ar || Array.prototype.slice.call(from));
+};
 
 
 var ChunkColumnState;
@@ -2866,8 +3437,10 @@ var ChunkColumnState;
     ChunkColumnState[ChunkColumnState["Registered"] = 0] = "Registered";
     ChunkColumnState[ChunkColumnState["Generating"] = 1] = "Generating";
     ChunkColumnState[ChunkColumnState["Generated"] = 2] = "Generated";
-    ChunkColumnState[ChunkColumnState["Rendering"] = 3] = "Rendering";
-    ChunkColumnState[ChunkColumnState["Rendered"] = 4] = "Rendered";
+    ChunkColumnState[ChunkColumnState["Decorating"] = 3] = "Decorating";
+    ChunkColumnState[ChunkColumnState["Decorated"] = 4] = "Decorated";
+    ChunkColumnState[ChunkColumnState["Rendering"] = 5] = "Rendering";
+    ChunkColumnState[ChunkColumnState["Rendered"] = 6] = "Rendered";
 })(ChunkColumnState || (ChunkColumnState = {}));
 var ChunkColumnManager = /** @class */ (function () {
     function ChunkColumnManager(scene, renderDistance, simulationDistance, chunkUpdateConcurrency) {
@@ -2879,6 +3452,7 @@ var ChunkColumnManager = /** @class */ (function () {
         this.chunkColumnStates = new Map();
     }
     ChunkColumnManager.prototype.setCenter = function (centerX, centerZ) {
+        var _this = this;
         var range = Math.max(this.renderDistance, this.simulationDistance) + 2;
         for (var offsetX = -range; offsetX <= range; offsetX += 1) {
             for (var offsetZ = -range; offsetZ <= range; offsetZ += 1) {
@@ -2893,7 +3467,7 @@ var ChunkColumnManager = /** @class */ (function () {
                         target: targetState,
                     });
                 }
-                else {
+                else if (targetState !== ChunkColumnState.Unregistered) {
                     var newColumn = new _chunk_column__WEBPACK_IMPORTED_MODULE_0__.ChunkColumn(this, [x, z], 8);
                     this.loadedChunkColumns.push(newColumn);
                     newColumn.register(this.scene);
@@ -2904,9 +3478,18 @@ var ChunkColumnManager = /** @class */ (function () {
                 }
             }
         }
+        var center = new three__WEBPACK_IMPORTED_MODULE_1__.Vector2(centerX, centerZ);
         this.loadedChunkColumns.sort(function (a, b) {
-            var aDist = new three__WEBPACK_IMPORTED_MODULE_1__.Vector2().fromArray(a.position).distanceTo(new three__WEBPACK_IMPORTED_MODULE_1__.Vector2(centerX, centerZ));
-            var bDist = new three__WEBPACK_IMPORTED_MODULE_1__.Vector2().fromArray(b.position).distanceTo(new three__WEBPACK_IMPORTED_MODULE_1__.Vector2(centerX, centerZ));
+            var aState = _this.chunkColumnStates.get(a);
+            var bState = _this.chunkColumnStates.get(b);
+            if (aState.target === ChunkColumnState.Unregistered && bState.target !== ChunkColumnState.Unregistered) {
+                return Number.MIN_SAFE_INTEGER;
+            }
+            if (bState.target === ChunkColumnState.Unregistered && aState.target !== ChunkColumnState.Unregistered) {
+                return Number.MAX_SAFE_INTEGER;
+            }
+            var aDist = new three__WEBPACK_IMPORTED_MODULE_1__.Vector2().fromArray(a.position).manhattanDistanceTo(center);
+            var bDist = new three__WEBPACK_IMPORTED_MODULE_1__.Vector2().fromArray(b.position).manhattanDistanceTo(center);
             return aDist - bDist;
         });
     };
@@ -2922,23 +3505,37 @@ var ChunkColumnManager = /** @class */ (function () {
                 this_1.loadedChunkColumns.splice(i, 1);
                 chunkColumn.unregister(this_1.scene);
                 this_1.chunkColumnStates.delete(chunkColumn);
-                i--;
+                i += 1;
+                return out_i_1 = i, "continue";
+            }
+            else if (state.is > state.target) {
                 return out_i_1 = i, "continue";
             }
             if (state.is === ChunkColumnState.Registered) {
-                this_1.chunkColumnStates.set(chunkColumn, { is: ChunkColumnState.Generating, target: state.target });
-                Promise.all(chunkColumn.chunks.map(function (chunk) { return chunk.generateTerrain(); })).then(function () {
-                    var currentState = _this.chunkColumnStates.get(chunkColumn);
-                    _this.chunkColumnStates.set(chunkColumn, { is: ChunkColumnState.Generated, target: currentState.target });
-                });
+                this_1.updateChunkColumnState(chunkColumn, { is: ChunkColumnState.Generating });
+                Promise.all(chunkColumn.chunks.map(function (chunk) { return chunk.generateTerrain(); })).then(function () { return _this.updateChunkColumnState(chunkColumn, { is: ChunkColumnState.Generated }); });
                 return { value: void 0 };
             }
-            if (state.is === ChunkColumnState.Generated && this_1.areNeighborColumnsGenerated(chunkColumn)) {
-                this_1.chunkColumnStates.set(chunkColumn, { is: ChunkColumnState.Rendering, target: state.target });
-                Promise.all(chunkColumn.chunks.map(function (chunk) { return chunk.buildMesh(); })).then(function () {
-                    var currentState = _this.chunkColumnStates.get(chunkColumn);
-                    _this.chunkColumnStates.set(chunkColumn, { is: ChunkColumnState.Rendered, target: currentState.target });
-                });
+            if (state.is === ChunkColumnState.Generated && this_1.areNeighborColumnsInState(chunkColumn, ChunkColumnState.Generated, true)) {
+                this_1.updateChunkColumnState(chunkColumn, { is: ChunkColumnState.Decorating });
+                chunkColumn.decorateTerrain().then(function () { return _this.updateChunkColumnState(chunkColumn, { is: ChunkColumnState.Decorated }); });
+                return { value: void 0 };
+            }
+            if (state.is === ChunkColumnState.Decorated) {
+                this_1.updateChunkColumnState(chunkColumn, { is: ChunkColumnState.Rendering });
+                Promise.all(chunkColumn.chunks.map(function (chunk) { return __awaiter(_this, void 0, void 0, function () {
+                    return __generator(this, function (_a) {
+                        switch (_a.label) {
+                            case 0: return [4 /*yield*/, chunk.buildMesh()];
+                            case 1:
+                                _a.sent();
+                                return [4 /*yield*/, chunk.enableRebuilds()];
+                            case 2:
+                                _a.sent();
+                                return [2 /*return*/];
+                        }
+                    });
+                }); })).then(function () { return _this.updateChunkColumnState(chunkColumn, { is: ChunkColumnState.Rendered }); });
                 return { value: void 0 };
             }
             out_i_1 = i;
@@ -2951,16 +3548,25 @@ var ChunkColumnManager = /** @class */ (function () {
                 return state_1.value;
         }
     };
-    ChunkColumnManager.prototype.areNeighborColumnsGenerated = function (chunkColumn) {
+    ChunkColumnManager.prototype.updateChunkColumnState = function (chunkColumn, state) {
+        var currentState = this.chunkColumnStates.get(chunkColumn);
+        if (!currentState) {
+            return;
+            // throw new Error('Chunk column not registered');
+        }
+        this.chunkColumnStates.set(chunkColumn, __assign(__assign({}, currentState), state));
+    };
+    ChunkColumnManager.prototype.areNeighborColumnsInState = function (chunkColumn, expectedState, quadNeighbors) {
         var _this = this;
-        return ![[-1, 0], [1, 0], [0, -1], [0, 1]].some(function (offset) {
+        if (quadNeighbors === void 0) { quadNeighbors = false; }
+        return !__spreadArray([[-1, 0], [1, 0], [0, -1], [0, 1]], (quadNeighbors ? [[-1, -1], [-1, 1], [1, -1], [1, 1]] : []), true).some(function (offset) {
             var position = [chunkColumn.position[0] + offset[0], chunkColumn.position[1] + offset[1]];
             var neighbor = _this.getChunkColumn(position[0], position[1]);
             if (!neighbor) {
                 return true;
             }
             var state = _this.chunkColumnStates.get(neighbor);
-            return state === undefined || state.is < ChunkColumnState.Generated;
+            return state === undefined || state.is < expectedState;
         });
     };
     ChunkColumnManager.prototype.lateUpdate = function (deltaTime) {
@@ -2992,7 +3598,7 @@ var ChunkColumnManager = /** @class */ (function () {
             return ChunkColumnState.Rendered;
         }
         if (absX < this.renderDistance + 1 && absZ < this.renderDistance + 1) {
-            return ChunkColumnState.Generated;
+            return ChunkColumnState.Decorated;
         }
         if (Math.abs(x) > this.renderDistance + 1 || Math.abs(z) > this.renderDistance + 1) {
             return ChunkColumnState.Unregistered;
@@ -3001,6 +3607,12 @@ var ChunkColumnManager = /** @class */ (function () {
     };
     ChunkColumnManager.prototype.getChunkColumn = function (x, z) {
         return this.loadedChunkColumns.find(function (element) { return element.position[0] === x && element.position[1] === z; });
+    };
+    ChunkColumnManager.prototype.drop = function () {
+        var _this = this;
+        this.loadedChunkColumns.forEach(function (chunkColumn) { return chunkColumn.unregister(_this.scene); });
+        this.loadedChunkColumns = [];
+        this.chunkColumnStates.clear();
     };
     return ChunkColumnManager;
 }());
@@ -3020,8 +3632,12 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */ __webpack_require__.d(__webpack_exports__, {
 /* harmony export */   "ChunkColumn": () => (/* binding */ ChunkColumn)
 /* harmony export */ });
-/* harmony import */ var three__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! three */ "./node_modules/three/build/three.module.js");
+/* harmony import */ var three__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! three */ "./node_modules/three/build/three.module.js");
 /* harmony import */ var _chunk__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./chunk */ "./src/world/chunk.ts");
+/* harmony import */ var _game__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../game */ "./src/game.ts");
+/* harmony import */ var _chunk_chunk_constants__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./chunk/chunk-constants */ "./src/world/chunk/chunk-constants.ts");
+/* harmony import */ var _util_index_to_vector3__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../util/index-to-vector3 */ "./src/util/index-to-vector3.ts");
+/* harmony import */ var _util_mod__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../util/mod */ "./src/util/mod.ts");
 var __awaiter = (undefined && undefined.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
     return new (P || (P = Promise))(function (resolve, reject) {
@@ -3060,13 +3676,18 @@ var __generator = (undefined && undefined.__generator) || function (thisArg, bod
 };
 
 
+
+
+
+
 var ChunkColumn = /** @class */ (function () {
     function ChunkColumn(manager, position, height) {
         this.manager = manager;
         this.position = position;
         this.chunks = [];
+        this.skyLight = new Uint8Array(_chunk_chunk_constants__WEBPACK_IMPORTED_MODULE_2__.CHUNK_WIDTH * _chunk_chunk_constants__WEBPACK_IMPORTED_MODULE_2__.CHUNK_WIDTH * _chunk_chunk_constants__WEBPACK_IMPORTED_MODULE_2__.CHUNK_WIDTH * 8);
         for (var i = 0; i < height; i++) {
-            this.chunks.push(new _chunk__WEBPACK_IMPORTED_MODULE_0__.Chunk(this, new three__WEBPACK_IMPORTED_MODULE_1__.Vector3(position[0], i, position[1])));
+            this.chunks.push(new _chunk__WEBPACK_IMPORTED_MODULE_0__.Chunk(this, new three__WEBPACK_IMPORTED_MODULE_5__.Vector3(position[0], i, position[1])));
         }
     }
     ChunkColumn.prototype.register = function (scene) {
@@ -3095,7 +3716,12 @@ var ChunkColumn = /** @class */ (function () {
         if (chunkLocalY < 0 || chunkLocalY >= this.chunks.length) {
             return;
         }
-        return this.chunks[chunkLocalY].setBlock([x, y - chunkLocalY * _chunk__WEBPACK_IMPORTED_MODULE_0__.CHUNK_HEIGHT, z], block);
+        var oldBlock = this.getBlockAt([x, y, z]);
+        this.chunks[chunkLocalY].setBlock([x, y - chunkLocalY * _chunk__WEBPACK_IMPORTED_MODULE_0__.CHUNK_HEIGHT, z], block);
+        // TODO: Run this async and NOT sync! Important!
+        if (oldBlock !== block && ((oldBlock === null || oldBlock === void 0 ? void 0 : oldBlock.blocksLight) !== block.blocksLight)) {
+            this.calculateSkyLight();
+        }
     };
     ChunkColumn.prototype.getBlockAt = function (_a) {
         var x = _a[0], y = _a[1], z = _a[2];
@@ -3104,6 +3730,21 @@ var ChunkColumn = /** @class */ (function () {
             return undefined;
         }
         return this.chunks[chunkLocalY].getBlock([x, y - chunkLocalY * _chunk__WEBPACK_IMPORTED_MODULE_0__.CHUNK_HEIGHT, z]);
+    };
+    ChunkColumn.prototype.decorateTerrain = function () {
+        return __awaiter(this, void 0, void 0, function () {
+            var decoratedBlocks;
+            return __generator(this, function (_a) {
+                switch (_a.label) {
+                    case 0: return [4 /*yield*/, _game__WEBPACK_IMPORTED_MODULE_1__.Game.main.chunkGeneratorPool.decorateTerrain(this.position, this.chunks.map(function (chunk) { return chunk.getBlockData(); }))];
+                    case 1:
+                        decoratedBlocks = _a.sent();
+                        this.chunks.forEach(function (chunk, i) { return chunk.setBlockData(decoratedBlocks[i]); });
+                        this.calculateSkyLight();
+                        return [2 /*return*/];
+                }
+            });
+        });
     };
     ChunkColumn.prototype.getChunkMeshes = function () {
         return this.chunks.flatMap(function (chunk) { return [chunk.solidMesh, chunk.transparentMesh]; }).filter(function (chunk) { return chunk !== undefined; });
@@ -3117,6 +3758,29 @@ var ChunkColumn = /** @class */ (function () {
             return undefined;
         }
         return neighborColumn.chunks[absolutePos[1]];
+    };
+    ChunkColumn.prototype.spillBlockData = function (blockData) {
+        this.spilledBlockData = blockData;
+    };
+    ChunkColumn.prototype.getSpilledBlockData = function () {
+        return this.spilledBlockData;
+    };
+    ChunkColumn.prototype.calculateSkyLight = function () {
+        this.skyLight = new Uint8Array(this.skyLight.length);
+        for (var x = 0; x < _chunk_chunk_constants__WEBPACK_IMPORTED_MODULE_2__.CHUNK_WIDTH; x += 1) {
+            for (var z = 0; z < _chunk_chunk_constants__WEBPACK_IMPORTED_MODULE_2__.CHUNK_WIDTH; z += 1) {
+                for (var y = _chunk_chunk_constants__WEBPACK_IMPORTED_MODULE_2__.CHUNK_WIDTH * 8 - 1; y >= 0; y -= 1) {
+                    var pos = { x: x, y: y, z: z };
+                    if (this.getBlockAt([(0,_util_mod__WEBPACK_IMPORTED_MODULE_4__.mod)(x, 16), y, (0,_util_mod__WEBPACK_IMPORTED_MODULE_4__.mod)(z, 16)]).blocksLight) {
+                        break;
+                    }
+                    this.skyLight[(0,_util_index_to_vector3__WEBPACK_IMPORTED_MODULE_3__.posToIndex)(pos)] = 15;
+                }
+            }
+        }
+    };
+    ChunkColumn.prototype.getSkyLight = function () {
+        return this.skyLight;
     };
     return ChunkColumn;
 }());
@@ -3138,10 +3802,13 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */   "CHUNK_HEIGHT": () => (/* binding */ CHUNK_HEIGHT),
 /* harmony export */   "Chunk": () => (/* binding */ Chunk)
 /* harmony export */ });
-/* harmony import */ var three__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! three */ "./node_modules/three/build/three.module.js");
+/* harmony import */ var three__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! three */ "./node_modules/three/build/three.module.js");
 /* harmony import */ var _game__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../game */ "./src/game.ts");
 /* harmony import */ var _util_index_to_vector3__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../util/index-to-vector3 */ "./src/util/index-to-vector3.ts");
 /* harmony import */ var _block_blocks__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../block/blocks */ "./src/block/blocks.ts");
+/* harmony import */ var _block_block_pos__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../block/block-pos */ "./src/block/block-pos.ts");
+/* harmony import */ var _light_flood_fill__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../light/flood-fill */ "./src/light/flood-fill.ts");
+/* harmony import */ var _light_are_block_light_properties_equal__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ../light/are-block-light-properties-equal */ "./src/light/are-block-light-properties-equal.ts");
 var __awaiter = (undefined && undefined.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
     return new (P || (P = Promise))(function (resolve, reject) {
@@ -3182,6 +3849,9 @@ var __generator = (undefined && undefined.__generator) || function (thisArg, bod
 
 
 
+
+
+
 var CHUNK_WIDTH = 16;
 var CHUNK_HEIGHT = 16;
 var Chunk = /** @class */ (function () {
@@ -3189,15 +3859,16 @@ var Chunk = /** @class */ (function () {
         this.chunkColumn = chunkColumn;
         this.position = position;
         this.shouldRebuild = false;
+        this.rebuildsEnabled = false;
         this.blockData = new Uint8Array(CHUNK_WIDTH * CHUNK_WIDTH * CHUNK_HEIGHT);
         this.blockStates = new Map();
         var _a = _game__WEBPACK_IMPORTED_MODULE_0__.Game.main.blocks.getBlockMaterials(), solid = _a.solid, transparent = _a.transparent, water = _a.water;
-        this.solidMesh = new three__WEBPACK_IMPORTED_MODULE_3__.Mesh(undefined, solid);
-        this.transparentMesh = new three__WEBPACK_IMPORTED_MODULE_3__.Mesh(undefined, transparent);
-        this.waterMesh = new three__WEBPACK_IMPORTED_MODULE_3__.Mesh(undefined, water);
+        this.solidMesh = new three__WEBPACK_IMPORTED_MODULE_6__.Mesh(undefined, solid);
+        this.transparentMesh = new three__WEBPACK_IMPORTED_MODULE_6__.Mesh(undefined, transparent);
+        this.waterMesh = new three__WEBPACK_IMPORTED_MODULE_6__.Mesh(undefined, water);
     }
     Chunk.prototype.register = function (scene) {
-        var worldPosition = this.position.clone().multiply(new three__WEBPACK_IMPORTED_MODULE_3__.Vector3(CHUNK_WIDTH, CHUNK_HEIGHT, CHUNK_WIDTH));
+        var worldPosition = this.position.clone().multiply(new three__WEBPACK_IMPORTED_MODULE_6__.Vector3(CHUNK_WIDTH, CHUNK_HEIGHT, CHUNK_WIDTH));
         this.solidMesh.position.set(worldPosition.x, worldPosition.y, worldPosition.z);
         this.waterMesh.position.set(worldPosition.x, worldPosition.y, worldPosition.z);
         this.transparentMesh.position.set(worldPosition.x, worldPosition.y, worldPosition.z);
@@ -3206,6 +3877,13 @@ var Chunk = /** @class */ (function () {
         scene.add(this.transparentMesh);
     };
     Chunk.prototype.unregister = function (scene) {
+        var _a, _b, _c;
+        if ((_a = this.solidMesh) === null || _a === void 0 ? void 0 : _a.geometry)
+            this.solidMesh.geometry.dispose();
+        if ((_b = this.waterMesh) === null || _b === void 0 ? void 0 : _b.geometry)
+            this.waterMesh.geometry.dispose();
+        if ((_c = this.transparentMesh) === null || _c === void 0 ? void 0 : _c.geometry)
+            this.transparentMesh.geometry.dispose();
         scene.remove(this.solidMesh);
         scene.remove(this.waterMesh);
         scene.remove(this.transparentMesh);
@@ -3222,7 +3900,7 @@ var Chunk = /** @class */ (function () {
         }
     };
     Chunk.prototype.tickRandomBlock = function () {
-        var blockPos = new three__WEBPACK_IMPORTED_MODULE_3__.Vector3(Math.floor(Math.random() * CHUNK_WIDTH), Math.floor(Math.random() * CHUNK_WIDTH), Math.floor(Math.random() * CHUNK_WIDTH));
+        var blockPos = new three__WEBPACK_IMPORTED_MODULE_6__.Vector3(Math.floor(Math.random() * CHUNK_WIDTH), Math.floor(Math.random() * CHUNK_WIDTH), Math.floor(Math.random() * CHUNK_WIDTH));
         var blockId = this.blockData[(0,_util_index_to_vector3__WEBPACK_IMPORTED_MODULE_1__.xzyToIndex)(blockPos, CHUNK_WIDTH, CHUNK_WIDTH)];
         var block = _block_blocks__WEBPACK_IMPORTED_MODULE_2__.Blocks.getBlockById(blockId);
         if (!block) {
@@ -3255,28 +3933,66 @@ var Chunk = /** @class */ (function () {
             });
         });
     };
+    Chunk.prototype.decorateTerrain = function () {
+        return __awaiter(this, void 0, void 0, function () {
+            return __generator(this, function (_a) {
+                this.applySpilledBlockData();
+                return [2 /*return*/];
+            });
+        });
+    };
+    Chunk.prototype.applySpilledBlockData = function () {
+        var spilledBlockData = this.chunkColumn.getSpilledBlockData();
+        if (!spilledBlockData) {
+            return;
+        }
+        for (var x = 0; x < CHUNK_WIDTH; x++) {
+            for (var y = 0; y < CHUNK_HEIGHT; y++) {
+                for (var z = 0; z < CHUNK_WIDTH; z++) {
+                    var index = (0,_util_index_to_vector3__WEBPACK_IMPORTED_MODULE_1__.xyzTupelToIndex)(x, y + this.position.y * CHUNK_HEIGHT, z, CHUNK_WIDTH, CHUNK_WIDTH);
+                    var spilledBlock = spilledBlockData[index];
+                    if (!spilledBlock) {
+                        continue;
+                    }
+                    var blockDataIndex = (0,_util_index_to_vector3__WEBPACK_IMPORTED_MODULE_1__.xyzTupelToIndex)(x, y, z, CHUNK_WIDTH, CHUNK_WIDTH);
+                    this.blockData[blockDataIndex] = spilledBlock;
+                }
+            }
+        }
+    };
     Chunk.prototype.requestRebuild = function () {
+        if (!this.rebuildsEnabled) {
+            return;
+        }
         this.shouldRebuild = true;
     };
     Chunk.prototype.buildMesh = function () {
+        var _a, _b, _c;
         return __awaiter(this, void 0, void 0, function () {
             var blockModelIndices, geometry;
             var _this = this;
-            return __generator(this, function (_a) {
-                switch (_a.label) {
+            return __generator(this, function (_d) {
+                switch (_d.label) {
                     case 0:
                         blockModelIndices = {};
                         this.blockStates.forEach(function (state, index) {
                             var block = _block_blocks__WEBPACK_IMPORTED_MODULE_2__.Blocks.getBlockById(_this.blockData[index]);
                             blockModelIndices[index] = block.getBlockModel(state);
                         });
-                        return [4 /*yield*/, _game__WEBPACK_IMPORTED_MODULE_0__.Game.main.chunkGeometryBuilderPool.buildGeometry({
+                        if ((_a = this.solidMesh) === null || _a === void 0 ? void 0 : _a.geometry)
+                            this.solidMesh.geometry.dispose();
+                        if ((_b = this.waterMesh) === null || _b === void 0 ? void 0 : _b.geometry)
+                            this.waterMesh.geometry.dispose();
+                        if ((_c = this.transparentMesh) === null || _c === void 0 ? void 0 : _c.geometry)
+                            this.transparentMesh.geometry.dispose();
+                        return [4 /*yield*/, _game__WEBPACK_IMPORTED_MODULE_0__.Game.main.chunkGeometryBuilderPool.buildGeometry(this.position, {
                                 blockModelIndices: blockModelIndices,
                                 blocks: this.blockData,
-                                neighborBlocks: this.getNeighborChunks().map(function (chunk) { var _a; return (_a = chunk === null || chunk === void 0 ? void 0 : chunk.blockData) !== null && _a !== void 0 ? _a : new Uint8Array(); }),
+                                neighborBlocks: this.getNeighborChunkBlocks(),
+                                skyLight: this.chunkColumn.getSkyLight(),
                             })];
                     case 1:
-                        geometry = _a.sent();
+                        geometry = _d.sent();
                         this.solidMesh.geometry = geometry.solid;
                         this.waterMesh.geometry = geometry.water;
                         this.transparentMesh.geometry = geometry.transparent;
@@ -3285,23 +4001,51 @@ var Chunk = /** @class */ (function () {
             });
         });
     };
-    Chunk.prototype.getNeighborChunks = function () {
-        return [
-            this.chunkColumn.getChunk([this.position.x, this.position.y + 1, this.position.z]),
-            this.chunkColumn.getChunk([this.position.x, this.position.y - 1, this.position.z]),
-            this.chunkColumn.getChunk([this.position.x - 1, this.position.y, this.position.z]),
-            this.chunkColumn.getChunk([this.position.x + 1, this.position.y, this.position.z]),
-            this.chunkColumn.getChunk([this.position.x, this.position.y, this.position.z - 1]),
-            this.chunkColumn.getChunk([this.position.x, this.position.y, this.position.z + 1]),
-        ];
+    Chunk.prototype.getNeighborChunkBlocks = function () {
+        var _a;
+        var neighborBlockData = [];
+        for (var i = 0; i < 3 * 3 * 3; i++) {
+            var pos = (0,_block_block_pos__WEBPACK_IMPORTED_MODULE_3__.sumBlockPos)((0,_util_index_to_vector3__WEBPACK_IMPORTED_MODULE_1__.indexToPos)(i, 3), { x: this.position.x - 1, y: this.position.y - 1, z: this.position.z - 1 });
+            var chunk = this.chunkColumn.getChunk([pos.x, pos.y, pos.z]);
+            neighborBlockData.push((_a = chunk === null || chunk === void 0 ? void 0 : chunk.getBlockData()) !== null && _a !== void 0 ? _a : new Uint8Array());
+        }
+        return neighborBlockData;
+    };
+    Chunk.prototype.getNeighborChunks = function (maxDistance) {
+        if (maxDistance === void 0) { maxDistance = 3; }
+        var neighborChunks = [];
+        for (var i = 0; i < 3 * 3 * 3; i++) {
+            var relativePos = (0,_util_index_to_vector3__WEBPACK_IMPORTED_MODULE_1__.indexToPos)(i, 3);
+            var distance = (0,_light_flood_fill__WEBPACK_IMPORTED_MODULE_4__.manhattenDistance)(relativePos, { x: 1, y: 1, z: 1 });
+            if (distance > maxDistance || distance === 0) {
+                continue;
+            }
+            var pos = (0,_block_block_pos__WEBPACK_IMPORTED_MODULE_3__.sumBlockPos)(relativePos, { x: this.position.x - 1, y: this.position.y - 1, z: this.position.z - 1 });
+            var chunk = this.chunkColumn.getChunk([pos.x, pos.y, pos.z]);
+            if (!chunk) {
+                continue;
+            }
+            neighborChunks.push(chunk);
+        }
+        return neighborChunks;
     };
     Chunk.prototype.setBlock = function (_a, block) {
         var x = _a[0], y = _a[1], z = _a[2];
-        this.blockData[(0,_util_index_to_vector3__WEBPACK_IMPORTED_MODULE_1__.xyzTupelToIndex)(x, y, z, CHUNK_WIDTH, CHUNK_WIDTH)] = _block_blocks__WEBPACK_IMPORTED_MODULE_2__.Blocks.getBlockId(block);
+        var oldBlockId = this.blockData[(0,_util_index_to_vector3__WEBPACK_IMPORTED_MODULE_1__.xyzTupelToIndex)(x, y, z, CHUNK_WIDTH, CHUNK_WIDTH)];
+        var newBlockId = _block_blocks__WEBPACK_IMPORTED_MODULE_2__.Blocks.getBlockId(block);
+        if (newBlockId === oldBlockId) {
+            return;
+        }
+        this.blockData[(0,_util_index_to_vector3__WEBPACK_IMPORTED_MODULE_1__.xyzTupelToIndex)(x, y, z, CHUNK_WIDTH, CHUNK_WIDTH)] = newBlockId;
         this.requestRebuild();
         // TODO: Only update the relevant chunk
-        if (x <= 0 || y <= 0 || z <= 0 || x >= CHUNK_WIDTH - 1 || y >= CHUNK_HEIGHT - 1 || z >= CHUNK_WIDTH - 1) {
-            this.getNeighborChunks().filter(function (chunk) { return chunk !== undefined; }).forEach(function (chunk) { return chunk.requestRebuild(); });
+        var oldBlock = _block_blocks__WEBPACK_IMPORTED_MODULE_2__.Blocks.getBlockById(oldBlockId);
+        if (!(0,_light_are_block_light_properties_equal__WEBPACK_IMPORTED_MODULE_5__.areBlockLightPropertiesEqual)(block, oldBlock)) {
+            this.getNeighborChunks().forEach(function (chunk) { return chunk.requestRebuild(); });
+        }
+        else if (x <= 0 || y <= 0 || z <= 0 || x >= CHUNK_WIDTH - 1 || y >= CHUNK_HEIGHT - 1 || z >= CHUNK_WIDTH - 1) {
+            console.log("pls update for ".concat(oldBlock.name, " -> ").concat(block.name));
+            this.getNeighborChunks(1).forEach(function (chunk) { return chunk.requestRebuild(); });
         }
     };
     Chunk.prototype.getBlock = function (_a) {
@@ -3318,11 +4062,20 @@ var Chunk = /** @class */ (function () {
     Chunk.prototype.setBlockState = function (_a, state) {
         var x = _a[0], y = _a[1], z = _a[2];
         this.blockStates.set((0,_util_index_to_vector3__WEBPACK_IMPORTED_MODULE_1__.xyzTupelToIndex)(x, y, z, CHUNK_WIDTH, CHUNK_WIDTH), state);
-        this.shouldRebuild = true;
+        this.requestRebuild();
     };
     Chunk.prototype.getBlockState = function (_a) {
         var x = _a[0], y = _a[1], z = _a[2];
         return this.blockStates.get((0,_util_index_to_vector3__WEBPACK_IMPORTED_MODULE_1__.xyzTupelToIndex)(x, y, z, CHUNK_WIDTH, CHUNK_WIDTH));
+    };
+    Chunk.prototype.setBlockData = function (blockData) {
+        this.blockData = blockData;
+    };
+    Chunk.prototype.getBlockData = function () {
+        return this.blockData;
+    };
+    Chunk.prototype.enableRebuilds = function () {
+        this.rebuildsEnabled = true;
     };
     return Chunk;
 }());
@@ -3360,11 +4113,9 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */ __webpack_require__.d(__webpack_exports__, {
 /* harmony export */   "ChunkGeneratorPool": () => (/* binding */ ChunkGeneratorPool)
 /* harmony export */ });
-/* harmony import */ var comlink__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! comlink */ "./node_modules/comlink/dist/esm/comlink.mjs");
+/* harmony import */ var comlink__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! comlink */ "./node_modules/comlink/dist/esm/comlink.mjs");
 /* harmony import */ var _chunk_generator_worker_ts__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./chunk-generator.worker.ts */ "./src/world/chunk/chunk-generator.worker.ts");
-/* harmony import */ var _util_map_2d__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../../util/map-2d */ "./src/util/map-2d.ts");
-/* harmony import */ var _chunk_constants__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./chunk-constants */ "./src/world/chunk/chunk-constants.ts");
-/* harmony import */ var _util_random_element__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../../util/random-element */ "./src/util/random-element.ts");
+/* harmony import */ var _util_random_element__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../../util/random-element */ "./src/util/random-element.ts");
 var __awaiter = (undefined && undefined.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
     return new (P || (P = Promise))(function (resolve, reject) {
@@ -3404,8 +4155,6 @@ var __generator = (undefined && undefined.__generator) || function (thisArg, bod
 
 
 
-
-
 var ChunkGeneratorPool = /** @class */ (function () {
     function ChunkGeneratorPool() {
         this.workers = [];
@@ -3416,7 +4165,7 @@ var ChunkGeneratorPool = /** @class */ (function () {
             return __generator(this, function (_a) {
                 switch (_a.label) {
                     case 0:
-                        ChunkGeneratorClass = (0,comlink__WEBPACK_IMPORTED_MODULE_4__.wrap)(new _chunk_generator_worker_ts__WEBPACK_IMPORTED_MODULE_0__["default"]());
+                        ChunkGeneratorClass = (0,comlink__WEBPACK_IMPORTED_MODULE_2__.wrap)(new _chunk_generator_worker_ts__WEBPACK_IMPORTED_MODULE_0__["default"]());
                         i = 0;
                         _a.label = 1;
                     case 1:
@@ -3437,29 +4186,19 @@ var ChunkGeneratorPool = /** @class */ (function () {
     ChunkGeneratorPool.prototype.buildBaseTerrain = function (chunkPosition) {
         return __awaiter(this, void 0, void 0, function () {
             return __generator(this, function (_a) {
-                return [2 /*return*/, this.getWorker().buildTerrain([
-                        chunkPosition.x,
-                        chunkPosition.y,
-                        chunkPosition.z,
-                    ])];
+                return [2 /*return*/, this.getWorker().buildTerrain([chunkPosition.x, chunkPosition.y, chunkPosition.z])];
             });
         });
     };
-    ChunkGeneratorPool.prototype.generateBiomeMap = function (chunkPosition) {
+    ChunkGeneratorPool.prototype.decorateTerrain = function (chunkPosition, blockData) {
         return __awaiter(this, void 0, void 0, function () {
-            var biomes;
             return __generator(this, function (_a) {
-                switch (_a.label) {
-                    case 0: return [4 /*yield*/, this.getWorker().generateBiomeMap(chunkPosition)];
-                    case 1:
-                        biomes = _a.sent();
-                        return [2 /*return*/, _util_map_2d__WEBPACK_IMPORTED_MODULE_1__.PaletteMap2D.fromArray(biomes, _chunk_constants__WEBPACK_IMPORTED_MODULE_2__.CHUNK_WIDTH)];
-                }
+                return [2 /*return*/, this.getWorker().decorateTerrain(chunkPosition, blockData)];
             });
         });
     };
     ChunkGeneratorPool.prototype.getWorker = function () {
-        return (0,_util_random_element__WEBPACK_IMPORTED_MODULE_3__.randomElement)(this.workers);
+        return (0,_util_random_element__WEBPACK_IMPORTED_MODULE_1__.randomElement)(this.workers);
     };
     return ChunkGeneratorPool;
 }());
@@ -3545,12 +4284,12 @@ var ChunkGeometryBuilderPool = /** @class */ (function (_super) {
         _this.blockModels = blockModels;
         return _this;
     }
-    ChunkGeometryBuilderPool.prototype.buildGeometry = function (blockData) {
+    ChunkGeometryBuilderPool.prototype.buildGeometry = function (chunkPosition, blockData) {
         return __awaiter(this, void 0, void 0, function () {
             var _a, solid, water, transparent;
             return __generator(this, function (_b) {
                 switch (_b.label) {
-                    case 0: return [4 /*yield*/, this.getWorker().buildGeometry(blockData)];
+                    case 0: return [4 /*yield*/, this.getWorker().buildGeometry(chunkPosition, blockData)];
                     case 1:
                         _a = _b.sent(), solid = _a.solid, water = _a.water, transparent = _a.transparent;
                         return [2 /*return*/, {
@@ -3564,10 +4303,15 @@ var ChunkGeometryBuilderPool = /** @class */ (function (_super) {
     };
     ChunkGeometryBuilderPool.prototype.getGeometryFromChunkMeshData = function (chunkMeshData) {
         var geometry = new three__WEBPACK_IMPORTED_MODULE_2__.BufferGeometry();
+        // Geometry
         geometry.setAttribute('position', new three__WEBPACK_IMPORTED_MODULE_2__.BufferAttribute(chunkMeshData.vertices, 3));
         geometry.setAttribute('normal', new three__WEBPACK_IMPORTED_MODULE_2__.BufferAttribute(chunkMeshData.normals, 3));
         geometry.setAttribute('uv', new three__WEBPACK_IMPORTED_MODULE_2__.BufferAttribute(chunkMeshData.uv, 2));
         geometry.setIndex(chunkMeshData.triangles);
+        // Lighting
+        geometry.setAttribute('blockLight', new three__WEBPACK_IMPORTED_MODULE_2__.BufferAttribute(chunkMeshData.blockLight, 1));
+        geometry.setAttribute('skyLight', new three__WEBPACK_IMPORTED_MODULE_2__.BufferAttribute(chunkMeshData.skyLight, 1));
+        geometry.setAttribute('foliage', new three__WEBPACK_IMPORTED_MODULE_2__.BufferAttribute(chunkMeshData.foliage, 1));
         return geometry;
     };
     ChunkGeometryBuilderPool.prototype.instantiateWorker = function () {
@@ -3584,6 +4328,48 @@ var ChunkGeometryBuilderPool = /** @class */ (function (_super) {
 
 /***/ }),
 
+/***/ "./src/world/sky/sky-box.ts":
+/*!**********************************!*\
+  !*** ./src/world/sky/sky-box.ts ***!
+  \**********************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "SkyBox": () => (/* binding */ SkyBox)
+/* harmony export */ });
+/* harmony import */ var three__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! three */ "./node_modules/three/build/three.module.js");
+/* harmony import */ var three_src_math_MathUtils__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! three/src/math/MathUtils */ "./node_modules/three/src/math/MathUtils.js");
+
+
+var SkyBox = /** @class */ (function () {
+    function SkyBox(camera) {
+        this.camera = camera;
+        this.sunHolder = new three__WEBPACK_IMPORTED_MODULE_0__.Object3D();
+        this.sunGeometry = new three__WEBPACK_IMPORTED_MODULE_0__.PlaneGeometry(200, 200);
+        this.sunMesh = new three__WEBPACK_IMPORTED_MODULE_0__.Mesh(this.sunGeometry, new three__WEBPACK_IMPORTED_MODULE_0__.MeshStandardMaterial({ blending: three__WEBPACK_IMPORTED_MODULE_0__.AdditiveBlending }));
+    }
+    SkyBox.prototype.register = function (scene) {
+        this.sunHolder.add(this.sunMesh);
+        this.sunMesh.position.set(0, 0, 1000);
+        scene.add(this.sunHolder);
+        var sunTexture = new three__WEBPACK_IMPORTED_MODULE_0__.TextureLoader().load('textures/sun.png');
+        this.sunMesh.material.map = sunTexture;
+    };
+    SkyBox.prototype.update = function (dayPhase) {
+        var camPos = this.camera.position;
+        this.sunHolder.position.set(camPos.x, camPos.y, camPos.z);
+        this.sunHolder.rotation.setFromVector3(new three__WEBPACK_IMPORTED_MODULE_0__.Vector3((0,three_src_math_MathUtils__WEBPACK_IMPORTED_MODULE_1__.degToRad)(dayPhase * 360 - 90), 0, 0));
+        this.sunMesh.lookAt(this.camera.position);
+    };
+    return SkyBox;
+}());
+
+
+
+/***/ }),
+
 /***/ "./src/world/world.ts":
 /*!****************************!*\
   !*** ./src/world/world.ts ***!
@@ -3595,8 +4381,14 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */ __webpack_require__.d(__webpack_exports__, {
 /* harmony export */   "World": () => (/* binding */ World)
 /* harmony export */ });
-/* harmony import */ var _util_mod__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../util/mod */ "./src/util/mod.ts");
-/* harmony import */ var _chunk_column_manager__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./chunk-column-manager */ "./src/world/chunk-column-manager.ts");
+/* harmony import */ var bezier_easing__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! bezier-easing */ "./node_modules/bezier-easing/src/index.js");
+/* harmony import */ var bezier_easing__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(bezier_easing__WEBPACK_IMPORTED_MODULE_0__);
+/* harmony import */ var three__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! three */ "./node_modules/three/build/three.module.js");
+/* harmony import */ var _block_block_pos__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../block/block-pos */ "./src/block/block-pos.ts");
+/* harmony import */ var _game__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../game */ "./src/game.ts");
+/* harmony import */ var _util_mod__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../util/mod */ "./src/util/mod.ts");
+/* harmony import */ var _chunk_column_manager__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./chunk-column-manager */ "./src/world/chunk-column-manager.ts");
+/* harmony import */ var _sky_sky_box__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ./sky/sky-box */ "./src/world/sky/sky-box.ts");
 var __awaiter = (undefined && undefined.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
     return new (P || (P = Promise))(function (resolve, reject) {
@@ -3635,16 +4427,27 @@ var __generator = (undefined && undefined.__generator) || function (thisArg, bod
 };
 
 
+
+
+
+
+
 var World = /** @class */ (function () {
     function World(level, scene) {
         this.level = level;
         this.scene = scene;
-        this.chunkColumnManager = new _chunk_column_manager__WEBPACK_IMPORTED_MODULE_1__.ChunkColumnManager(scene, 7, 3, 4);
+        this.dayTime = 0;
+        this.dayPhaseEasing = bezier_easing__WEBPACK_IMPORTED_MODULE_0___default()(0.6, 0, 0.4, 1);
+        this.chunkColumnManager = new _chunk_column_manager__WEBPACK_IMPORTED_MODULE_4__.ChunkColumnManager(scene, 7, 3, 4);
+        this.skyBox = new _sky_sky_box__WEBPACK_IMPORTED_MODULE_5__.SkyBox(_game__WEBPACK_IMPORTED_MODULE_2__.Game.main.camera);
+        this.skyBox.register(scene);
     }
     World.prototype.init = function () {
         return __awaiter(this, void 0, void 0, function () {
+            var playerPosition;
             return __generator(this, function (_a) {
-                this.chunkColumnManager.setCenter(0, 0);
+                playerPosition = this.level.player.getChunkPosition();
+                this.chunkColumnManager.setCenter(playerPosition[0], playerPosition[1]);
                 return [2 /*return*/];
             });
         });
@@ -3653,25 +4456,37 @@ var World = /** @class */ (function () {
         this.chunkColumnManager.tick(deltaTime);
     };
     World.prototype.update = function (deltaTime) {
+        this.updateDayTime(deltaTime);
         this.chunkColumnManager.update(deltaTime);
     };
     World.prototype.lateUpdate = function (deltaTime) {
         this.chunkColumnManager.lateUpdate(deltaTime);
     };
+    World.prototype.updateDayTime = function (deltaTime) {
+        this.dayTime += (deltaTime / 1000);
+        // 0 = 1 = midday; 0.5 = night;
+        var dayPhase = (0,_util_mod__WEBPACK_IMPORTED_MODULE_3__.mod)(this.dayTime, 300) / 300;
+        // 0.5 = midday;
+        var bounce = Math.cos(dayPhase * Math.PI * 2) * 0.5 + 0.5;
+        var ambientColorLerp = this.dayPhaseEasing(bounce);
+        var solid = _game__WEBPACK_IMPORTED_MODULE_2__.Game.main.blocks.getBlockMaterials().solid;
+        solid.uniforms.fSkyLightFactor.value = ambientColorLerp;
+        _game__WEBPACK_IMPORTED_MODULE_2__.Game.main.scene.background = new three__WEBPACK_IMPORTED_MODULE_6__.Color('#0c0b17').lerp(new three__WEBPACK_IMPORTED_MODULE_6__.Color('#96d7e0'), ambientColorLerp);
+        this.skyBox.update(dayPhase);
+    };
     World.prototype.setPlayerChunk = function (x, z) {
         this.chunkColumnManager.setCenter(x, z);
     };
     World.prototype.setBlock = function (pos, block) {
-        var chunk = this.chunkColumnManager.getChunkByBlockPos(pos);
-        if (!chunk) {
-            return undefined;
-        }
         block.onSetBlock(this, pos);
-        chunk.setBlock([
-            (0,_util_mod__WEBPACK_IMPORTED_MODULE_0__.mod)(pos.x, 16),
-            (0,_util_mod__WEBPACK_IMPORTED_MODULE_0__.mod)(pos.y, 16),
-            (0,_util_mod__WEBPACK_IMPORTED_MODULE_0__.mod)(pos.z, 16),
-        ], block);
+        var normalizedPos = (0,_block_block_pos__WEBPACK_IMPORTED_MODULE_1__.modifyBlockPosValues)(pos, function (v) { return (0,_util_mod__WEBPACK_IMPORTED_MODULE_3__.mod)(v, 16); });
+        var chunkColumnPos = (0,_block_block_pos__WEBPACK_IMPORTED_MODULE_1__.modifyBlockPosValues)(pos, function (v) { return Math.floor(v / 16); });
+        // TODO: This is a hack to update the sky light of the chunk column. There must be a better way.
+        var column = this.chunkColumnManager.getChunkColumn(chunkColumnPos.x, chunkColumnPos.z);
+        if (!column) {
+            return;
+        }
+        column.setBlockAt([normalizedPos.x, pos.y, normalizedPos.z], block);
     };
     World.prototype.getBlock = function (pos) {
         var chunk = this.chunkColumnManager.getChunkByBlockPos(pos);
@@ -3679,9 +4494,9 @@ var World = /** @class */ (function () {
             return undefined;
         }
         return chunk.getBlock([
-            (0,_util_mod__WEBPACK_IMPORTED_MODULE_0__.mod)(pos.x, 16),
-            (0,_util_mod__WEBPACK_IMPORTED_MODULE_0__.mod)(pos.y, 16),
-            (0,_util_mod__WEBPACK_IMPORTED_MODULE_0__.mod)(pos.z, 16),
+            (0,_util_mod__WEBPACK_IMPORTED_MODULE_3__.mod)(pos.x, 16),
+            (0,_util_mod__WEBPACK_IMPORTED_MODULE_3__.mod)(pos.y, 16),
+            (0,_util_mod__WEBPACK_IMPORTED_MODULE_3__.mod)(pos.z, 16),
         ]);
     };
     World.prototype.getBlockState = function (pos) {
@@ -3690,9 +4505,9 @@ var World = /** @class */ (function () {
             return undefined;
         }
         return chunk.getBlockState([
-            (0,_util_mod__WEBPACK_IMPORTED_MODULE_0__.mod)(pos.x, 16),
-            (0,_util_mod__WEBPACK_IMPORTED_MODULE_0__.mod)(pos.y, 16),
-            (0,_util_mod__WEBPACK_IMPORTED_MODULE_0__.mod)(pos.z, 16),
+            (0,_util_mod__WEBPACK_IMPORTED_MODULE_3__.mod)(pos.x, 16),
+            (0,_util_mod__WEBPACK_IMPORTED_MODULE_3__.mod)(pos.y, 16),
+            (0,_util_mod__WEBPACK_IMPORTED_MODULE_3__.mod)(pos.z, 16),
         ]);
     };
     World.prototype.setBlockState = function (pos, blockState) {
@@ -3700,7 +4515,7 @@ var World = /** @class */ (function () {
         if (!chunk) {
             return undefined;
         }
-        chunk.setBlockState([(0,_util_mod__WEBPACK_IMPORTED_MODULE_0__.mod)(pos.x, 16), (0,_util_mod__WEBPACK_IMPORTED_MODULE_0__.mod)(pos.y, 16), (0,_util_mod__WEBPACK_IMPORTED_MODULE_0__.mod)(pos.z, 16)], blockState);
+        chunk.setBlockState([(0,_util_mod__WEBPACK_IMPORTED_MODULE_3__.mod)(pos.x, 16), (0,_util_mod__WEBPACK_IMPORTED_MODULE_3__.mod)(pos.y, 16), (0,_util_mod__WEBPACK_IMPORTED_MODULE_3__.mod)(pos.z, 16)], blockState);
     };
     World.prototype.playSound = function (name) {
         this.level.getGame().audioManager.playSound(name);
@@ -3711,24 +4526,6 @@ var World = /** @class */ (function () {
     return World;
 }());
 
-
-
-/***/ }),
-
-/***/ "./src/world/chunk-data-generator.worker.ts":
-/*!**************************************************!*\
-  !*** ./src/world/chunk-data-generator.worker.ts ***!
-  \**************************************************/
-/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
-
-"use strict";
-__webpack_require__.r(__webpack_exports__);
-/* harmony export */ __webpack_require__.d(__webpack_exports__, {
-/* harmony export */   "default": () => (/* binding */ Worker_fn)
-/* harmony export */ });
-function Worker_fn() {
-  return new Worker(__webpack_require__.p + "chunk-data-generator.worker.06d2721c970c9ed1e116.worker.js");
-}
 
 
 /***/ }),
@@ -3745,7 +4542,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */   "default": () => (/* binding */ Worker_fn)
 /* harmony export */ });
 function Worker_fn() {
-  return new Worker(__webpack_require__.p + "chunk-generator.worker.d776bd13b12f29b338fa.worker.js");
+  return new Worker(__webpack_require__.p + "chunk-generator.worker.87982a9601d3d3f22ae0.worker.js");
 }
 
 
@@ -3763,7 +4560,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */   "default": () => (/* binding */ Worker_fn)
 /* harmony export */ });
 function Worker_fn() {
-  return new Worker(__webpack_require__.p + "chunk-geometry-builder.worker.44d56d910b9e8973135b.worker.js");
+  return new Worker(__webpack_require__.p + "chunk-geometry-builder.worker.b0f7e6bbba93aae64634.worker.js");
 }
 
 
@@ -55823,7 +56620,7 @@ function bootstrap() {
                     }
                     game = new _game__WEBPACK_IMPORTED_MODULE_0__.Game(gameDomElement);
                     window.game = game;
-                    console.log("Loading...");
+                    console.log('Loading...');
                     return [4 /*yield*/, game.init()];
                 case 1:
                     _a.sent();

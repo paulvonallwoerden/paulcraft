@@ -34,7 +34,7 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
         if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
     }
 };
-import { Game } from "./game";
+import { Game } from './game';
 export function bootstrap() {
     return __awaiter(this, void 0, void 0, function () {
         var gameDomElement, game;
@@ -47,7 +47,7 @@ export function bootstrap() {
                     }
                     game = new Game(gameDomElement);
                     window.game = game;
-                    console.log("Loading...");
+                    console.log('Loading...');
                     return [4 /*yield*/, game.init()];
                 case 1:
                     _a.sent();

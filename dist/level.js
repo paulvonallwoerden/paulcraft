@@ -52,7 +52,7 @@ var Level = /** @class */ (function () {
         this.sun.target = this.sunTarget;
         this.scene.add(this.sun, this.sunTarget);
         // Player
-        this.player = new Player(Game.main.camera, Game.main.input, new Vector3(0, 40, 0), new Vector2(degToRad(0), degToRad(0)));
+        this.player = new Player(Game.main.camera, Game.main.input, new Vector3(22, 68, 70), new Vector2(degToRad(0), degToRad(0)));
         this.world = new World(this, this.scene);
     }
     Level.prototype.init = function () {

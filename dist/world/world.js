@@ -34,18 +34,29 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
         if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
     }
 };
+import bezier from 'bezier-easing';
+import { Color } from 'three';
+import { modifyBlockPosValues } from '../block/block-pos';
+import { Game } from '../game';
 import { mod } from '../util/mod';
 import { ChunkColumnManager } from './chunk-column-manager';
+import { SkyBox } from './sky/sky-box';
 var World = /** @class */ (function () {
     function World(level, scene) {
         this.level = level;
         this.scene = scene;
+        this.dayTime = 0;
+        this.dayPhaseEasing = bezier(0.6, 0, 0.4, 1);
         this.chunkColumnManager = new ChunkColumnManager(scene, 7, 3, 4);
+        this.skyBox = new SkyBox(Game.main.camera);
+        this.skyBox.register(scene);
     }
     World.prototype.init = function () {
         return __awaiter(this, void 0, void 0, function () {
+            var playerPosition;
             return __generator(this, function (_a) {
-                this.chunkColumnManager.setCenter(0, 0);
+                playerPosition = this.level.player.getChunkPosition();
+                this.chunkColumnManager.setCenter(playerPosition[0], playerPosition[1]);
                 return [2 /*return*/];
             });
         });
@@ -54,25 +65,37 @@ var World = /** @class */ (function () {
         this.chunkColumnManager.tick(deltaTime);
     };
     World.prototype.update = function (deltaTime) {
+        this.updateDayTime(deltaTime);
         this.chunkColumnManager.update(deltaTime);
     };
     World.prototype.lateUpdate = function (deltaTime) {
         this.chunkColumnManager.lateUpdate(deltaTime);
     };
+    World.prototype.updateDayTime = function (deltaTime) {
+        this.dayTime += (deltaTime / 1000);
+        // 0 = 1 = midday; 0.5 = night;
+        var dayPhase = mod(this.dayTime, 300) / 300;
+        // 0.5 = midday;
+        var bounce = Math.cos(dayPhase * Math.PI * 2) * 0.5 + 0.5;
+        var ambientColorLerp = this.dayPhaseEasing(bounce);
+        var solid = Game.main.blocks.getBlockMaterials().solid;
+        solid.uniforms.fSkyLightFactor.value = ambientColorLerp;
+        Game.main.scene.background = new Color('#0c0b17').lerp(new Color('#96d7e0'), ambientColorLerp);
+        this.skyBox.update(dayPhase);
+    };
     World.prototype.setPlayerChunk = function (x, z) {
         this.chunkColumnManager.setCenter(x, z);
     };
     World.prototype.setBlock = function (pos, block) {
-        var chunk = this.chunkColumnManager.getChunkByBlockPos(pos);
-        if (!chunk) {
-            return undefined;
-        }
         block.onSetBlock(this, pos);
-        chunk.setBlock([
-            mod(pos.x, 16),
-            mod(pos.y, 16),
-            mod(pos.z, 16),
-        ], block);
+        var normalizedPos = modifyBlockPosValues(pos, function (v) { return mod(v, 16); });
+        var chunkColumnPos = modifyBlockPosValues(pos, function (v) { return Math.floor(v / 16); });
+        // TODO: This is a hack to update the sky light of the chunk column. There must be a better way.
+        var column = this.chunkColumnManager.getChunkColumn(chunkColumnPos.x, chunkColumnPos.z);
+        if (!column) {
+            return;
+        }
+        column.setBlockAt([normalizedPos.x, pos.y, normalizedPos.z], block);
     };
     World.prototype.getBlock = function (pos) {
         var chunk = this.chunkColumnManager.getChunkByBlockPos(pos);

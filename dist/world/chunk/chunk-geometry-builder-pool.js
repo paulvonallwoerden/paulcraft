@@ -60,12 +60,12 @@ var ChunkGeometryBuilderPool = /** @class */ (function (_super) {
         _this.blockModels = blockModels;
         return _this;
     }
-    ChunkGeometryBuilderPool.prototype.buildGeometry = function (blockData) {
+    ChunkGeometryBuilderPool.prototype.buildGeometry = function (chunkPosition, blockData) {
         return __awaiter(this, void 0, void 0, function () {
             var _a, solid, water, transparent;
             return __generator(this, function (_b) {
                 switch (_b.label) {
-                    case 0: return [4 /*yield*/, this.getWorker().buildGeometry(blockData)];
+                    case 0: return [4 /*yield*/, this.getWorker().buildGeometry(chunkPosition, blockData)];
                     case 1:
                         _a = _b.sent(), solid = _a.solid, water = _a.water, transparent = _a.transparent;
                         return [2 /*return*/, {
@@ -79,10 +79,15 @@ var ChunkGeometryBuilderPool = /** @class */ (function (_super) {
     };
     ChunkGeometryBuilderPool.prototype.getGeometryFromChunkMeshData = function (chunkMeshData) {
         var geometry = new BufferGeometry();
+        // Geometry
         geometry.setAttribute('position', new BufferAttribute(chunkMeshData.vertices, 3));
         geometry.setAttribute('normal', new BufferAttribute(chunkMeshData.normals, 3));
         geometry.setAttribute('uv', new BufferAttribute(chunkMeshData.uv, 2));
         geometry.setIndex(chunkMeshData.triangles);
+        // Lighting
+        geometry.setAttribute('blockLight', new BufferAttribute(chunkMeshData.blockLight, 1));
+        geometry.setAttribute('skyLight', new BufferAttribute(chunkMeshData.skyLight, 1));
+        geometry.setAttribute('foliage', new BufferAttribute(chunkMeshData.foliage, 1));
         return geometry;
     };
     ChunkGeometryBuilderPool.prototype.instantiateWorker = function () {

@@ -36,8 +36,6 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
 };
 import { wrap } from "comlink";
 import ChunkGeneratorWorker from "./chunk-generator.worker.ts";
-import { PaletteMap2D } from "../../util/map-2d";
-import { CHUNK_WIDTH } from "./chunk-constants";
 import { randomElement } from "../../util/random-element";
 var ChunkGeneratorPool = /** @class */ (function () {
     function ChunkGeneratorPool() {
@@ -70,24 +68,14 @@ var ChunkGeneratorPool = /** @class */ (function () {
     ChunkGeneratorPool.prototype.buildBaseTerrain = function (chunkPosition) {
         return __awaiter(this, void 0, void 0, function () {
             return __generator(this, function (_a) {
-                return [2 /*return*/, this.getWorker().buildTerrain([
-                        chunkPosition.x,
-                        chunkPosition.y,
-                        chunkPosition.z,
-                    ])];
+                return [2 /*return*/, this.getWorker().buildTerrain([chunkPosition.x, chunkPosition.y, chunkPosition.z])];
             });
         });
     };
-    ChunkGeneratorPool.prototype.generateBiomeMap = function (chunkPosition) {
+    ChunkGeneratorPool.prototype.decorateTerrain = function (chunkPosition, blockData) {
         return __awaiter(this, void 0, void 0, function () {
-            var biomes;
             return __generator(this, function (_a) {
-                switch (_a.label) {
-                    case 0: return [4 /*yield*/, this.getWorker().generateBiomeMap(chunkPosition)];
-                    case 1:
-                        biomes = _a.sent();
-                        return [2 /*return*/, PaletteMap2D.fromArray(biomes, CHUNK_WIDTH)];
-                }
+                return [2 /*return*/, this.getWorker().decorateTerrain(chunkPosition, blockData)];
             });
         });
     };

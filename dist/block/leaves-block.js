@@ -26,31 +26,28 @@ var __assign = (this && this.__assign) || function () {
 };
 import { Block } from "./block";
 import { BlockFaces } from "./block-face";
-export var WaterBlockModel = {
+export var LeavesBlockModel = {
     elements: [
         {
             from: [0, 0, 0],
-            to: [15, 13, 15],
+            to: [15, 15, 15],
             faces: BlockFaces.reduce(function (faces, face) {
                 var _a;
                 return (__assign(__assign({}, faces), (_a = {}, _a[face] = {
-                    cull: true,
-                    texture: 'textures/blocks/water.png',
+                    texture: 'textures/blocks/oak_leaves.png',
                 }, _a)));
             }, {}),
         },
     ],
 };
-var WaterBlock = /** @class */ (function (_super) {
-    __extends(WaterBlock, _super);
-    function WaterBlock() {
-        var _this = _super.call(this, 'water', [WaterBlockModel]) || this;
+var LeavesBlock = /** @class */ (function (_super) {
+    __extends(LeavesBlock, _super);
+    function LeavesBlock() {
+        var _this = _super.call(this, 'leaves', [LeavesBlockModel]) || this;
+        _this.isFoliage = true;
         _this.blocksLight = false;
         return _this;
     }
-    WaterBlock.prototype.isCollidable = function () {
-        return false;
-    };
-    return WaterBlock;
+    return LeavesBlock;
 }(Block));
-export { WaterBlock };
+export { LeavesBlock };
