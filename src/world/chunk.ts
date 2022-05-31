@@ -209,7 +209,6 @@ export class Chunk implements ITickable {
         if (!areBlockLightPropertiesEqual(block, oldBlock)) {
             this.getNeighborChunks().forEach((chunk) => chunk.requestRebuild());
         } else if(x <= 0 || y <= 0 || z <= 0 || x >= CHUNK_WIDTH - 1 || y >= CHUNK_HEIGHT - 1 || z >= CHUNK_WIDTH - 1) {
-            console.log(`pls update for ${oldBlock.name} -> ${block.name}`);
             this.getNeighborChunks(1).forEach((chunk) => chunk.requestRebuild());
         }
     }

@@ -74,15 +74,13 @@ export class DoorBlock extends Block {
         world.setBlockState(pos, new BlockState({ ...DefaultDoorBlockStateValues }));
     }
 
-    public onPlace(player: Player, world: World, pos: BlockPos): boolean {
+    public onPlace(player: Player, world: World, pos: BlockPos): void {
         const facing = player.getFacingDirection();
         world.setBlockState(pos, new BlockState({ ...DefaultDoorBlockStateValues, facing }));
 
         const topPos = { ...pos, y: pos.y + 1 };
         world.setBlockState(topPos, new BlockState({ ...DefaultDoorBlockStateValues, isTop: true, facing }));
         world.setBlock(topPos, Blocks.DOOR);
-
-        return true;
     }
 
     public onInteract(world: World, pos: BlockPos): boolean {

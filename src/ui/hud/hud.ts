@@ -15,10 +15,28 @@ export class Hud extends UiInterface {
 
     public draw(size: Vector2): void {
         this.textChunkPosition.setText(`Chunk: ${this.player.getChunkPosition().join(', ')}`);
-        this.textChunkPosition.setPosition(1, 1);
+        this.textChunkPosition.setPosition(
+            size.x - (this.textChunkPosition.getTextWidth() + 1),
+            size.y - 2,
+        );
 
-        this.textSelectedBlock.setText(`Selected block: ${Blocks.getBlockById(this.player.selectedBlockId).displayName}`);
+        const selectedItem = this.getSelectedItem();
+        if (selectedItem) {
+            this.textSelectedBlock.setText(`Use Q & E to select another item`);
+        } else {
+            this.textSelectedBlock.setText('Your hands are empty! Press \'M\' to cheat <3');
+        }
         this.textSelectedBlock.setPosition((size.x / 2) - (this.textSelectedBlock.getTextWidth() / 2), 1);
+    }
+
+    private getSelectedItem(): string | undefined {
+        const { inventory, selectedInventorySlot } = this.player;
+        const itemStack = inventory.getSlot(selectedInventorySlot);
+        if (!itemStack) {
+            return undefined;
+        }
+
+        return itemStack.item.displayName;
     }
 
     public getElements(): UiElement[] {

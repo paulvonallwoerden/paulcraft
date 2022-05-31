@@ -1,5 +1,5 @@
 import bezier, { EasingFunction } from 'bezier-easing';
-import { Color, Mesh, Scene } from 'three';
+import { Color, Mesh, Scene, Vector3 } from 'three';
 import { SoundNames } from '../audio/sounds';
 import { Block } from '../block/block';
 import { BlockPos, modifyBlockPosValues } from '../block/block-pos';
@@ -112,6 +112,10 @@ export class World {
 
     public playSound(name: SoundNames[number]): void {
         this.level.getGame().audioManager.playSound(name);
+    }
+
+    public playSound3D(name: SoundNames[number], pos: Vector3): void {
+        this.level.getGame().audioManager.playSound3D(name, pos);
     }
 
     public __tempGetChunkMeshes(): Mesh[] {

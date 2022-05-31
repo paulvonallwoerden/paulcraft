@@ -1,4 +1,4 @@
-# Paulcraft
+# paulcraft
 
 A clone of Minecraft that runs in the browser. **[Play it now!](https://paulvonallwoerden.github.io/paulcraft/dist/index.html)**
 
@@ -74,9 +74,10 @@ yarn serve
 
 ### Sounds
 
-  * [Place block](https://freesound.org/people/greenvwbeetle/sounds/244653/)
   * [Break block](https://freesound.org/people/MorneDelport/sounds/326407/)
+  * [Explosion](https://freesound.org/people/derplayer/sounds/587194/)
   * [Open/close door](https://freesound.org/people/InspectorJ/sounds/339677/)
+  * [Place block](https://freesound.org/people/greenvwbeetle/sounds/244653/)
 
 ### Music
 
@@ -84,5 +85,5 @@ yarn serve
 
 ### Textures
 
-  * [Faithful 32x32](https://resourcepack.net/faithful-32x32-resource-pack/)
   * [Clafault by Rikox3](https://resource-packs.de/clafault/)
+  * [Faithful 32x32](https://resourcepack.net/faithful-32x32-resource-pack/)
