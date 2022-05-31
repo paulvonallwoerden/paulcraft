@@ -55,7 +55,6 @@ export function makeOpaqueBlockMaterial(map: Texture) {
         },
         fragmentShader,
         vertexShader,
-        alphaTest: 0.5,
         transparent: true,
     });
 }
