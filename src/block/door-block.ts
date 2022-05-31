@@ -34,7 +34,7 @@ export class DoorBlock extends Block {
     public readonly blocksLight = false;
 
     public constructor() {
-        super('door', [
+        super('door', 'Door', [
             makeDoorBlockModel(false, 90, 'textures/blocks/oak_door_bottom.png'),
             makeDoorBlockModel(true, 90, 'textures/blocks/oak_door_bottom.png'),
             makeDoorBlockModel(false, 90, 'textures/blocks/oak_door_top.png'),

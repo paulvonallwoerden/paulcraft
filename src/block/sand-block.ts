@@ -24,7 +24,7 @@ export const SandBlockModel: BlockModel = {
 
 export class SandBlock extends Block {
     public constructor() {
-        super('sand', [SandBlockModel]);
+        super('sand', 'Sand', [SandBlockModel]);
     }
 
     public onRandomTick(level: Level, pos: BlockPos): void {

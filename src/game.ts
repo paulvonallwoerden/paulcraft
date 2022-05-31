@@ -3,13 +3,12 @@ import { Blocks } from './block/blocks';
 import { Input } from './input/input';
 import { Level } from './level';
 import { OriginCross } from './origin-cross';
-import ChunkDataGeneratorWorker from './world/chunk-data-generator.worker.ts';
-import { BuildGeometryResult } from './world/chunk-renderer';
 import { ChunkGeneratorPool } from './world/chunk/chunk-generator-pool';
 import { ChunkGeometryBuilderPool } from './world/chunk/chunk-geometry-builder-pool';
 import Stats from 'stats.js';
 import { AudioManager } from './audio/audio-manager';
 import { SoundNames, ListOfSounds } from './audio/sounds';
+import { UiManager } from './ui/ui-manager';
 
 // TODO: This class has too many responsibilities. Factor it out.
 export class Game {
@@ -28,6 +27,7 @@ export class Game {
     public blocks: Blocks = new Blocks();
     public level!: Level;
 
+    public readonly uiManager = new UiManager();
     public readonly input: Input;
 
     // TODO: Make this configurable or at least random.
@@ -55,6 +55,7 @@ export class Game {
         this.scene.add(ambientLight);
 
         this.renderer = new WebGLRenderer();
+        this.renderer.autoClear = false;
         this.renderer.setSize(width, height);
         this.renderer.setClearColor(0xe6fcff);
         const canvas = root.appendChild(this.renderer.domElement);
@@ -64,6 +65,7 @@ export class Game {
         this.camera.add(this.audioListener);
 
         this.input = new Input(document.body);
+        this.uiManager.setScreenSize(width, height);
 
         const originCross = new OriginCross();
         originCross.addToScene(this.scene);
@@ -81,6 +83,9 @@ export class Game {
     }
 
     public async init() {
+        console.log('Preparing ui...');
+        await this.uiManager.load();
+
         console.log("Crafting the blocks...");
         this.blocks = new Blocks();
         await this.blocks.init();
@@ -90,27 +95,6 @@ export class Game {
         await this.chunkGeometryBuilderPool.addWorkers(4);
 
         await this.chunkGeneratorPool.addWorkers(1);
-
-        // Legacy
-        // for (let i = 0; i < 4; i++) {
-        //     const worker = new ChunkDataGeneratorWorker();
-        //     worker.postMessage({
-        //         type: 'seed',
-        //         seed: this.seed,
-        //     });
-
-        //     worker.addEventListener('message', ({ data }) => {
-        //         if (data.type === 'generate--complete') {
-        //             this.chunkDataGenerationResults[JSON.stringify(data.position)] = data.result;
-        //         }
-
-        //         if (data.type === 'build-mesh--complete') {
-        //             this.chunkGeometryResults[JSON.stringify(data.position)] = data.result;
-        //         }
-        //     });
-
-        //     this.chunkDataGeneratorWorkerPool.push(worker);
-        // }
 
         // Level
         console.log("Leveling...");
@@ -162,8 +146,13 @@ export class Game {
 
         this.blocks.update(deltaTime);
         this.level.update(deltaTime);
+        this.uiManager.render();
 
+        this.renderer.clear();
         this.renderer.render(this.scene, this.camera);
+        
+        this.renderer.clearDepth();
+        this.renderer.render(this.uiManager.scene, this.uiManager.camera);
 
         this.level.lateUpdate(deltaTime);
         this.input.lateUpdate();

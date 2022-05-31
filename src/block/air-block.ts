@@ -9,7 +9,7 @@ export class AirBlock extends Block {
     public readonly blocksLight = false;
 
     public constructor() {
-        super('air', [AirBlockModel]);
+        super('air', 'Air', [AirBlockModel]);
     }
 
     public isCollidable(): boolean {

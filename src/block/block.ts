@@ -12,6 +12,7 @@ export abstract class Block {
 
     public constructor(
         public readonly name: string,
+        public readonly displayName: string,
         public readonly blockModels: BlockModel[],
     ) {}
 

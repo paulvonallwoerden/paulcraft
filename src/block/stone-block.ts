@@ -20,6 +20,6 @@ export const StoneBlockModel: BlockModel = {
 
 export class StoneBlock extends Block {
     public constructor() {
-        super('stone', [StoneBlockModel]);
+        super('stone', 'Stone', [StoneBlockModel]);
     }
 }

@@ -22,7 +22,7 @@ export class WaterBlock extends Block {
     public readonly blocksLight = false;
 
     public constructor() {
-        super('water', [WaterBlockModel]);
+        super('water', 'Water', [WaterBlockModel]);
     }
 
     public isCollidable(): boolean {

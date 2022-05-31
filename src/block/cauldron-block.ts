@@ -118,7 +118,7 @@ export class CauldronBlock extends Block {
     public readonly occludesNeighborBlocks = false;
 
     public constructor() {
-        super('cauldron', [
+        super('cauldron', 'Cauldron', [
             makeCauldronBlockModel(0),
             makeCauldronBlockModel(1),
             makeCauldronBlockModel(2),

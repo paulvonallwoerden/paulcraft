@@ -24,7 +24,7 @@ export const DirtBlockModel: BlockModel = {
 
 export class DirtBlock extends Block {
     public constructor() {
-        super('dirt', [DirtBlockModel]);
+        super('dirt', 'Dirt', [DirtBlockModel]);
     }
 
     public onRandomTick(level: Level, pos: BlockPos): void {

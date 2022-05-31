@@ -9,6 +9,7 @@ import { Blocks } from '../block/blocks';
 import { BlockPos, floorBlockPos, modifyBlockPosValues } from '../block/block-pos';
 import { WorldCursor } from './world-cursor';
 import { mod } from '../util/mod';
+import { Hud } from '../ui/hud/hud';
 
 // TODO: Re-factor to:
 // - don't use createTerrainCollisionBoxes as it's stupid.
@@ -36,7 +37,7 @@ export class Player {
     private digBlockSounds: AudioBuffer[] = [];
     private readonly audio: Audio;
 
-    private selectedBlockId: number = Blocks.getBlockId(Blocks.TORCH);
+    public selectedBlockId: number = Blocks.getBlockId(Blocks.TORCH);
 
     private readonly worldCursor: WorldCursor;
 
@@ -81,6 +82,9 @@ export class Player {
         this.audio.setVolume(0.2);
 
         this.worldCursor.register(Game.main.scene);
+
+        const hud = new Hud(this);
+        Game.main.uiManager.show(hud);
     }
 
     public update(deltaTime: number) {
