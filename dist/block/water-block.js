@@ -44,7 +44,7 @@ export var WaterBlockModel = {
 var WaterBlock = /** @class */ (function (_super) {
     __extends(WaterBlock, _super);
     function WaterBlock() {
-        var _this = _super.call(this, 'water', [WaterBlockModel]) || this;
+        var _this = _super.call(this, 'water', 'Water', [WaterBlockModel]) || this;
         _this.blocksLight = false;
         return _this;
     }

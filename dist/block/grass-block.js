@@ -55,7 +55,7 @@ export var GrassBlockModel = {
 var GrassBlock = /** @class */ (function (_super) {
     __extends(GrassBlock, _super);
     function GrassBlock() {
-        return _super.call(this, 'grass', [GrassBlockModel]) || this;
+        return _super.call(this, 'grass', 'Grass', [GrassBlockModel]) || this;
     }
     GrassBlock.prototype.onRandomTick = function (level, pos) {
         var blockAbove = level.getBlockAt(new Vector3(pos.x, pos.y + 1, pos.z));

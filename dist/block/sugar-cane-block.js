@@ -49,7 +49,7 @@ var SugarCaneBlockModel = {
 var SugarCaneBlock = /** @class */ (function (_super) {
     __extends(SugarCaneBlock, _super);
     function SugarCaneBlock() {
-        var _this = _super.call(this, 'sugar_cane', [SugarCaneBlockModel]) || this;
+        var _this = _super.call(this, 'sugar_cane', 'Sugarcane', [SugarCaneBlockModel]) || this;
         _this.blocksLight = false;
         return _this;
     }

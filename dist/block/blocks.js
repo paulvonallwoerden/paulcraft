@@ -116,6 +116,9 @@ var Blocks = /** @class */ (function () {
     Blocks.prototype.getNumberOfBlocks = function () {
         return Blocks.blocks.length;
     };
+    Blocks.listBlocks = function () {
+        return Blocks.blocks;
+    };
     Blocks.AIR = new AirBlock();
     Blocks.STONE = new StoneBlock();
     Blocks.GRASS = new GrassBlock();

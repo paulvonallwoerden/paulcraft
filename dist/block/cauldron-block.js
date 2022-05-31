@@ -131,7 +131,7 @@ var DefaultCauldronBlockStateValues = {
 var CauldronBlock = /** @class */ (function (_super) {
     __extends(CauldronBlock, _super);
     function CauldronBlock() {
-        var _this = _super.call(this, 'cauldron', [
+        var _this = _super.call(this, 'cauldron', 'Cauldron', [
             makeCauldronBlockModel(0),
             makeCauldronBlockModel(1),
             makeCauldronBlockModel(2),

@@ -40,11 +40,16 @@ import { degToRad, radToDeg } from 'three/src/math/MathUtils';
 import { Game } from '../game';
 import { LeftMouseButton, RightMouseButton } from '../input/input';
 import { xyzTupelToIndex } from '../util/index-to-vector3';
-import { randomElement } from '../util/random-element';
 import { Blocks } from '../block/blocks';
 import { floorBlockPos, modifyBlockPosValues } from '../block/block-pos';
 import { WorldCursor } from './world-cursor';
 import { mod } from '../util/mod';
+import { Hud } from '../ui/hud/hud';
+import { blockFaceByNormal } from '../block/block-face';
+import { Inventory } from '../inventory/inventory';
+import { UseAction } from '../item/item';
+import { Items } from '../item/items';
+import { InventoryUi } from '../inventory/inventory-ui';
 // TODO: Re-factor to:
 // - don't use createTerrainCollisionBoxes as it's stupid.
 // - use block-based ray-casting and not mesh-based ray-casting.
@@ -69,7 +74,9 @@ var Player = /** @class */ (function () {
         this.terrainCollisionBoxes = [];
         this.placeBlockSounds = [];
         this.digBlockSounds = [];
-        this.selectedBlockId = Blocks.getBlockId(Blocks.TORCH);
+        this.inventory = new Inventory(30);
+        this.selectedInventorySlot = 0;
+        this.inventoryUi = new InventoryUi(this.inventory);
         this.worldCursor = new WorldCursor(Game.main.blocks);
         this.audio = new Audio(Game.main.audioListener);
         this.updateMovement(0, 0);
@@ -84,7 +91,7 @@ var Player = /** @class */ (function () {
     };
     Player.prototype.init = function () {
         return __awaiter(this, void 0, void 0, function () {
-            var audioLoader, _a, _b;
+            var audioLoader, _a, _b, hud;
             var _this = this;
             return __generator(this, function (_c) {
                 switch (_c.label) {
@@ -110,56 +117,93 @@ var Player = /** @class */ (function () {
                         _b.placeBlockSounds = _c.sent();
                         this.audio.setVolume(0.2);
                         this.worldCursor.register(Game.main.scene);
+                        hud = new Hud(this);
+                        Game.main.uiManager.show(hud);
+                        Game.main.uiManager.show(this.inventoryUi);
                         return [2 /*return*/];
                 }
             });
         });
     };
     Player.prototype.update = function (deltaTime) {
-        this.raycaster.setFromCamera({ x: 0, y: 0 }, this.camera);
-        var intersections = this.raycaster.intersectObjects(Game.main.level.getChunkMeshes());
-        var intersection = intersections.reduce(function (nearestIntersection, intersection) { return nearestIntersection && nearestIntersection.distance < intersection.distance ? nearestIntersection : intersection; }, undefined);
-        if (intersection !== undefined && intersection.face) {
-            var normalOffset = intersection.face.normal.normalize().multiplyScalar(0.1);
-            var hitBlockPos = {
-                x: Math.floor(intersection.point.x - normalOffset.x),
-                y: Math.floor(intersection.point.y - normalOffset.y),
-                z: Math.floor(intersection.point.z - normalOffset.z),
-            };
-            if (this.input.isKeyDowned(LeftMouseButton)) {
-                if (this.audio.isPlaying)
-                    this.audio.stop();
-                this.audio.setBuffer(randomElement(this.digBlockSounds));
-                this.audio.play();
-                var world = Game.main.level.getWorld();
-                var blockToBreak = world.getBlock(hitBlockPos);
-                world.setBlock(hitBlockPos, Blocks.AIR);
-                blockToBreak === null || blockToBreak === void 0 ? void 0 : blockToBreak.onBreak(world, hitBlockPos);
+        // const intersections = this.raycaster.intersectObjects(Game.main.level.getChunkMeshes());
+        // const intersection = intersections.reduce<Intersection | undefined>(
+        //     (nearestIntersection, intersection) => nearestIntersection && nearestIntersection.distance < intersection.distance ? nearestIntersection : intersection,
+        //     undefined,
+        // );
+        // if (intersection !== undefined && intersection.face) {
+        //     const normalOffset = intersection.face.normal.normalize().multiplyScalar(0.1);
+        //     const hitBlockPos: BlockPos = {
+        //         x: Math.floor(intersection.point.x - normalOffset.x),
+        //         y: Math.floor(intersection.point.y - normalOffset.y),
+        //         z: Math.floor(intersection.point.z - normalOffset.z),
+        //     };
+        var _this = this;
+        //     if (this.input.isKeyDowned(LeftMouseButton)) {
+        //         if (this.audio.isPlaying) this.audio.stop();
+        //         this.audio.setBuffer(randomElement(this.digBlockSounds));
+        //         this.audio.play();
+        //         const world = Game.main.level.getWorld();
+        //         const blockToBreak = world.getBlock(hitBlockPos)!;
+        //         world.setBlock(hitBlockPos, Blocks.AIR);
+        //         blockToBreak?.onBreak(world, hitBlockPos);
+        //     }
+        //     { 
+        //         const world = Game.main.level.getWorld();
+        //         // this.worldCursor.set(world, hitBlockPos);
+        //         if (this.input.isKeyDowned(RightMouseButton)) {
+        //             const hitBlock = world.getBlock(hitBlockPos);
+        //             const interactionResult = hitBlock?.onInteract(world, hitBlockPos);
+        //             const samplePoint = intersection.point.clone().add(normalOffset);
+        //             const [hitX, hitY, hitZ] = [
+        //                 Math.floor(samplePoint.x),
+        //                 Math.floor(samplePoint.y),
+        //                 Math.floor(samplePoint.z),
+        //             ];
+        //             const blockPos = new Vector3(hitX, hitY, hitZ);
+        //             if (interactionResult === false && ([Blocks.AIR, Blocks.WATER] as any).includes(world.getBlock(blockPos))) {
+        //                 if (this.audio.isPlaying) this.audio.stop();
+        //                 this.audio.setBuffer(randomElement(this.placeBlockSounds));
+        //                 this.audio.play();
+        //                 // const blockToPlace = Blocks.getBlockById(this.selectedBlockId);
+        //                 // Game.main.level.setBlockAt(blockPos, blockToPlace);
+        //                 // blockToPlace.onPlace(this, world, blockPos);
+        //             }
+        //         }
+        //     }
+        // }
+        if (this.input.isKeyDowned(LeftMouseButton)) {
+            var itemStack = this.inventory.getSlot(this.selectedInventorySlot);
+            if (!itemStack) {
+                return;
             }
-            {
-                var world = Game.main.level.getWorld();
-                // this.worldCursor.set(world, hitBlockPos);
-                if (this.input.isKeyDowned(RightMouseButton)) {
-                    var hitBlock = world.getBlock(hitBlockPos);
-                    var interactionResult = hitBlock === null || hitBlock === void 0 ? void 0 : hitBlock.onInteract(world, hitBlockPos);
-                    var samplePoint = intersection.point.clone().add(normalOffset);
-                    var _a = [
-                        Math.floor(samplePoint.x),
-                        Math.floor(samplePoint.y),
-                        Math.floor(samplePoint.z),
-                    ], hitX = _a[0], hitY = _a[1], hitZ = _a[2];
-                    var blockPos = new Vector3(hitX, hitY, hitZ);
-                    if (interactionResult === false && [Blocks.AIR, Blocks.WATER].includes(world.getBlock(blockPos))) {
-                        if (this.audio.isPlaying)
-                            this.audio.stop();
-                        this.audio.setBuffer(randomElement(this.placeBlockSounds));
-                        this.audio.play();
-                        var blockToPlace = Blocks.getBlockById(this.selectedBlockId);
-                        Game.main.level.setBlockAt(blockPos, blockToPlace);
-                        blockToPlace.onPlace(this, world, blockPos);
-                    }
-                }
+            var item = itemStack.item;
+            var canUse = item.onUse(UseAction.Primary, Game.main.level.getWorld(), this);
+            if (!canUse) {
+                return;
             }
+            this.inventory.tidy();
+        }
+        if (this.input.isKeyDowned(RightMouseButton)) {
+            var facing = this.getFacingBlock();
+            if (!facing) {
+                return;
+            }
+            var block = facing.block;
+            var canInteract = block.onInteract(Game.main.level.getWorld(), facing.pos);
+            if (canInteract) {
+                return;
+            }
+            var itemStack = this.inventory.getSlot(this.selectedInventorySlot);
+            if (!itemStack) {
+                return;
+            }
+            var item = itemStack.item;
+            var canUse = item.onUse(UseAction.Secondary, Game.main.level.getWorld(), this);
+            if (!canUse) {
+                return;
+            }
+            this.inventory.tidy();
         }
         // TODO: Remove this temporary fix. It solves the problem of the player falling before the world terrain
         // is generated.
@@ -168,12 +212,21 @@ var Player = /** @class */ (function () {
         }
         if (!this.start)
             return;
-        // Inventory
-        if (this.input.isKeyDowned('Q') && this.selectedBlockId > 1) {
-            this.selectedBlockId--;
+        if (this.input.isKeyDowned('Q')) {
+            this.selectedInventorySlot--;
+            if (this.selectedInventorySlot < 0)
+                this.selectedInventorySlot = 0;
+            if (this.selectedInventorySlot >= this.inventory.countUsedSlots())
+                this.selectedInventorySlot = this.inventory.countUsedSlots() - 1;
+            this.inventoryUi.setSelectedSlot(this.selectedInventorySlot);
         }
-        if (this.input.isKeyDowned('E') && this.selectedBlockId + 1 < Game.main.blocks.getNumberOfBlocks()) {
-            this.selectedBlockId++;
+        if (this.input.isKeyDowned('E')) {
+            this.selectedInventorySlot++;
+            if (this.selectedInventorySlot < 0)
+                this.selectedInventorySlot = 0;
+            if (this.selectedInventorySlot >= this.inventory.countUsedSlots())
+                this.selectedInventorySlot = this.inventory.countUsedSlots() - 1;
+            this.inventoryUi.setSelectedSlot(this.selectedInventorySlot);
         }
         // Movement
         var movementSpeed = this.flying ? this.flyingSpeed : this.walkingSpeed;
@@ -192,6 +245,10 @@ var Player = /** @class */ (function () {
                 Game.main.level.getWorld().chunkColumnManager.drop();
                 var chunkPosition = floorBlockPos(modifyBlockPosValues(this.position, function (v) { return v / 16; }));
                 Game.main.level.getWorld().chunkColumnManager.setCenter(chunkPosition.x, chunkPosition.z);
+            }
+            if (this.input.isKeyDowned('M')) {
+                this.inventory.put(Items.BOMB);
+                Blocks.listBlocks().forEach(function (block) { return _this.inventory.put(Items.getBlockItem(block), 64); });
             }
             var x = Math.cos(this.rotation.y);
             var z = Math.sin(this.rotation.y);
@@ -299,6 +356,31 @@ var Player = /** @class */ (function () {
     };
     Player.prototype.getFacingDirection = function () {
         return mod(Math.round(radToDeg(this.rotation.y) / 90), 4);
+    };
+    Player.prototype.getFacingBlock = function () {
+        this.raycaster.setFromCamera({ x: 0, y: 0 }, this.camera);
+        var intersections = this.raycaster.intersectObjects(Game.main.level.getChunkMeshes());
+        var intersection = intersections.reduce(function (nearestIntersection, intersection) { return nearestIntersection && nearestIntersection.distance < intersection.distance ? nearestIntersection : intersection; }, undefined);
+        if (!intersection || !intersection.face) {
+            return;
+        }
+        var point = intersection.point, hitFace = intersection.face;
+        var normal = hitFace.normal.normalize();
+        var normalOffset = normal.clone().multiplyScalar(0.1);
+        var pos = {
+            x: Math.floor(point.x - normalOffset.x),
+            y: Math.floor(point.y - normalOffset.y),
+            z: Math.floor(point.z - normalOffset.z),
+        };
+        var block = Game.main.level.getBlockAt(pos);
+        if (!block) {
+            return;
+        }
+        var face = blockFaceByNormal(hitFace.normal);
+        if (!face) {
+            return;
+        }
+        return { pos: pos, block: block, face: face, point: point };
     };
     return Player;
 }());

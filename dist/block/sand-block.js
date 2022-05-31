@@ -46,7 +46,7 @@ export var SandBlockModel = {
 var SandBlock = /** @class */ (function (_super) {
     __extends(SandBlock, _super);
     function SandBlock() {
-        return _super.call(this, 'sand', [SandBlockModel]) || this;
+        return _super.call(this, 'sand', 'Sand', [SandBlockModel]) || this;
     }
     SandBlock.prototype.onRandomTick = function (level, pos) {
         if (level.getBlockAt(new Vector3(pos.x, pos.y - 1, pos.z)) !== Blocks.AIR) {

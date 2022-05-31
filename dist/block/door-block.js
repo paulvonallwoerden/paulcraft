@@ -51,7 +51,7 @@ var DefaultDoorBlockStateValues = { open: false, isTop: false, facing: 0 };
 var DoorBlock = /** @class */ (function (_super) {
     __extends(DoorBlock, _super);
     function DoorBlock() {
-        var _this = _super.call(this, 'door', [
+        var _this = _super.call(this, 'door', 'Door', [
             makeDoorBlockModel(false, 90, 'textures/blocks/oak_door_bottom.png'),
             makeDoorBlockModel(true, 90, 'textures/blocks/oak_door_bottom.png'),
             makeDoorBlockModel(false, 90, 'textures/blocks/oak_door_top.png'),
@@ -91,7 +91,6 @@ var DoorBlock = /** @class */ (function (_super) {
         var topPos = __assign(__assign({}, pos), { y: pos.y + 1 });
         world.setBlockState(topPos, new BlockState(__assign(__assign({}, DefaultDoorBlockStateValues), { isTop: true, facing: facing })));
         world.setBlock(topPos, Blocks.DOOR);
-        return true;
     };
     DoorBlock.prototype.onInteract = function (world, pos) {
         var topPos = __assign(__assign({}, pos), { y: pos.y + 1 });

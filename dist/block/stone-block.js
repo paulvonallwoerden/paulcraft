@@ -44,7 +44,7 @@ export var StoneBlockModel = {
 var StoneBlock = /** @class */ (function (_super) {
     __extends(StoneBlock, _super);
     function StoneBlock() {
-        return _super.call(this, 'stone', [StoneBlockModel]) || this;
+        return _super.call(this, 'stone', 'Stone', [StoneBlockModel]) || this;
     }
     return StoneBlock;
 }(Block));

@@ -233,7 +233,6 @@ var Chunk = /** @class */ (function () {
             this.getNeighborChunks().forEach(function (chunk) { return chunk.requestRebuild(); });
         }
         else if (x <= 0 || y <= 0 || z <= 0 || x >= CHUNK_WIDTH - 1 || y >= CHUNK_HEIGHT - 1 || z >= CHUNK_WIDTH - 1) {
-            console.log("pls update for ".concat(oldBlock.name, " -> ").concat(block.name));
             this.getNeighborChunks(1).forEach(function (chunk) { return chunk.requestRebuild(); });
         }
     };

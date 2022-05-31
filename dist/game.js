@@ -44,6 +44,7 @@ import { ChunkGeometryBuilderPool } from './world/chunk/chunk-geometry-builder-p
 import Stats from 'stats.js';
 import { AudioManager } from './audio/audio-manager';
 import { ListOfSounds } from './audio/sounds';
+import { UiManager } from './ui/ui-manager';
 // TODO: This class has too many responsibilities. Factor it out.
 var Game = /** @class */ (function () {
     function Game(root) {
@@ -53,6 +54,7 @@ var Game = /** @class */ (function () {
         this.timeSinceLastTick = 0;
         this.ticksPerSecond = 20;
         this.blocks = new Blocks();
+        this.uiManager = new UiManager();
         // TODO: Make this configurable or at least random.
         this.seed = 'ijn3fi3fin3fim';
         this.audioListener = new AudioListener();
@@ -68,6 +70,7 @@ var Game = /** @class */ (function () {
         var ambientLight = new AmbientLight(0x888888);
         this.scene.add(ambientLight);
         this.renderer = new WebGLRenderer();
+        this.renderer.autoClear = false;
         this.renderer.setSize(width, height);
         this.renderer.setClearColor(0xe6fcff);
         var canvas = root.appendChild(this.renderer.domElement);
@@ -75,6 +78,7 @@ var Game = /** @class */ (function () {
         this.camera = new PerspectiveCamera(75, width / height, 0.1, 100000);
         this.camera.add(this.audioListener);
         this.input = new Input(document.body);
+        this.uiManager.setScreenSize(width, height);
         var originCross = new OriginCross();
         originCross.addToScene(this.scene);
         this.stats.showPanel(0);
@@ -92,50 +96,37 @@ var Game = /** @class */ (function () {
             return __generator(this, function (_a) {
                 switch (_a.label) {
                     case 0:
+                        console.log('Preparing ui...');
+                        return [4 /*yield*/, this.uiManager.load()];
+                    case 1:
+                        _a.sent();
                         console.log("Crafting the blocks...");
                         this.blocks = new Blocks();
                         return [4 /*yield*/, this.blocks.init()];
-                    case 1:
+                    case 2:
                         _a.sent();
                         // Workers
                         console.log("Waking up the workers...");
                         return [4 /*yield*/, this.chunkGeometryBuilderPool.addWorkers(4)];
-                    case 2:
-                        _a.sent();
-                        return [4 /*yield*/, this.chunkGeneratorPool.addWorkers(1)];
                     case 3:
                         _a.sent();
-                        // Legacy
-                        // for (let i = 0; i < 4; i++) {
-                        //     const worker = new ChunkDataGeneratorWorker();
-                        //     worker.postMessage({
-                        //         type: 'seed',
-                        //         seed: this.seed,
-                        //     });
-                        //     worker.addEventListener('message', ({ data }) => {
-                        //         if (data.type === 'generate--complete') {
-                        //             this.chunkDataGenerationResults[JSON.stringify(data.position)] = data.result;
-                        //         }
-                        //         if (data.type === 'build-mesh--complete') {
-                        //             this.chunkGeometryResults[JSON.stringify(data.position)] = data.result;
-                        //         }
-                        //     });
-                        //     this.chunkDataGeneratorWorkerPool.push(worker);
-                        // }
+                        return [4 /*yield*/, this.chunkGeneratorPool.addWorkers(1)];
+                    case 4:
+                        _a.sent();
                         // Level
                         console.log("Leveling...");
                         this.level = new Level(this, this.scene);
                         return [4 /*yield*/, this.level.init()];
-                    case 4:
+                    case 5:
                         _a.sent();
                         // Audio
                         console.log("Making it sound nice...");
                         return [4 /*yield*/, this.audioManager.load()];
-                    case 5:
+                    case 6:
                         _a.sent();
                         musicLoader = new AudioLoader();
                         return [4 /*yield*/, musicLoader.loadAsync('audio/music/shimmer.mp3')];
-                    case 6:
+                    case 7:
                         shimmer = _a.sent();
                         this.musicAudio.setLoop(true);
                         this.musicAudio.setBuffer(shimmer);
@@ -172,7 +163,11 @@ var Game = /** @class */ (function () {
         }
         this.blocks.update(deltaTime);
         this.level.update(deltaTime);
+        this.uiManager.render();
+        this.renderer.clear();
         this.renderer.render(this.scene, this.camera);
+        this.renderer.clearDepth();
+        this.renderer.render(this.uiManager.scene, this.uiManager.camera);
         this.level.lateUpdate(deltaTime);
         this.input.lateUpdate();
     };

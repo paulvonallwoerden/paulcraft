@@ -129,6 +129,9 @@ var World = /** @class */ (function () {
     World.prototype.playSound = function (name) {
         this.level.getGame().audioManager.playSound(name);
     };
+    World.prototype.playSound3D = function (name, pos) {
+        this.level.getGame().audioManager.playSound3D(name, pos);
+    };
     World.prototype.__tempGetChunkMeshes = function () {
         return this.chunkColumnManager.__tempGetChunkMeshes();
     };

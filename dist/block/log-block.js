@@ -53,7 +53,7 @@ export var OakLogBlockModel = {
 var OakLogBlock = /** @class */ (function (_super) {
     __extends(OakLogBlock, _super);
     function OakLogBlock() {
-        return _super.call(this, 'oak_log', [OakLogBlockModel]) || this;
+        return _super.call(this, 'oak_log', 'Wood', [OakLogBlockModel]) || this;
     }
     return OakLogBlock;
 }(Block));

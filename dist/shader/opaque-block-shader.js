@@ -10,7 +10,6 @@ export function makeOpaqueBlockMaterial(map) {
         },
         fragmentShader: fragmentShader,
         vertexShader: vertexShader,
-        alphaTest: 0.5,
         transparent: true,
     });
 }

@@ -178,7 +178,7 @@ var AirBlockModel = {
 var AirBlock = /** @class */ (function (_super) {
     __extends(AirBlock, _super);
     function AirBlock() {
-        var _this = _super.call(this, 'air', [AirBlockModel]) || this;
+        var _this = _super.call(this, 'air', 'Air', [AirBlockModel]) || this;
         _this.blocksLight = false;
         return _this;
     }
@@ -202,7 +202,9 @@ var AirBlock = /** @class */ (function (_super) {
 __webpack_require__.r(__webpack_exports__);
 /* harmony export */ __webpack_require__.d(__webpack_exports__, {
 /* harmony export */   "BlockFace": () => (/* binding */ BlockFace),
-/* harmony export */   "BlockFaces": () => (/* binding */ BlockFaces)
+/* harmony export */   "BlockFaces": () => (/* binding */ BlockFaces),
+/* harmony export */   "blockFaceByNormal": () => (/* binding */ blockFaceByNormal),
+/* harmony export */   "normalByBlockFace": () => (/* binding */ normalByBlockFace)
 /* harmony export */ });
 var BlockFace;
 (function (BlockFace) {
@@ -221,6 +223,36 @@ var BlockFaces = [
     BlockFace.FRONT,
     BlockFace.BACK,
 ];
+function blockFaceByNormal(normal) {
+    if (normal.x === 1) {
+        return BlockFace.RIGHT;
+    }
+    if (normal.x === -1) {
+        return BlockFace.LEFT;
+    }
+    if (normal.y === 1) {
+        return BlockFace.TOP;
+    }
+    if (normal.y === -1) {
+        return BlockFace.BOTTOM;
+    }
+    if (normal.z === 1) {
+        return BlockFace.FRONT;
+    }
+    if (normal.z === -1) {
+        return BlockFace.BACK;
+    }
+}
+function normalByBlockFace(face) {
+    switch (face) {
+        case BlockFace.RIGHT: return { x: 1, y: 0, z: 0 };
+        case BlockFace.LEFT: return { x: -1, y: 0, z: 0 };
+        case BlockFace.TOP: return { x: 0, y: 1, z: 0 };
+        case BlockFace.BOTTOM: return { x: 0, y: -1, z: 0 };
+        case BlockFace.FRONT: return { x: 0, y: 0, z: 1 };
+        case BlockFace.BACK: return { x: 0, y: 0, z: -1 };
+    }
+}
 
 
 /***/ }),
@@ -332,8 +364,9 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */   "Block": () => (/* binding */ Block)
 /* harmony export */ });
 var Block = /** @class */ (function () {
-    function Block(name, blockModels) {
+    function Block(name, displayName, blockModels) {
         this.name = name;
+        this.displayName = displayName;
         this.blockModels = blockModels;
         this.isFoliage = false;
         this.blocksLight = true;
@@ -343,7 +376,7 @@ var Block = /** @class */ (function () {
     Block.prototype.getBlockModel = function (blockState) { return 0; };
     Block.prototype.getLightLevel = function () { return 0; };
     Block.prototype.onSetBlock = function (world, pos) { };
-    Block.prototype.onPlace = function (player, world, pos) { return true; };
+    Block.prototype.onPlace = function (player, world, pos) { };
     Block.prototype.onBreak = function (world, pos) { };
     Block.prototype.onInteract = function (world, pos) { return false; };
     Block.prototype.isCollidable = function (world, pos) { return true; };
@@ -499,6 +532,9 @@ var Blocks = /** @class */ (function () {
     };
     Blocks.prototype.getNumberOfBlocks = function () {
         return Blocks.blocks.length;
+    };
+    Blocks.listBlocks = function () {
+        return Blocks.blocks;
     };
     Blocks.AIR = new _air_block__WEBPACK_IMPORTED_MODULE_2__.AirBlock();
     Blocks.STONE = new _stone_block__WEBPACK_IMPORTED_MODULE_11__.StoneBlock();
@@ -682,7 +718,7 @@ var DefaultCauldronBlockStateValues = {
 var CauldronBlock = /** @class */ (function (_super) {
     __extends(CauldronBlock, _super);
     function CauldronBlock() {
-        var _this = _super.call(this, 'cauldron', [
+        var _this = _super.call(this, 'cauldron', 'Cauldron', [
             makeCauldronBlockModel(0),
             makeCauldronBlockModel(1),
             makeCauldronBlockModel(2),
@@ -773,7 +809,7 @@ var DirtBlockModel = {
 var DirtBlock = /** @class */ (function (_super) {
     __extends(DirtBlock, _super);
     function DirtBlock() {
-        return _super.call(this, 'dirt', [DirtBlockModel]) || this;
+        return _super.call(this, 'dirt', 'Dirt', [DirtBlockModel]) || this;
     }
     DirtBlock.prototype.onRandomTick = function (level, pos) {
         if (level.getBlockAt(new three__WEBPACK_IMPORTED_MODULE_3__.Vector3(pos.x, pos.y + 1, pos.z)) !== _blocks__WEBPACK_IMPORTED_MODULE_2__.Blocks.AIR) {
@@ -885,7 +921,7 @@ var DefaultDoorBlockStateValues = { open: false, isTop: false, facing: 0 };
 var DoorBlock = /** @class */ (function (_super) {
     __extends(DoorBlock, _super);
     function DoorBlock() {
-        var _this = _super.call(this, 'door', [
+        var _this = _super.call(this, 'door', 'Door', [
             makeDoorBlockModel(false, 90, 'textures/blocks/oak_door_bottom.png'),
             makeDoorBlockModel(true, 90, 'textures/blocks/oak_door_bottom.png'),
             makeDoorBlockModel(false, 90, 'textures/blocks/oak_door_top.png'),
@@ -925,7 +961,6 @@ var DoorBlock = /** @class */ (function (_super) {
         var topPos = __assign(__assign({}, pos), { y: pos.y + 1 });
         world.setBlockState(topPos, new _block_state_block_state__WEBPACK_IMPORTED_MODULE_2__.BlockState(__assign(__assign({}, DefaultDoorBlockStateValues), { isTop: true, facing: facing })));
         world.setBlock(topPos, _blocks__WEBPACK_IMPORTED_MODULE_3__.Blocks.DOOR);
-        return true;
     };
     DoorBlock.prototype.onInteract = function (world, pos) {
         var topPos = __assign(__assign({}, pos), { y: pos.y + 1 });
@@ -1055,7 +1090,7 @@ var GrassBlockModel = {
 var GrassBlock = /** @class */ (function (_super) {
     __extends(GrassBlock, _super);
     function GrassBlock() {
-        return _super.call(this, 'grass', [GrassBlockModel]) || this;
+        return _super.call(this, 'grass', 'Grass', [GrassBlockModel]) || this;
     }
     GrassBlock.prototype.onRandomTick = function (level, pos) {
         var blockAbove = level.getBlockAt(new three__WEBPACK_IMPORTED_MODULE_3__.Vector3(pos.x, pos.y + 1, pos.z));
@@ -1130,7 +1165,7 @@ var LeavesBlockModel = {
 var LeavesBlock = /** @class */ (function (_super) {
     __extends(LeavesBlock, _super);
     function LeavesBlock() {
-        var _this = _super.call(this, 'leaves', [LeavesBlockModel]) || this;
+        var _this = _super.call(this, 'leaves', 'Leaves', [LeavesBlockModel]) || this;
         _this.isFoliage = true;
         _this.blocksLight = false;
         return _this;
@@ -1211,7 +1246,7 @@ var OakLogBlockModel = {
 var OakLogBlock = /** @class */ (function (_super) {
     __extends(OakLogBlock, _super);
     function OakLogBlock() {
-        return _super.call(this, 'oak_log', [OakLogBlockModel]) || this;
+        return _super.call(this, 'oak_log', 'Wood', [OakLogBlockModel]) || this;
     }
     return OakLogBlock;
 }(_block__WEBPACK_IMPORTED_MODULE_0__.Block));
@@ -1284,7 +1319,7 @@ var SandBlockModel = {
 var SandBlock = /** @class */ (function (_super) {
     __extends(SandBlock, _super);
     function SandBlock() {
-        return _super.call(this, 'sand', [SandBlockModel]) || this;
+        return _super.call(this, 'sand', 'Sand', [SandBlockModel]) || this;
     }
     SandBlock.prototype.onRandomTick = function (level, pos) {
         if (level.getBlockAt(new three__WEBPACK_IMPORTED_MODULE_3__.Vector3(pos.x, pos.y - 1, pos.z)) !== _blocks__WEBPACK_IMPORTED_MODULE_2__.Blocks.AIR) {
@@ -1360,7 +1395,7 @@ var StoneBlockModel = {
 var StoneBlock = /** @class */ (function (_super) {
     __extends(StoneBlock, _super);
     function StoneBlock() {
-        return _super.call(this, 'stone', [StoneBlockModel]) || this;
+        return _super.call(this, 'stone', 'Stone', [StoneBlockModel]) || this;
     }
     return StoneBlock;
 }(_block__WEBPACK_IMPORTED_MODULE_0__.Block));
@@ -1433,7 +1468,7 @@ var SugarCaneBlockModel = {
 var SugarCaneBlock = /** @class */ (function (_super) {
     __extends(SugarCaneBlock, _super);
     function SugarCaneBlock() {
-        var _this = _super.call(this, 'sugar_cane', [SugarCaneBlockModel]) || this;
+        var _this = _super.call(this, 'sugar_cane', 'Sugarcane', [SugarCaneBlockModel]) || this;
         _this.blocksLight = false;
         return _this;
     }
@@ -1677,7 +1712,7 @@ var DefaultTorchBlockStateValues = {
 var TorchBlock = /** @class */ (function (_super) {
     __extends(TorchBlock, _super);
     function TorchBlock() {
-        var _this = _super.call(this, 'torch', [
+        var _this = _super.call(this, 'torch', 'Torch', [
             StandingTorchBlockModel,
             makeHangingTorchBlockModel(0),
             makeHangingTorchBlockModel(90),
@@ -1780,7 +1815,7 @@ var WaterBlockModel = {
 var WaterBlock = /** @class */ (function (_super) {
     __extends(WaterBlock, _super);
     function WaterBlock() {
-        var _this = _super.call(this, 'water', [WaterBlockModel]) || this;
+        var _this = _super.call(this, 'water', 'Water', [WaterBlockModel]) || this;
         _this.blocksLight = false;
         return _this;
     }
@@ -1853,7 +1888,6 @@ function makeOpaqueBlockMaterial(map) {
         },
         fragmentShader: fragmentShader,
         vertexShader: vertexShader,
-        alphaTest: 0.5,
         transparent: true,
     });
 }
@@ -55193,4 +55227,4 @@ var ChunkGenerator = /** @class */ (function () {
 
 /******/ })()
 ;
-//# sourceMappingURL=chunk-generator.worker.87982a9601d3d3f22ae0.worker.js.map
+//# sourceMappingURL=chunk-generator.worker.e47ceee73c1f60652bac.worker.js.map

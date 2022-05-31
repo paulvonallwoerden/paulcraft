@@ -45,6 +45,7 @@ var ChunkColumn = /** @class */ (function () {
         this.manager = manager;
         this.position = position;
         this.chunks = [];
+        this.skylightDirty = false;
         this.skyLight = new Uint8Array(CHUNK_WIDTH * CHUNK_WIDTH * CHUNK_WIDTH * 8);
         for (var i = 0; i < height; i++) {
             this.chunks.push(new Chunk(this, new Vector3(position[0], i, position[1])));
@@ -68,6 +69,10 @@ var ChunkColumn = /** @class */ (function () {
         });
     };
     ChunkColumn.prototype.lateUpdate = function (deltaTime) {
+        if (this.skylightDirty) {
+            this.calculateSkyLight();
+            this.skylightDirty = false;
+        }
         this.chunks.forEach(function (chunk) { return chunk.lateUpdate(deltaTime); });
     };
     ChunkColumn.prototype.setBlockAt = function (_a, block) {
@@ -78,9 +83,8 @@ var ChunkColumn = /** @class */ (function () {
         }
         var oldBlock = this.getBlockAt([x, y, z]);
         this.chunks[chunkLocalY].setBlock([x, y - chunkLocalY * CHUNK_HEIGHT, z], block);
-        // TODO: Run this async and NOT sync! Important!
         if (oldBlock !== block && ((oldBlock === null || oldBlock === void 0 ? void 0 : oldBlock.blocksLight) !== block.blocksLight)) {
-            this.calculateSkyLight();
+            this.skylightDirty = true;
         }
     };
     ChunkColumn.prototype.getBlockAt = function (_a) {

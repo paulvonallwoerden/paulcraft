@@ -43,7 +43,7 @@ export var LeavesBlockModel = {
 var LeavesBlock = /** @class */ (function (_super) {
     __extends(LeavesBlock, _super);
     function LeavesBlock() {
-        var _this = _super.call(this, 'leaves', [LeavesBlockModel]) || this;
+        var _this = _super.call(this, 'leaves', 'Leaves', [LeavesBlockModel]) || this;
         _this.isFoliage = true;
         _this.blocksLight = false;
         return _this;

@@ -34,76 +34,55 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
         if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
     }
 };
-import { DirectionalLight, Object3D, Vector2, Vector3 } from "three";
-import { Player } from "./player/player";
-import { Game } from "./game";
-import { degToRad } from "three/src/math/MathUtils";
-import { World } from "./world/world";
-// TODO: The abstraction between level & world isn't really clear. Come up with a concept.
-var Level = /** @class */ (function () {
-    function Level(game, scene) {
-        this.game = game;
-        this.scene = scene;
-        // Lighting
-        this.sun = new DirectionalLight(0xffffff, 0.6);
-        this.sun.position.set(0, 1, 0);
-        this.sunTarget = new Object3D();
-        this.sunTarget.position.set(0.2, 0, 0.4);
-        this.sun.target = this.sunTarget;
-        this.scene.add(this.sun, this.sunTarget);
-        // Player
-        this.player = new Player(Game.main.camera, Game.main.input, new Vector3(22, 68, 70), new Vector2(degToRad(0), degToRad(0)));
-        this.world = new World(this, this.scene);
+import { NearestFilter, OrthographicCamera, Scene, TextureLoader, Vector2 } from 'three';
+import { makeTextMaterial } from '../shader/text-shader';
+import { FontRenderer } from './font-renderer';
+var UiManager = /** @class */ (function () {
+    function UiManager() {
+        this.fontRenderer = new FontRenderer();
+        this.textMaterial = makeTextMaterial();
+        this.scene = new Scene();
+        this.camera = new OrthographicCamera(-10, 10, 10, -10, 0, 1);
+        this.size = new Vector2();
+        this.activeInterfaces = [];
     }
-    Level.prototype.init = function () {
+    UiManager.prototype.setScreenSize = function (width, height) {
+        var scale = 0.05;
+        this.camera.bottom = 0;
+        this.camera.left = 0;
+        this.camera.right = width * scale;
+        this.camera.top = height * scale;
+        this.camera.updateProjectionMatrix();
+        this.size.set(width * scale, height * scale);
+    };
+    UiManager.prototype.show = function (uiInterface) {
+        this.activeInterfaces.push(uiInterface);
+        uiInterface.init(this);
+    };
+    UiManager.prototype.render = function () {
+        var _this = this;
+        this.activeInterfaces.forEach(function (ui) { return ui.draw(_this.size); });
+        this.activeInterfaces.forEach(function (ui) { return ui.onAfterDraw(_this, new Vector2(640, 480)); });
+    };
+    UiManager.prototype.addMesh = function (mesh) {
+        mesh.frustumCulled = false;
+        this.scene.add(mesh);
+    };
+    UiManager.prototype.load = function () {
         return __awaiter(this, void 0, void 0, function () {
+            var fontTexture;
+            var _this = this;
             return __generator(this, function (_a) {
-                switch (_a.label) {
-                    case 0: return [4 /*yield*/, this.player.init()];
-                    case 1:
-                        _a.sent();
-                        return [4 /*yield*/, this.world.init()];
-                    case 2:
-                        _a.sent();
-                        return [2 /*return*/];
-                }
+                fontTexture = new TextureLoader().load('textures/ascii.png', function (texture) {
+                    fontTexture.minFilter = NearestFilter;
+                    fontTexture.magFilter = NearestFilter;
+                    _this.fontRenderer.calculateGlyphWidths(texture);
+                    _this.textMaterial.uniforms.uTexture.value = fontTexture;
+                });
+                return [2 /*return*/];
             });
         });
     };
-    Level.prototype.update = function (deltaTime) {
-        var oldPos = this.player.getChunkPosition();
-        this.player.update(deltaTime);
-        var newPos = this.player.getChunkPosition();
-        if (oldPos[0] !== newPos[0] || oldPos[2] !== newPos[2]) {
-            this.world.setPlayerChunk(newPos[0], newPos[2]);
-        }
-        this.world.update(deltaTime);
-    };
-    Level.prototype.lateUpdate = function (deltaTime) {
-        this.world.lateUpdate(deltaTime);
-    };
-    Level.prototype.destroy = function () {
-        if (this.sun)
-            this.scene.remove(this.sun);
-    };
-    Level.prototype.onTick = function (deltaTime) {
-        this.world.tick(deltaTime);
-    };
-    Level.prototype.setBlockAt = function (pos, block) {
-        return this.world.setBlock({ x: pos.x, y: pos.y, z: pos.z }, block);
-    };
-    Level.prototype.getBlockAt = function (pos) {
-        return this.world.getBlock(pos);
-    };
-    Level.prototype.getWorld = function () {
-        return this.world;
-    };
-    Level.prototype.getChunkMeshes = function () {
-        return this.world.__tempGetChunkMeshes();
-    };
-    Level.prototype.getGame = function () {
-        return this.game;
-    };
-    return Level;
+    return UiManager;
 }());
-export { Level };
+export { UiManager };

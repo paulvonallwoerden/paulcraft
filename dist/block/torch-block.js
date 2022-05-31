@@ -105,7 +105,7 @@ var DefaultTorchBlockStateValues = {
 var TorchBlock = /** @class */ (function (_super) {
     __extends(TorchBlock, _super);
     function TorchBlock() {
-        var _this = _super.call(this, 'torch', [
+        var _this = _super.call(this, 'torch', 'Torch', [
             StandingTorchBlockModel,
             makeHangingTorchBlockModel(0),
             makeHangingTorchBlockModel(90),

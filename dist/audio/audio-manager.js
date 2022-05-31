@@ -46,13 +46,15 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
     }
 };
 import pReduce from 'p-reduce';
-import { Audio } from 'three';
+import { Audio, PositionalAudio } from 'three';
+import { Game } from '../game';
 var AudioManager = /** @class */ (function () {
     function AudioManager(audioListener, audioLoader, soundSrc) {
         this.audioListener = audioListener;
         this.audioLoader = audioLoader;
         this.soundSrc = soundSrc;
         this.audios = [];
+        this.positionalAudios = [];
     }
     AudioManager.prototype.load = function () {
         return __awaiter(this, void 0, void 0, function () {
@@ -92,6 +94,17 @@ var AudioManager = /** @class */ (function () {
         }
         this.getAudio().setBuffer(this.sounds[name]).play();
     };
+    AudioManager.prototype.playSound3D = function (name, pos) {
+        if (!this.sounds) {
+            throw new Error('Can\'t play sound as the sounds haven\'t been loaded yet');
+        }
+        var audio = this.getPositionalAudio();
+        audio.setBuffer(this.sounds[name]);
+        audio.setVolume(0.5);
+        audio.setRefDistance(20);
+        audio.position.set(pos.x, pos.y, pos.z);
+        audio.play();
+    };
     AudioManager.prototype.getAudio = function () {
         for (var i = 0; i < this.audios.length; i += 1) {
             var audio = this.audios[i];
@@ -101,6 +114,18 @@ var AudioManager = /** @class */ (function () {
         }
         var newAudio = new Audio(this.audioListener);
         this.audios.push(newAudio);
+        return newAudio;
+    };
+    AudioManager.prototype.getPositionalAudio = function () {
+        for (var i = 0; i < this.positionalAudios.length; i += 1) {
+            var audio = this.positionalAudios[i];
+            if (!audio.isPlaying) {
+                return audio;
+            }
+        }
+        var newAudio = new PositionalAudio(this.audioListener);
+        Game.main.scene.add(newAudio);
+        this.positionalAudios.push(newAudio);
         return newAudio;
     };
     return AudioManager;
