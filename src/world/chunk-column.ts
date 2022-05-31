@@ -12,6 +12,7 @@ import { mod } from '../util/mod';
 export class ChunkColumn implements ITickable {    
     public readonly chunks: Chunk[] = [];
 
+    private skylightDirty = false;
     private skyLight = new Uint8Array(CHUNK_WIDTH * CHUNK_WIDTH * CHUNK_WIDTH * 8);
     private spilledBlockData?: Uint8Array;
 
@@ -43,6 +44,11 @@ export class ChunkColumn implements ITickable {
     }
 
     public lateUpdate(deltaTime: number) {
+        if (this.skylightDirty) {
+            this.calculateSkyLight();
+            this.skylightDirty = false;
+        }
+
         this.chunks.forEach((chunk) => chunk.lateUpdate(deltaTime));
     }
 
@@ -55,9 +61,8 @@ export class ChunkColumn implements ITickable {
         const oldBlock = this.getBlockAt([x, y, z]);
         this.chunks[chunkLocalY].setBlock([x, y - chunkLocalY * CHUNK_HEIGHT, z], block);
 
-        // TODO: Run this async and NOT sync! Important!
         if (oldBlock !== block && (oldBlock?.blocksLight !== block.blocksLight)) {
-            this.calculateSkyLight();
+            this.skylightDirty = true;
         }
     }
 

@@ -114,4 +114,8 @@ export class Blocks {
     public getNumberOfBlocks() {
         return Blocks.blocks.length;
     }
+
+    public static listBlocks() {
+        return Blocks.blocks;
+    }
 }

@@ -39,6 +39,6 @@ export const OakLogBlockModel: BlockModel = {
 
 export class OakLogBlock extends Block {
     public constructor() {
-        super('oak_log', [OakLogBlockModel]);
+        super('oak_log', 'Wood', [OakLogBlockModel]);
     }
 }

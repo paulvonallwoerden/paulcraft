@@ -22,6 +22,6 @@ export class LeavesBlock extends Block {
     public readonly blocksLight = false;
 
     public constructor() {
-        super('leaves', [LeavesBlockModel]);
+        super('leaves', 'Leaves', [LeavesBlockModel]);
     }
 }

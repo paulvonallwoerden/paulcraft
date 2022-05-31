@@ -12,6 +12,7 @@ export abstract class Block {
 
     public constructor(
         public readonly name: string,
+        public readonly displayName: string,
         public readonly blockModels: BlockModel[],
     ) {}
 
@@ -21,7 +22,7 @@ export abstract class Block {
 
     public onSetBlock(world: World, pos: BlockPos): void {}
 
-    public onPlace(player: Player, world: World, pos: BlockPos): boolean { return true; }
+    public onPlace(player: Player, world: World, pos: BlockPos): void {}
     public onBreak(world: World, pos: BlockPos): void {}
     public onInteract(world: World, pos: BlockPos): boolean { return false; }
 

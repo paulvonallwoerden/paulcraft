@@ -92,7 +92,7 @@ export class TorchBlock extends Block {
     public readonly occludesNeighborBlocks = false;
 
     public constructor() {
-        super('torch', [
+        super('torch', 'Torch', [
             StandingTorchBlockModel,
             makeHangingTorchBlockModel(0),
             makeHangingTorchBlockModel(90),

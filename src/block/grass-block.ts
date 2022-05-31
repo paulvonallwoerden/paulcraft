@@ -43,7 +43,7 @@ export const GrassBlockModel: BlockModel = {
 
 export class GrassBlock extends Block {
     public constructor() {
-        super('grass', [GrassBlockModel]);
+        super('grass', 'Grass', [GrassBlockModel]);
     }
 
     public onRandomTick(level: Level, pos: BlockPos): void {

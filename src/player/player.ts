@@ -9,6 +9,13 @@ import { Blocks } from '../block/blocks';
 import { BlockPos, floorBlockPos, modifyBlockPosValues } from '../block/block-pos';
 import { WorldCursor } from './world-cursor';
 import { mod } from '../util/mod';
+import { Hud } from '../ui/hud/hud';
+import { Block } from '../block/block';
+import { BlockFace, blockFaceByNormal } from '../block/block-face';
+import { Inventory } from '../inventory/inventory';
+import { UseAction } from '../item/item';
+import { Items } from '../item/items';
+import { InventoryUi } from '../inventory/inventory-ui';
 
 // TODO: Re-factor to:
 // - don't use createTerrainCollisionBoxes as it's stupid.
@@ -36,7 +43,11 @@ export class Player {
     private digBlockSounds: AudioBuffer[] = [];
     private readonly audio: Audio;
 
-    private selectedBlockId: number = Blocks.getBlockId(Blocks.TORCH);
+    public readonly inventory = new Inventory(30);
+    public selectedInventorySlot = 0;
+    public readonly inventoryUi = new InventoryUi(this.inventory);
+
+    // public selectedBlockId: number = Blocks.getBlockId(Blocks.TORCH);
 
     private readonly worldCursor: WorldCursor;
 
@@ -81,61 +92,102 @@ export class Player {
         this.audio.setVolume(0.2);
 
         this.worldCursor.register(Game.main.scene);
+
+        const hud = new Hud(this);
+        Game.main.uiManager.show(hud);
+        Game.main.uiManager.show(this.inventoryUi);
     }
 
     public update(deltaTime: number) {
-        this.raycaster.setFromCamera({ x: 0, y: 0 }, this.camera);
-        const intersections = this.raycaster.intersectObjects(Game.main.level.getChunkMeshes());
-        const intersection = intersections.reduce<Intersection | undefined>(
-            (nearestIntersection, intersection) => nearestIntersection && nearestIntersection.distance < intersection.distance ? nearestIntersection : intersection,
-            undefined,
-        );
-        if (intersection !== undefined && intersection.face) {
-            const normalOffset = intersection.face.normal.normalize().multiplyScalar(0.1);
-            const hitBlockPos: BlockPos = {
-                x: Math.floor(intersection.point.x - normalOffset.x),
-                y: Math.floor(intersection.point.y - normalOffset.y),
-                z: Math.floor(intersection.point.z - normalOffset.z),
-            };
+        // const intersections = this.raycaster.intersectObjects(Game.main.level.getChunkMeshes());
+        // const intersection = intersections.reduce<Intersection | undefined>(
+        //     (nearestIntersection, intersection) => nearestIntersection && nearestIntersection.distance < intersection.distance ? nearestIntersection : intersection,
+        //     undefined,
+        // );
+        // if (intersection !== undefined && intersection.face) {
+        //     const normalOffset = intersection.face.normal.normalize().multiplyScalar(0.1);
+        //     const hitBlockPos: BlockPos = {
+        //         x: Math.floor(intersection.point.x - normalOffset.x),
+        //         y: Math.floor(intersection.point.y - normalOffset.y),
+        //         z: Math.floor(intersection.point.z - normalOffset.z),
+        //     };
 
-            if (this.input.isKeyDowned(LeftMouseButton)) {
-                if (this.audio.isPlaying) this.audio.stop();
-                this.audio.setBuffer(randomElement(this.digBlockSounds));
-                this.audio.play();
+        //     if (this.input.isKeyDowned(LeftMouseButton)) {
+        //         if (this.audio.isPlaying) this.audio.stop();
+        //         this.audio.setBuffer(randomElement(this.digBlockSounds));
+        //         this.audio.play();
 
-                const world = Game.main.level.getWorld();
-                const blockToBreak = world.getBlock(hitBlockPos)!;
-                world.setBlock(hitBlockPos, Blocks.AIR);
-                blockToBreak?.onBreak(world, hitBlockPos);
-            }
+        //         const world = Game.main.level.getWorld();
+        //         const blockToBreak = world.getBlock(hitBlockPos)!;
+        //         world.setBlock(hitBlockPos, Blocks.AIR);
+        //         blockToBreak?.onBreak(world, hitBlockPos);
+        //     }
 
-            { 
-                const world = Game.main.level.getWorld();
-                // this.worldCursor.set(world, hitBlockPos);
+        //     { 
+        //         const world = Game.main.level.getWorld();
+        //         // this.worldCursor.set(world, hitBlockPos);
 
-                if (this.input.isKeyDowned(RightMouseButton)) {
-                    const hitBlock = world.getBlock(hitBlockPos);
-                    const interactionResult = hitBlock?.onInteract(world, hitBlockPos);
+        //         if (this.input.isKeyDowned(RightMouseButton)) {
+        //             const hitBlock = world.getBlock(hitBlockPos);
+        //             const interactionResult = hitBlock?.onInteract(world, hitBlockPos);
 
-                    const samplePoint = intersection.point.clone().add(normalOffset);
-                    const [hitX, hitY, hitZ] = [
-                        Math.floor(samplePoint.x),
-                        Math.floor(samplePoint.y),
-                        Math.floor(samplePoint.z),
-                    ];
-                    const blockPos = new Vector3(hitX, hitY, hitZ);
+        //             const samplePoint = intersection.point.clone().add(normalOffset);
+        //             const [hitX, hitY, hitZ] = [
+        //                 Math.floor(samplePoint.x),
+        //                 Math.floor(samplePoint.y),
+        //                 Math.floor(samplePoint.z),
+        //             ];
+        //             const blockPos = new Vector3(hitX, hitY, hitZ);
 
-                    if (interactionResult === false && ([Blocks.AIR, Blocks.WATER] as any).includes(world.getBlock(blockPos))) {
-                        if (this.audio.isPlaying) this.audio.stop();
-                        this.audio.setBuffer(randomElement(this.placeBlockSounds));
-                        this.audio.play();
+        //             if (interactionResult === false && ([Blocks.AIR, Blocks.WATER] as any).includes(world.getBlock(blockPos))) {
+        //                 if (this.audio.isPlaying) this.audio.stop();
+        //                 this.audio.setBuffer(randomElement(this.placeBlockSounds));
+        //                 this.audio.play();
                         
-                        const blockToPlace = Blocks.getBlockById(this.selectedBlockId);
-                        Game.main.level.setBlockAt(blockPos, blockToPlace);
-                        blockToPlace.onPlace(this, world, blockPos);
-                    }
-                }
+        //                 // const blockToPlace = Blocks.getBlockById(this.selectedBlockId);
+        //                 // Game.main.level.setBlockAt(blockPos, blockToPlace);
+        //                 // blockToPlace.onPlace(this, world, blockPos);
+        //             }
+        //         }
+        //     }
+        // }
+
+        if (this.input.isKeyDowned(LeftMouseButton)) {
+            const itemStack = this.inventory.getSlot(this.selectedInventorySlot);
+            if (!itemStack) {
+                return;
             }
+            const { item } = itemStack;
+            const canUse = item.onUse(UseAction.Primary, Game.main.level.getWorld(), this);
+            if (!canUse) {
+                return;
+            }
+
+            this.inventory.tidy();
+        }
+
+        if (this.input.isKeyDowned(RightMouseButton)) {
+            const facing = this.getFacingBlock();
+            if (!facing) {
+                return;
+            }
+            const { block } = facing;
+            const canInteract = block.onInteract(Game.main.level.getWorld(), facing.pos);
+            if (canInteract) {
+                return;
+            }
+
+            const itemStack = this.inventory.getSlot(this.selectedInventorySlot);
+            if (!itemStack) {
+                return;
+            }
+            const { item } = itemStack;
+            const canUse = item.onUse(UseAction.Secondary, Game.main.level.getWorld(), this);
+            if (!canUse) {
+                return;
+            }
+
+            this.inventory.tidy();
         }
 
         // TODO: Remove this temporary fix. It solves the problem of the player falling before the world terrain
@@ -145,12 +197,19 @@ export class Player {
         }
         if (!this.start) return;
 
-        // Inventory
-        if (this.input.isKeyDowned('Q') && this.selectedBlockId > 1) {
-            this.selectedBlockId--;
+        if (this.input.isKeyDowned('Q')) {
+            this.selectedInventorySlot--;
+
+            if (this.selectedInventorySlot < 0) this.selectedInventorySlot = 0;
+            if (this.selectedInventorySlot >= this.inventory.countUsedSlots()) this.selectedInventorySlot = this.inventory.countUsedSlots() - 1;
+            this.inventoryUi.setSelectedSlot(this.selectedInventorySlot);    
         }
-        if (this.input.isKeyDowned('E') && this.selectedBlockId + 1 < Game.main.blocks.getNumberOfBlocks()) {
-            this.selectedBlockId++;
+        if (this.input.isKeyDowned('E')) {
+            this.selectedInventorySlot++;
+
+            if (this.selectedInventorySlot < 0) this.selectedInventorySlot = 0;
+            if (this.selectedInventorySlot >= this.inventory.countUsedSlots()) this.selectedInventorySlot = this.inventory.countUsedSlots() - 1;
+            this.inventoryUi.setSelectedSlot(this.selectedInventorySlot);    
         }
 
         // Movement
@@ -173,6 +232,11 @@ export class Player {
                 Game.main.level.getWorld().chunkColumnManager.drop();
                 const chunkPosition = floorBlockPos(modifyBlockPosValues(this.position, (v) => v / 16));
                 Game.main.level.getWorld().chunkColumnManager.setCenter(chunkPosition.x, chunkPosition.z);
+            }
+
+            if (this.input.isKeyDowned('M')) {
+                this.inventory.put(Items.BOMB);
+                Blocks.listBlocks().forEach((block) => this.inventory.put(Items.getBlockItem(block), 64));
             }
 
             const x = Math.cos(this.rotation.y);
@@ -317,5 +381,37 @@ export class Player {
 
     public getFacingDirection(): number {
         return mod(Math.round(radToDeg(this.rotation.y) / 90), 4);
+    }
+
+    public getFacingBlock(): { pos: BlockPos, block: Block, face: BlockFace, point: Vector3 } | undefined {
+        this.raycaster.setFromCamera({ x: 0, y: 0 }, this.camera);
+        const intersections = this.raycaster.intersectObjects(Game.main.level.getChunkMeshes());
+        const intersection = intersections.reduce<Intersection | undefined>(
+            (nearestIntersection, intersection) => nearestIntersection && nearestIntersection.distance < intersection.distance ? nearestIntersection : intersection,
+            undefined,
+        );
+        if (!intersection || !intersection.face) {
+            return;
+        }
+
+        const { point, face: hitFace } = intersection;
+        const normal = hitFace.normal.normalize();
+        const normalOffset = normal.clone().multiplyScalar(0.1);
+        const pos: BlockPos = {
+            x: Math.floor(point.x - normalOffset.x),
+            y: Math.floor(point.y - normalOffset.y),
+            z: Math.floor(point.z - normalOffset.z),
+        };
+        const block = Game.main.level.getBlockAt(pos);
+        if (!block) {
+            return;
+        }
+
+        const face = blockFaceByNormal(hitFace.normal);
+        if (!face) {
+            return;
+        }
+
+        return { pos, block, face, point };
     }
 }

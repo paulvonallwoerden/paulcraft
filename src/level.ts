@@ -5,6 +5,7 @@ import { Game } from "./game";
 import { degToRad } from "three/src/math/MathUtils";
 import { World } from "./world/world";
 import { Block } from "./block/block";
+import { BlockPos } from "./block/block-pos";
 
 // TODO: The abstraction between level & world isn't really clear. Come up with a concept.
 export class Level implements ITickable {
@@ -66,8 +67,8 @@ export class Level implements ITickable {
         return this.world.setBlock({ x: pos.x, y: pos.y, z: pos.z }, block);
     }
 
-    public getBlockAt(pos: Vector3): Block | undefined {
-        return this.world.getBlock({ x: pos.x, y: pos.y, z: pos.z });
+    public getBlockAt(pos: BlockPos): Block | undefined {
+        return this.world.getBlock(pos);
     }
 
     public getWorld(): World {

@@ -37,7 +37,7 @@ export class SugarCaneBlock extends Block {
     public readonly blocksLight = false;
 
     public constructor() {
-        super('sugar_cane', [SugarCaneBlockModel]);
+        super('sugar_cane', 'Sugarcane', [SugarCaneBlockModel]);
     }
 
     public isCollidable(): boolean {
