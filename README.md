@@ -58,6 +58,7 @@ A clone of Minecraft that runs in the browser. **[Play it now!](https://paulvona
 ![Sky](docs/media/sky.png)
 ![3D Cliffs](docs/media/cliffs.png)
 ![Block states](docs/media/block-states.png)
+![Falling sand](docs/media/falling-sand.gif)
 ![Block ticks](docs/media/block-ticks.png)
 ![Font rendering](docs/media/font-rendering.png)
 

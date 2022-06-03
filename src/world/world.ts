@@ -2,9 +2,11 @@ import bezier, { EasingFunction } from 'bezier-easing';
 import { Color, Mesh, Scene, Vector3 } from 'three';
 import { SoundNames } from '../audio/sounds';
 import { Block } from '../block/block';
-import { BlockPos, modifyBlockPosValues } from '../block/block-pos';
+import { BlockFaces, normalByBlockFace } from '../block/block-face';
+import { BlockPos, modifyBlockPosValues, sumBlockPos } from '../block/block-pos';
 import { BlockState, BlockStateValues } from '../block/block-state/block-state';
 import { Blocks } from '../block/blocks';
+import { EntityManager } from '../entity/entity-manager';
 import { Game } from '../game';
 import { Level } from '../level';
 import { areBlockLightPropertiesEqual } from '../light/are-block-light-properties-equal';
@@ -19,6 +21,7 @@ export class World {
     /* TODO: Make this private */ public readonly chunkColumnManager: ChunkColumnManager;
     public readonly blockLightEngine: BlockLightEngine;
     public readonly skyLightEngine: SkyLightEngine;
+    public readonly entityManager: EntityManager;
 
     private dayTime: number = 0;
     private skyBox: SkyBox;
@@ -28,6 +31,7 @@ export class World {
         this.chunkColumnManager = new ChunkColumnManager(scene, 7, 3, 4);
         this.blockLightEngine = new BlockLightEngine(this.chunkColumnManager);
         this.skyLightEngine = new SkyLightEngine(this.chunkColumnManager);
+        this.entityManager = new EntityManager(scene);
 
         this.skyBox = new SkyBox(Game.main.camera);
         this.skyBox.register(scene);
@@ -48,10 +52,13 @@ export class World {
 
         this.skyLightEngine.run();
         this.blockLightEngine.run();
+
+        this.entityManager.update(deltaTime);
     }
 
     public lateUpdate(deltaTime: number) {
         this.chunkColumnManager.lateUpdate(deltaTime);
+        this.entityManager.lateUpdate(deltaTime);
     }
 
     private updateDayTime(deltaTime: number) {
@@ -107,6 +114,22 @@ export class World {
             // Game.main.level.getWorld().skyLightEngine.floodChunk(this.chunks[0]);
             Game.main.level.getWorld().skyLightEngine.fillLight(pos);
         }
+
+        block.onTick(this, pos);
+        this.tickNeighborBlocks(pos);
+    }
+
+    private tickNeighborBlocks(blockPos: BlockPos) {
+        BlockFaces.forEach((face) => {
+            const normal = normalByBlockFace(face);
+            const pos = sumBlockPos(blockPos, normal);
+            const block = this.getBlock(pos);
+            if (!block) {
+                return;
+            }
+
+            block.onTick(this, pos);
+        });
     }
 
     public getBlock(pos: BlockPos): Block | undefined {

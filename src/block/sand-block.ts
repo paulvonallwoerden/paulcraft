@@ -1,5 +1,7 @@
 import { Vector3 } from "three";
+import { FallingBlockEntity } from "../entity/falling-block-entity";
 import { Level } from "../level";
+import { World } from "../world/world";
 import { Block } from "./block";
 import { BlockFaces } from "./block-face";
 import { BlockModel } from "./block-model/block-model";
@@ -27,12 +29,13 @@ export class SandBlock extends Block {
         super('sand', 'Sand', [SandBlockModel]);
     }
 
-    public onRandomTick(level: Level, pos: BlockPos): void {
-        if (level.getBlockAt(new Vector3(pos.x, pos.y - 1, pos.z)) !== Blocks.AIR) {
+    public onTick(world: World, pos: BlockPos): void {
+        if (world.getBlock(new Vector3(pos.x, pos.y - 1, pos.z)) !== Blocks.AIR) {
             return;
         }
 
-        level.setBlockAt(new Vector3(pos.x, pos.y, pos.z), Blocks.AIR);
-        level.setBlockAt(new Vector3(pos.x, pos.y - 1, pos.z), Blocks.SAND);
+        world.setBlock(pos, Blocks.AIR);
+        const fallingBlock = new FallingBlockEntity(world, this, pos);
+        world.entityManager.add(fallingBlock);
     }
 }

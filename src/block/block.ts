@@ -16,6 +16,7 @@ export abstract class Block {
         public readonly blockModels: BlockModel[],
     ) {}
 
+    public onTick(world: World, pos: BlockPos) {}
     public onRandomTick(level: Level, pos: BlockPos): void {}
     public getBlockModel(blockState: BlockState): number { return 0; }
     public getLightLevel(): number { return 0; }

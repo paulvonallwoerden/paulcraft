@@ -1,3 +1,5 @@
+import { mod } from "../util/mod";
+
 export interface BlockPos {
     x: number;
     y: number;
@@ -18,6 +20,10 @@ export function roundBlockPos(pos: BlockPos): BlockPos {
 
 export function floorBlockPos(pos: BlockPos): BlockPos {
    return modifyBlockPosValues(pos, Math.floor);
+}
+
+export function modBlockPos(pos: BlockPos, d = 16): BlockPos {
+    return modifyBlockPosValues(pos, (v) => mod(v, d));
 }
 
 export function modifyBlockPosValues(pos: BlockPos, modify: (v: number) => number): BlockPos {
