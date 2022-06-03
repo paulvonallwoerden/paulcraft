@@ -3,6 +3,7 @@ import { BlockFace } from "./block-face";
 import { BlockModel } from "./block-model/block-model";
 
 const SugarCaneBlockModel: BlockModel = {
+    itemTexture: 'textures/items/sugar_cane.png',
     elements: [
         {
             from: [0, 0, 7.5],

@@ -21,6 +21,7 @@ export interface BlockModelElement {
 }
 
 export interface BlockModel {
+    readonly itemTexture?: string;
     readonly elements: BlockModelElement[];
     readonly rotation?: BlockModelRotation;
 }

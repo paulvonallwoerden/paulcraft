@@ -9,6 +9,7 @@ import { Blocks } from './blocks';
 
 export function makeDoorBlockModel(open: boolean, rotation: number, texture: string): BlockModel {
     return {
+        itemTexture: 'textures/items/door.png',
         rotation: {
             angle: rotation,
             axis: 'y',

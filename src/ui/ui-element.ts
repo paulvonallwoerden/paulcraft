@@ -12,11 +12,11 @@ export abstract class UiElement {
 
     public constructor(public readonly uiInterface: UiInterface) {}
 
-    public onAdd(ui: UiManager) {
+    public async onAdd(ui: UiManager): Promise<void> {
         this.ui = ui;
     }
     
-    public setPosition(x: number, y: number) {
+    public setPosition(x: number, y: number) {
         if (this.position.x === x && this.position.y === y) {
             return;
         }

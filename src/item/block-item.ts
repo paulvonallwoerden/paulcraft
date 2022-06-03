@@ -1,5 +1,6 @@
 import { Block } from '../block/block';
 import { normalByBlockFace } from '../block/block-face';
+import { getBlockModelTextures } from '../block/block-model/block-model';
 import { floorBlockPos } from '../block/block-pos';
 import { Blocks } from '../block/blocks';
 import { Player } from '../player/player';
@@ -7,7 +8,7 @@ import { World } from '../world/world';
 import { Item, UseAction } from './item';
 
 export class BlockItem extends Item {
-    public constructor(private readonly block: Block) {
+    public constructor(private readonly block: Block) {
         super(block.name, block.displayName);
     }
 
@@ -33,5 +34,11 @@ export class BlockItem extends Item {
         this.block.onPlace(player, world, placePos);
 
         return true;
+    }
+
+    public getDisplayImage(): string {
+        const blockModel = this.block.blockModels[0];
+
+        return blockModel.itemTexture ?? getBlockModelTextures(blockModel)[0];
     }
 }

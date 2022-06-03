@@ -47,14 +47,12 @@ export class Player {
     public selectedInventorySlot = 0;
     public readonly inventoryUi = new InventoryUi(this.inventory);
 
-    // public selectedBlockId: number = Blocks.getBlockId(Blocks.TORCH);
-
     private readonly worldCursor: WorldCursor;
 
     public constructor(
         private readonly camera: Camera,
         private readonly input: Input,
-        private position: Vector3,
+        public position: Vector3,
         private rotation: Vector2,
     ) {
         this.worldCursor = new WorldCursor(Game.main.blocks);
@@ -63,6 +61,16 @@ export class Player {
 
         this.updateMovement(0, 0);
         this.updateCamera(0);
+
+        this.inventory.put(Items.BOMB);
+        this.inventory.put(Items.getBlockItem(Blocks.STONE), 64);
+        this.inventory.put(Items.getBlockItem(Blocks.DIRT), 64);
+        this.inventory.put(Items.getBlockItem(Blocks.SAND), 64);
+        this.inventory.put(Items.getBlockItem(Blocks.TORCH), 64);
+        this.inventory.put(Items.getBlockItem(Blocks.CAULDRON), 64);
+        this.inventory.put(Items.getBlockItem(Blocks.DOOR), 64);
+        this.inventory.put(Items.getBlockItem(Blocks.WATER), 64);
+        this.inventory.put(Items.getBlockItem(Blocks.SUGAR_CANE), 64);
     }
 
     public getChunkPosition(): [number, number, number] {
@@ -237,6 +245,16 @@ export class Player {
             if (this.input.isKeyDowned('M')) {
                 this.inventory.put(Items.BOMB);
                 Blocks.listBlocks().forEach((block) => this.inventory.put(Items.getBlockItem(block), 64));
+            }
+
+            if (this.input.isKeyDowned('L')) {
+                const curBlockPos = floorBlockPos(this.position);
+                // Game.main.level.getWorld().lightEngine.addLight(curBlockPos, 15);
+            }
+
+            if (this.input.isKeyDowned('K')) {
+                const curBlockPos = floorBlockPos(this.position);
+                // Game.main.level.getWorld().lightEngine.removeLight(curBlockPos);
             }
 
             const x = Math.cos(this.rotation.y);

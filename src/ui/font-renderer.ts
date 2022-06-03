@@ -16,6 +16,7 @@ export class FontRenderer {
         const uvs: number[] = [];
         let currentOffset = 0;
         let glyphIndex = 0;
+
         for (const char of text) {
             const glyph = char.charCodeAt(0);
             if (glyph === 0x20) {
@@ -55,7 +56,7 @@ export class FontRenderer {
         geometry.setAttribute('uv', new BufferAttribute(new Float32Array(uvs), 2));
         geometry.setIndex(indices);
 
-        return { geometry, width: currentOffset };
+        return { geometry, width: currentOffset, vertexCount: vertices.length / 3 };
     }
 
     public calculateGlyphWidths(sheet: Texture): void {

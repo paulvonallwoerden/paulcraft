@@ -8,6 +8,7 @@ import { BlockState } from './block-state/block-state';
 import { Blocks } from './blocks';
 
 const StandingTorchBlockModel: BlockModel = {
+    itemTexture: 'textures/items/torch.png',
     elements: [
         {
             from: [7, 0, 7],

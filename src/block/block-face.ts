@@ -16,7 +16,7 @@ export const BlockFaces = [
     BlockFace.LEFT,
     BlockFace.FRONT,
     BlockFace.BACK,
-];
+] as const;
 
 export function blockFaceByNormal(normal: BlockPos) {
     if (normal.x === 1) {

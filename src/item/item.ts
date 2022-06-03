@@ -15,4 +15,8 @@ export class Item {
     public onUse(action: UseAction, world: World, player: Player): boolean {
         return false;
     }
+
+    public getDisplayImage(): string {
+        return 'textures/sun.png';
+    }
 }

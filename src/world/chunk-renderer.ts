@@ -1,7 +1,7 @@
 import { Vector3 } from "three";
-import { BlockFace } from "../block/block-face";
+import { BlockFace, blockFaceByNormal, BlockFaces } from "../block/block-face";
 import { BlockModelRenderer, SolidityMap } from "../block/block-model/block-model-renderer";
-import { BlockPos, isBlockPosIn, modifyBlockPosValues } from "../block/block-pos";
+import { BlockPos, floorBlockPos, isBlockPosIn, modifyBlockPosValues } from "../block/block-pos";
 import { Blocks, SerializedBlockModels } from "../block/blocks";
 import { floodFillBlockLightAdditive } from "../light/flood-fill";
 import { indexToPos, indexToXZY, posToIndex, xyzTupelToIndex, xzyToIndex } from "../util/index-to-vector3";
@@ -38,11 +38,19 @@ export interface BuildGeometryResult {
     transparent: ChunkMeshData;
 }
 
+interface LightData {
+    sky: Uint8Array,
+    block: Uint8Array,
+}
+
 export interface ChunkBlockData {
     blocks: Uint8Array;
     neighborBlocks: Uint8Array[];
     blockModelIndices: Record<number, number | undefined>;
     skyLight: Uint8Array;
+    blockLight: Uint8Array;
+    light: LightData;
+    neighborLight: (LightData | undefined)[];
 }
 
 export interface ChunkBlockDataWithLight extends ChunkBlockData {
@@ -77,25 +85,25 @@ export class ChunkRenderer {
         // TODO: Don't hard-code visibility of blocks but define it in the block model.
         // TODO: Can the solid & transparent meshes be merged into one mesh?
         // TODO: Is there a need for block models being included in two meshes? E.g. solid cauldron with water?
-        const blockLight = this.calculateBlockLight(blockData);
-        const chunkBlockDataWithLight = { ...blockData, blockLight };
+        // const blockLight = this.calculateBlockLight(blockData);
+        // const chunkBlockDataWithLight = { ...blockData, blockLight };
 
         return {
             solid: this.buildGeometryWithOptions(
                 chunkPosition,
-                chunkBlockDataWithLight,
+                blockData,
                 (blockId) => [1, 2, 3, 4, 5, 10, 11].includes(blockId),
             ),
             water: this.buildGeometryWithOptions(
                 chunkPosition,
                 // There currently is no water.
-                chunkBlockDataWithLight,
+                blockData,
                 (blockId) => blockId === 7,
             ),
             transparent: this.buildGeometryWithOptions(
                 chunkPosition,
                 // There currently are no transparent blocks.
-                chunkBlockDataWithLight,
+                blockData,
                 (blockId) => [6, 8, 9].includes(blockId),
             ),
         };
@@ -143,6 +151,13 @@ export class ChunkRenderer {
                 isVisible,
             );
         }
+
+        // const buf = new SharedArrayBuffer(10);
+        // // buf.
+        // const view = new DataView(buf);
+        // view.setUint8(0, 0);
+
+
 
         return {
             vertices: new Float32Array(partialChunkMeshData.vertices),
@@ -207,22 +222,29 @@ export class ChunkRenderer {
             ).multiplyScalar(0.25);
             const samplePoint = faceMidPoint.add(faceNormal.multiplyScalar(0.5)).floor();
 
-            const lightMapIndex = posToIndex(samplePoint);
-            if (lightMapIndex >= 0 && lightMapIndex < blockData.blockLight.length) {
-                const blockLight = blockData.blockLight[lightMapIndex];
+            // const lightMapIndex = posToIndex(samplePoint);
+            const lightData = this.getLightDataAt(blockData, samplePoint);
+            // if (lightMapIndex >= 0 && lightMapIndex < blockData.blockLight.length) {
+            // const blockLight = blockData.blockLight[lightMapIndex];
+
+            // const skyLight = blockData.skyLight[lightMapIndex];
+            if (lightData) {
+                const { sky: skyLight, block: blockLight } = lightData;
+                partialChunkMeshData.skyLight.push(skyLight, skyLight, skyLight, skyLight);
                 partialChunkMeshData.blockLight.push(blockLight, blockLight, blockLight, blockLight);
             } else {
                 partialChunkMeshData.blockLight.push(0, 0, 0, 0);
-            }
-
-            const skyLightIndexOffset = chunkPosition.y * CHUNK_WIDTH * CHUNK_WIDTH * CHUNK_WIDTH;
-            const skyLightIndex = lightMapIndex + skyLightIndexOffset;
-            if (skyLightIndex >= 0 && skyLightIndex < blockData.skyLight.length) {
-                const skyLight = blockData.skyLight[skyLightIndex];
-                partialChunkMeshData.skyLight.push(skyLight, skyLight, skyLight, skyLight);
-            } else {
                 partialChunkMeshData.skyLight.push(0, 0, 0, 0);
             }
+
+            // const skyLightIndexOffset = chunkPosition.y * CHUNK_WIDTH * CHUNK_WIDTH * CHUNK_WIDTH;
+            // const skyLightIndex = lightMapIndex; // + skyLightIndexOffset;
+            // if (skyLightIndex >= 0 && skyLightIndex < blockData.skyLight.length) {
+            //     const skyLight = blockData.skyLight[skyLightIndex];
+            //     partialChunkMeshData.skyLight.push(skyLight, skyLight, skyLight, skyLight);
+            // } else {
+            //     partialChunkMeshData.skyLight.push(0, 0, 0, 0);
+            // }
         }
 
         /**
@@ -232,6 +254,33 @@ export class ChunkRenderer {
         for (let i = 0; i < modelMesh.vertices.length; i += 3) {
             partialChunkMeshData.foliage.push(block.isFoliage ? 1 : 0);
         }
+    }
+
+    private getLightDataAt(data: ChunkBlockData, relativePos: BlockPos): { block: number, sky: number } | undefined {
+        const blockPos = modifyBlockPosValues(relativePos, (v) => mod(v, 16));
+        const blockIndex = posToIndex(blockPos);
+        if (isBlockPosIn(relativePos)) {
+            return {
+                sky: data.light.sky[blockIndex],
+                block: data.light.block[blockIndex],
+            };
+        }
+
+        const normal = floorBlockPos(modifyBlockPosValues(relativePos, (v) => v / 16));
+        const face = blockFaceByNormal(normal);
+        if (!face) {
+            return undefined;
+        }
+        const index = BlockFaces.findIndex((f) => f === face);
+        const neighborLight = data.neighborLight[index];
+        if (index === -1 || !neighborLight) {
+            return undefined;
+        }
+
+        return {
+            sky: neighborLight.sky[blockIndex],
+            block: neighborLight.block[blockIndex],
+        };
     }
 
     private isFaceVisible(blockData: ChunkBlockData, position: Vector3, face: BlockFace, isVisible: IsVisible): boolean {

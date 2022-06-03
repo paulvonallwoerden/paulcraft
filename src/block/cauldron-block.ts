@@ -18,6 +18,7 @@ const CauldronBlockModelSideFaces: BlockModelElement['faces'] = {
 
 export function makeCauldronBlockModel(level: number): BlockModel {
     const model: BlockModel = {
+        itemTexture: 'textures/items/cauldron.png',
         elements: [
             // Sides
             {

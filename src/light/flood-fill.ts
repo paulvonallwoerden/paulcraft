@@ -29,14 +29,14 @@ function flood(
         return;
     }
 
-    if (isBlockPosIn(pos, { x: 0, y: 0, z: 0 }, { x: CHUNK_WIDTH - 1, y: CHUNK_HEIGHT - 1, z: CHUNK_WIDTH - 1 })) {
-        if (lightLevels[posToIndex(pos)] >= lightLevel) {
+    if (isBlockPosIn(pos, { x: -1, y: -1, z: -1 }, { x: CHUNK_WIDTH, y: CHUNK_HEIGHT, z: CHUNK_WIDTH })) {
+        if (lightLevels[posToIndex(pos, 18)] >= lightLevel) {
             return;
         }
     
-        lightLevels[posToIndex(pos)] = lightLevel;
+        lightLevels[posToIndex(pos, 18)] = lightLevel;
     } else if (isBlockPosIn(pos, { x: -16, y: -16, z: -16 }, { x: 31, y: 31, z: 31 })) {
-        const posKey = posToIndex({ x: pos.x + 16, y: pos.y + 16, z: pos.z + 16 }, 48);
+        const posKey = posToIndex({ x: pos.x + 17, y: pos.y + 17, z: pos.z + 17 }, 50);
         if (visited.get(posKey) ?? 0 >= lightLevel) {
             return;
         }

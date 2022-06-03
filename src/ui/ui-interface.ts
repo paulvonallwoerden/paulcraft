@@ -3,13 +3,15 @@ import { UiElement } from './ui-element';
 import { UiManager } from './ui-manager';
 
 export abstract class UiInterface {
+    public readonly zIndex: number = 0;
+
     private dirtyElements: number[] = [];
 
-    public init(uiManager: UiManager) {
-        this.getElements().forEach((element) => element.onAdd(uiManager));
+    public async init(uiManager: UiManager): Promise<void> {
+        await Promise.all(this.getElements().map((element) => element.onAdd(uiManager)));
     }
 
-    public abstract draw(screenSize: Vector2): void;
+    public abstract draw(screenSize: Vector2, deltaTime: number): void;
 
     public onAfterDraw(uiManager: UiManager, screenSize: Vector2): void {
         this.getElements().forEach((element) => {

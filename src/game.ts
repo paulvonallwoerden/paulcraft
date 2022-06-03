@@ -9,6 +9,7 @@ import Stats from 'stats.js';
 import { AudioManager } from './audio/audio-manager';
 import { SoundNames, ListOfSounds } from './audio/sounds';
 import { UiManager } from './ui/ui-manager';
+import { EnteringWorldUi } from './ui/entering-world-ui';
 
 // TODO: This class has too many responsibilities. Factor it out.
 export class Game {
@@ -42,7 +43,9 @@ export class Game {
         this.blocks.serializeBlockModels(),
     );
 
+    private readonly enteringWorldUi: EnteringWorldUi = new EnteringWorldUi();
     private readonly stats: Stats = new Stats();
+    private joinedWorld = false;
 
     public constructor(readonly root: HTMLElement) {
         Game.main = this;
@@ -50,9 +53,6 @@ export class Game {
         this.scene = new Scene();
         // this.scene.fog = new Fog(0xe6fcff, 90, 110)
         const { clientWidth: width, clientHeight: height } = root;
-
-        const ambientLight = new AmbientLight(0x888888);
-        this.scene.add(ambientLight);
 
         this.renderer = new WebGLRenderer();
         this.renderer.autoClear = false;
@@ -70,8 +70,8 @@ export class Game {
         const originCross = new OriginCross();
         originCross.addToScene(this.scene);
 
-        this.stats.showPanel(0);
-        root.appendChild(this.stats.dom);
+        // this.stats.showPanel(0);
+        // root.appendChild(this.stats.dom);
 
         // Observe a scene or a renderer
         if (typeof (window as any).__THREE_DEVTOOLS__ !== 'undefined') {
@@ -83,6 +83,8 @@ export class Game {
     }
 
     public async init() {
+        await this.uiManager.show(this.enteringWorldUi);
+
         console.log('Preparing ui...');
         await this.uiManager.load();
 
@@ -125,19 +127,29 @@ export class Game {
             return;
         }
 
-        this.stats.begin();
+        // this.stats.begin();
         if (this.lastAnimationFrameAt === 0) {
             this.lastAnimationFrameAt = time;
         }
         const deltaTime = time - this.lastAnimationFrameAt;
         this.lastAnimationFrameAt = time;
         this.loop(deltaTime);
-        this.stats.end();
+        // this.stats.end();
 
         window.requestAnimationFrame(this.onAnimationFrame);
     }
 
     private loop(deltaTime: number) {
+        if (!this.joinedWorld) {
+            const chunkProgress = this.level.getWorld().chunkColumnManager.getChunkStateProgress();
+            if (chunkProgress >= 0.999) {
+                this.joinedWorld = true;
+                this.uiManager.hide(this.enteringWorldUi);
+            } else {
+                this.enteringWorldUi.setProgress(chunkProgress);
+            }
+        }
+
         this.timeSinceLastTick += deltaTime;
         if (this.timeSinceLastTick >= 1000 / this.ticksPerSecond) {
             this.tick(deltaTime);
@@ -146,11 +158,13 @@ export class Game {
 
         this.blocks.update(deltaTime);
         this.level.update(deltaTime);
-        this.uiManager.render();
+        this.uiManager.render(deltaTime);
 
         this.renderer.clear();
-        this.renderer.render(this.scene, this.camera);
-        
+        if (this.joinedWorld) {
+            this.renderer.render(this.scene, this.camera);
+        }
+
         this.renderer.clearDepth();
         this.renderer.render(this.uiManager.scene, this.uiManager.camera);
 

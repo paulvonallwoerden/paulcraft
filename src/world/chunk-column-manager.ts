@@ -172,6 +172,12 @@ export class ChunkColumnManager {
         return column.chunks[y];
     }
 
+    public getChunk(pos: BlockPos): Chunk | undefined {
+        const column = this.getChunkColumn(pos.x, pos.z);
+
+        return column?.chunks[pos.y];
+    }
+
     public __tempGetChunkMeshes() {
         return this.loadedChunkColumns.flatMap((column) => column.getChunkMeshes());
     }
@@ -206,5 +212,23 @@ export class ChunkColumnManager {
         this.loadedChunkColumns.forEach((chunkColumn) => chunkColumn.unregister(this.scene));
         this.loadedChunkColumns = [];
         this.chunkColumnStates.clear();
+    }
+
+    public getChunkStateProgress(): number {
+        let inTargetState = 0;
+        let notInTargetState = 0;
+
+        const states = this.chunkColumnStates.entries();
+        let state = states.next();
+        while (!state.done) {
+            if (state.value[1].is >= state.value[1].target || state.value[1].target !== ChunkColumnState.Rendered) {
+                inTargetState += 1;
+            } else {
+                notInTargetState += 1;
+            }
+            state = states.next();
+        }
+
+        return inTargetState / (inTargetState + notInTargetState);
     }
 }

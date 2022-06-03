@@ -24,6 +24,6 @@ export function modifyBlockPosValues(pos: BlockPos, modify: (v: number) => numbe
     return { x: modify(pos.x), y: modify(pos.y), z: modify(pos.z) };
 }
 
-export function isBlockPosIn(pos: BlockPos, from: BlockPos, to: BlockPos): boolean {
+export function isBlockPosIn(pos: BlockPos, from: BlockPos = { x: 0, y: 0, z: 0 }, to: BlockPos = { x: 15, y: 15, z: 15 }): boolean {
     return pos.x >= from.x && pos.x <= to.x && pos.y >= from.y && pos.y <= to.y && pos.z >= from.z && pos.z <= to.z;
 }

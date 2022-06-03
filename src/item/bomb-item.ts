@@ -6,7 +6,7 @@ import { indexToPos } from '../util/index-to-vector3';
 import { World } from '../world/world';
 import { Item, UseAction } from './item';
 
-const BLAST_DIAMETER = 32;
+const BLAST_DIAMETER = 16;
 
 export class BombItem extends Item {
     public constructor() {
@@ -38,5 +38,9 @@ export class BombItem extends Item {
         world.playSound3D('generic.explosion', point);
 
         return true;
+    }
+
+    public getDisplayImage(): string {
+        return 'textures/items/bomb.png';
     }
 }

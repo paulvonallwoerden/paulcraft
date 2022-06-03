@@ -52,6 +52,7 @@ A clone of Minecraft that runs in the browser. **[Play it now!](https://paulvona
 
 ![Night](docs/media/night.png)
 ![Light](docs/media/light.png)
+![Inventory](docs/media/inventory.png)
 ![Door open](docs/media/door-open.png)
 ![Door close](docs/media/door-close.png)
 ![Sky](docs/media/sky.png)

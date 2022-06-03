@@ -3,6 +3,7 @@ import { BlockFaces } from "./block-face";
 import { BlockModel } from "./block-model/block-model";
 
 export const WaterBlockModel: BlockModel = {
+    itemTexture: 'textures/items/water_bucket.png',
     elements: [
         {
             from: [0, 0, 0],

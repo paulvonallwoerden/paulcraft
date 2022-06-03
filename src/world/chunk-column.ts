@@ -60,10 +60,6 @@ export class ChunkColumn implements ITickable {
 
         const oldBlock = this.getBlockAt([x, y, z]);
         this.chunks[chunkLocalY].setBlock([x, y - chunkLocalY * CHUNK_HEIGHT, z], block);
-
-        if (oldBlock !== block && (oldBlock?.blocksLight !== block.blocksLight)) {
-            this.skylightDirty = true;
-        }
     }
 
     public getBlockAt([x, y, z]: Vector3Tuple): Block | undefined {
@@ -81,7 +77,8 @@ export class ChunkColumn implements ITickable {
         );
         this.chunks.forEach((chunk, i) => chunk.setBlockData(decoratedBlocks[i]));
 
-        this.calculateSkyLight();
+        // this.calculateSkyLight();
+        Game.main.level.getWorld().skyLightEngine.floodChunk(this.chunks[0]);
     }
 
     public getChunkMeshes(): Mesh[] {

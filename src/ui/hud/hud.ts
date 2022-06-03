@@ -1,4 +1,5 @@
 import { Vector2 } from 'three';
+import { modifyBlockPosValues } from '../../block/block-pos';
 import { Blocks } from '../../block/blocks';
 import { Player } from '../../player/player';
 import { UiElement } from '../ui-element';
@@ -6,43 +7,40 @@ import { UiInterface } from '../ui-interface';
 import { UiText } from '../ui-text';
 
 export class Hud extends UiInterface {
-    private readonly textChunkPosition = new UiText(this);
-    private readonly textSelectedBlock = new UiText(this);
+    private readonly textPosition = new UiText(this);
+    private readonly textFps = new UiText(this);
+
+    private lastUpdate = 0;
+    private updateFpsIn = 100;
+    private fps = 0;
 
     public constructor(private readonly player: Player) {
         super();
     }
 
     public draw(size: Vector2): void {
-        this.textChunkPosition.setText(`Chunk: ${this.player.getChunkPosition().join(', ')}`);
-        this.textChunkPosition.setPosition(
-            size.x - (this.textChunkPosition.getTextWidth() + 1),
-            size.y - 2,
-        );
+        const playerPosition = modifyBlockPosValues(this.player.position, (v) => Math.round(v * 10) / 10);
+        const formatCoord = (v: number) => Number.isInteger(v) ? `${v}.0` : `${v}`;
+        this.textPosition.setText(`Position: ${formatCoord(playerPosition.x)}, ${formatCoord(playerPosition.y)}, ${formatCoord(playerPosition.z)}`);
+        this.textPosition.setPosition(1, size.y - 2);
 
-        const selectedItem = this.getSelectedItem();
-        if (selectedItem) {
-            this.textSelectedBlock.setText(`Use Q & E to select another item`);
-        } else {
-            this.textSelectedBlock.setText('Your hands are empty! Press \'M\' to cheat <3');
-        }
-        this.textSelectedBlock.setPosition((size.x / 2) - (this.textSelectedBlock.getTextWidth() / 2), 1);
-    }
+        const delta = Date.now() - this.lastUpdate;
+        this.lastUpdate = Date.now();
 
-    private getSelectedItem(): string | undefined {
-        const { inventory, selectedInventorySlot } = this.player;
-        const itemStack = inventory.getSlot(selectedInventorySlot);
-        if (!itemStack) {
-            return undefined;
+        this.updateFpsIn = this.updateFpsIn - delta;
+        if (this.updateFpsIn <= 0) {
+            this.fps = Math.round(1000 / delta);
+            this.updateFpsIn = 50;
         }
 
-        return itemStack.item.displayName;
+        this.textFps.setText(`Fps: ${this.fps}`);
+        this.textFps.setPosition(1, size.y - 3.5);
     }
 
     public getElements(): UiElement[] {
         return [
-            this.textChunkPosition,
-            this.textSelectedBlock,
+            this.textPosition,
+            this.textFps,
         ];
     }
 }

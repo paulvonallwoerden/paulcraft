@@ -9,15 +9,16 @@ export class UiManager {
     public readonly textMaterial = makeTextMaterial();
 
     public readonly scene = new Scene();
-    public readonly camera = new OrthographicCamera(-10, 10, 10, -10, 0, 1);
+    public readonly camera = new OrthographicCamera(-10, 10, 10, -10, -10, 10);
     private readonly size = new Vector2();
 
     private readonly activeInterfaces: UiInterface[] = [];
+    private readonly interfaceMeshes: Map<UiInterface, Mesh[]> = new Map();
 
     public constructor() {}
 
     public setScreenSize(width: number, height: number) {
-        const scale = 0.05;
+        const scale = 0.04;
         this.camera.bottom = 0;
         this.camera.left = 0;
         this.camera.right = width * scale;
@@ -27,19 +28,27 @@ export class UiManager {
         this.size.set(width * scale, height * scale);
     }
 
-    public show(uiInterface: UiInterface) {
+    public async show(uiInterface: UiInterface): Promise<void> {
         this.activeInterfaces.push(uiInterface);
-        uiInterface.init(this);
+        await uiInterface.init(this);
     }
 
-    public render(): void {
-        this.activeInterfaces.forEach((ui) => ui.draw(this.size));
+    public async hide(uiInterface: UiInterface): Promise<void> {
+        this.scene.remove(...this.interfaceMeshes.get(uiInterface) ?? []);
+        this.interfaceMeshes.set(uiInterface, []);
+        this.activeInterfaces.splice(this.activeInterfaces.indexOf(uiInterface), 1);
+    }
+
+    public render(deltaTime: number): void {
+        this.activeInterfaces.forEach((ui) => ui.draw(this.size, deltaTime));
         this.activeInterfaces.forEach((ui) => ui.onAfterDraw(this, new Vector2(640, 480)));
     }
 
-    public addMesh(mesh: Mesh) {
+    public addMesh(uiInterface: UiInterface, mesh: Mesh) {
         mesh.frustumCulled = false;
         this.scene.add(mesh);
+
+        this.interfaceMeshes.set(uiInterface, [...this.interfaceMeshes.get(uiInterface) ?? [], mesh]);
     }
 
     public async load(): Promise<void> {

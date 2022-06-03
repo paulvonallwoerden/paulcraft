@@ -1,7 +1,6 @@
-import { Mesh, Scene, Vector3, Vector3Tuple } from 'three';
-import { VertexNormalsHelper } from 'three/examples/jsm/helpers/VertexNormalsHelper';
+import { BufferAttribute, Mesh, Scene, Vector3, Vector3Tuple } from 'three';
 import { Game } from '../game';
-import { indexToPos, xyzTupelToIndex, xzyToIndex } from '../util/index-to-vector3';
+import { indexToPos, posToIndex, xyzTupelToIndex, xzyToIndex } from '../util/index-to-vector3';
 import { ITickable } from '../tickable';
 import { ChunkColumn } from './chunk-column';
 import { Blocks } from '../block/blocks';
@@ -10,6 +9,7 @@ import { BlockState } from '../block/block-state/block-state';
 import { BlockPos, sumBlockPos } from '../block/block-pos';
 import { manhattenDistance } from '../light/flood-fill';
 import { areBlockLightPropertiesEqual } from '../light/are-block-light-properties-equal';
+import { BlockFaces, normalByBlockFace } from '../block/block-face';
 
 export const CHUNK_WIDTH = 16;
 export const CHUNK_HEIGHT = 16;
@@ -21,13 +21,16 @@ export class Chunk implements ITickable {
     private blockData: Uint8Array = new Uint8Array(CHUNK_WIDTH * CHUNK_WIDTH * CHUNK_HEIGHT);
     private blockStates: Map<number, BlockState> = new Map();
 
+    private skyLight: Uint8Array = new Uint8Array(CHUNK_WIDTH * CHUNK_WIDTH * CHUNK_HEIGHT);
+    private blockLight: Uint8Array = new Uint8Array(CHUNK_WIDTH * CHUNK_WIDTH * CHUNK_HEIGHT);
+
     public readonly solidMesh: Mesh;
     public readonly waterMesh: Mesh;
     public readonly transparentMesh: Mesh;
 
     public constructor(
-        private readonly chunkColumn: ChunkColumn,
-        private readonly position: Vector3,
+        public readonly column: ChunkColumn,
+        public readonly position: Vector3,
     ) {
         const { solid, transparent, water } = Game.main.blocks.getBlockMaterials();
         this.solidMesh = new Mesh(undefined, solid);
@@ -108,7 +111,7 @@ export class Chunk implements ITickable {
     }
 
     private applySpilledBlockData() {
-        const spilledBlockData = this.chunkColumn.getSpilledBlockData();
+        const spilledBlockData = this.column.getSpilledBlockData();
         if (!spilledBlockData) {
             return;
         }
@@ -154,7 +157,13 @@ export class Chunk implements ITickable {
                 blockModelIndices,
                 blocks: this.blockData,
                 neighborBlocks: this.getNeighborChunkBlocks(),
-                skyLight: this.chunkColumn.getSkyLight(),
+                skyLight: this.skyLight, // this.column.getSkyLight(),
+                blockLight: this.blockLight,
+                light: this.getLightData(),
+                neighborLight: BlockFaces
+                    .map((face) => normalByBlockFace(face))
+                    .map((offset) => sumBlockPos(this.position, offset))
+                    .map((pos) => this.column.getChunk([pos.x, pos.y, pos.z])?.getLightData()),
             },
         );
         this.solidMesh.geometry = geometry.solid;
@@ -162,18 +171,24 @@ export class Chunk implements ITickable {
         this.transparentMesh.geometry = geometry.transparent;
     }
 
+    private getSixNeighborChunks(): (Chunk | undefined)[] {
+        return [{ x: 1, y: 0, z: 0 }, { x: -1, y: 0, z: 0 }, { x: 0, y: 0, z: 1 }, { x: 0, y: 0, z: -1 }, { x: 0, y: 1, z: 0 }, { x: 0, y: -1, z: 0}].map(
+            (offset) => this.column.getChunk([this.position.x + offset.x, this.position.y + offset.y, this.position.z + offset.z]),
+        );
+    }
+
     private getNeighborChunkBlocks(): Uint8Array[] {
         const neighborBlockData = [];
         for (let i = 0; i < 3 * 3 * 3; i++) {
             const pos = sumBlockPos(indexToPos(i, 3), { x: this.position.x - 1, y: this.position.y - 1, z: this.position.z - 1 });
-            const chunk = this.chunkColumn.getChunk([pos.x, pos.y, pos.z]);
+            const chunk = this.column.getChunk([pos.x, pos.y, pos.z]);
             neighborBlockData.push(chunk?.getBlockData() ?? new Uint8Array());
         }
 
         return neighborBlockData;
     }
 
-    private getNeighborChunks(maxDistance = 3): Chunk[] {
+    private getNeighborChunks(maxDistance = 3, skipUnloaded = true): Chunk[] {
         const neighborChunks = [];
         for (let i = 0; i < 3 * 3 * 3; i++) {
             const relativePos = indexToPos(i, 3);
@@ -183,7 +198,7 @@ export class Chunk implements ITickable {
             }
 
             const pos = sumBlockPos(relativePos, { x: this.position.x - 1, y: this.position.y - 1, z: this.position.z - 1 });
-            const chunk = this.chunkColumn.getChunk([pos.x, pos.y, pos.z]);
+            const chunk = this.column.getChunk([pos.x, pos.y, pos.z]);
             if (!chunk) {
                 continue;
             }
@@ -206,9 +221,10 @@ export class Chunk implements ITickable {
 
         // TODO: Only update the relevant chunk
         const oldBlock = Blocks.getBlockById(oldBlockId);
-        if (!areBlockLightPropertiesEqual(block, oldBlock)) {
-            this.getNeighborChunks().forEach((chunk) => chunk.requestRebuild());
-        } else if(x <= 0 || y <= 0 || z <= 0 || x >= CHUNK_WIDTH - 1 || y >= CHUNK_HEIGHT - 1 || z >= CHUNK_WIDTH - 1) {
+        // if (!areBlockLightPropertiesEqual(block, oldBlock)) {
+            // this.getNeighborChunks().forEach((chunk) => chunk.requestRebuild());
+        
+        if(x <= 0 || y <= 0 || z <= 0 || x >= CHUNK_WIDTH - 1 || y >= CHUNK_HEIGHT - 1 || z >= CHUNK_WIDTH - 1) {
             this.getNeighborChunks(1).forEach((chunk) => chunk.requestRebuild());
         }
     }
@@ -245,5 +261,30 @@ export class Chunk implements ITickable {
 
     public enableRebuilds() {
         this.rebuildsEnabled = true;
+    }
+
+    public setBlockLight(pos: BlockPos, lightLevel: number): void {
+        this.blockLight[posToIndex(pos)] = lightLevel;
+        this.requestRebuild();
+    }
+
+    public getBlockLight(pos: BlockPos): number {
+        return this.blockLight[posToIndex(pos)];
+    }
+
+    public setSkyLight(pos: BlockPos, lightLevel: number): void {
+        this.skyLight[posToIndex(pos)] = lightLevel;
+        this.requestRebuild();
+    }
+
+    public getSkyLight(pos: BlockPos): number {
+        return this.skyLight[posToIndex(pos)];
+    }
+
+    public getLightData() {
+        return {
+            block: this.blockLight,
+            sky: this.skyLight,
+        };
     }
 }
